@@ -1,4 +1,4 @@
-import: Agent/intro
+import: Agent/doctrine
 
 system:
 
@@ -13,7 +13,8 @@ Guidelines:
 - If no search is needed, output exactly: NO_SEARCH_NEEDED.
 - Keep the result short and reusable by other agents.
 - Make sure you identify any skills that could be relevant using match_skills
-- Prefer
+- Before searching, check whether the executor will read the repository anyway;
+  if so, report that overlap instead of duplicating the work.
 
 Rules:
 - Don't suggest code or design decisions, but consider what would be important
@@ -29,20 +30,3 @@ Output format:
 - Relevant skills
 - Uncertainties
 - Recommendation
-
-
-tool: ScoutCoder help_list_repos
-tool: ScoutCoder help_list_repo_documents
-tool: ScoutCoder help_get_repo_document
-tool: ScoutCoder help_overview
-tool: ScoutCoder help_workflow
-tool: ScoutCoder searxng
-tool: ScoutCoder html2md
-tool: ScoutCoder html_query
-tool: ScoutCoder list_directory
-tool: ScoutCoder read
-tool: ScoutCoder file_stats
-introduce: Skills
-tool: Skills
-introduce: Cortex
-tool: Cortex

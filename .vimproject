@@ -1,8 +1,10 @@
 AgentSuite=/$PWD filter="*" {
  LICENSE
+ doctrine
  intro
  chats=~/chats/AgentSuite{
   new_doctrine
+  first_version
  }
  Branched=Branched {
   workflow.rb

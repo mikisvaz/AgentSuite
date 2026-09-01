@@ -1,4 +1,5 @@
-import: Agent/intro
+import: Agent/doctrine
+import: Agent/society
 
 system:
 
