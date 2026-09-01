@@ -1,0 +1,250 @@
+AgentSuite=/$PWD filter="*" {
+ LICENSE
+ intro
+ chats=~/chats/AgentSuite{
+  new_doctrine
+ }
+ Branched=Branched {
+  workflow.rb
+ }
+ ChatAnalyst=ChatAnalyst {
+  README.md
+  start_chat
+  workflow.rb
+  research=research {
+   chatanalyst-provenance-search-brief.md
+  }
+  test=test {
+   test_agent_meta_tasks.rb
+   test_cross_consumer_tokens.rb
+   test_helper.rb
+   test_pagination_and_copies.rb
+   test_provenance_relationships.rb
+   scout=scout {
+    agent_meta_fixtures.rb
+   }
+  }
+ }
+ ComputerUse=ComputerUse {
+  LICENSE
+  README.md
+  start_chat
+  workflow.rb
+  lib=lib {
+   ComputerUse=ComputerUse {
+    exceptions.rb
+    tasks=tasks {
+     documents.rb
+     exec.rb
+     filesystem.rb
+     patch.rb
+     playwright.rb
+     web.rb
+    }
+   }
+  }
+  research=research {
+   sandbox_evidence_counts.md
+   sandbox_paths_design.md
+  }
+  share=share {
+   scout_commands=scout_commands {
+    refactor
+   }
+  }
+  test=test {
+   test_helper.rb
+   ComputerUse=ComputerUse {
+    tasks=tasks {
+     test_exec_helpers.rb
+     test_patch.rb
+    }
+   }
+  }
+ }
+ Cortex=Cortex {
+  LICENSE
+  README.md
+  start_chat
+  workflow.rb
+  doc=doc {
+   StartHere.md
+   developer=developer {
+    Architecture.md
+    Entities.md
+    Improvements.md
+    Receipts.md
+    ToolExposure.md
+    Workspace.md
+   }
+   user=user {
+    Conversations.md
+    Receipts.md
+    Workspace.md
+    WorkspaceTools.md
+   }
+  }
+  etc=etc {
+   config
+  }
+  lib=lib {
+   Cortex=Cortex {
+    activity.rb
+    artifacts.rb
+    briefs.rb
+    conversations.rb
+    entities.rb
+    helpers.rb
+    listing.rb
+    lists.rb
+    path_maps.rb
+    properties.rb
+    storage.rb
+    activity=activity {
+     context.rb
+     investigations_facet.rb
+     lists_facet.rb
+     mentions_facet.rb
+     properties_facet.rb
+    }
+    tasks=tasks {
+     activity.rb
+     artifact.rb
+     conversation.rb
+     entity.rb
+     list.rb
+     listing.rb
+    }
+   }
+  }
+  research=research {
+   after-trials.md
+   baseline-trials.md
+   cortex-managed-entities-design.md
+   critique.md
+   design-decisions-management-pass.md
+   design-decisions.md
+   example-run.md
+   findings.md
+   impl-reference-entities.md
+   notes-entity-executions.md
+   notes-implementation.md
+   notes-list-ergonomics.md
+   notes-preflight.md
+   notes-refactor.md
+   notes-tools.md
+   notes-validation.md
+   probe-property-task-findings.md
+   recon-findings.md
+   reference-scout-paths.md
+   test-results.md
+  }
+  share=share {
+   scout_commands=scout_commands {
+    cortex
+   }
+  }
+  test=test {
+   test_cortex_workspace.rb
+   test_helper.rb
+   Cortex=Cortex {
+    test_activity.rb
+    test_conversation.rb
+    test_entities.rb
+    test_helper.rb
+    test_listing.rb
+    test_lists.rb
+    test_path_maps.rb
+    test_property_registry.rb
+    test_storage.rb
+   }
+  }
+ }
+ Critic=Critic {
+  start_chat
+  workflow.rb
+  lib=lib {
+  }
+  python=python {
+  }
+ }
+ Manager=Manager {
+  start_chat
+  test
+  lib=lib {
+  }
+ }
+ Planned=Planned {
+  README.md
+  workflow.rb
+ }
+ ScoutCoder=ScoutCoder {
+  LICENSE
+  README.md
+  start_chat
+  workflow.rb
+  doc=doc {
+   developer=developer {
+    Help.md
+   }
+  }
+  lib=lib {
+   ScoutCoder=ScoutCoder {
+    tasks=tasks {
+     develop.rb
+     documentation.rb
+     explore.rb
+    }
+   }
+  }
+  research=research {
+   workflow-doc-sources.md
+  }
+  share=share {
+   prompts=prompts {
+    developer
+    planer
+    supervisor
+    return=return {
+     markdown
+    }
+   }
+  }
+  test=test {
+   test_helper.rb
+  }
+ }
+ Searcher=Searcher {
+  start_chat
+  python=python {
+  }
+ }
+ User=User {
+  start_chat
+  python=python {
+  }
+ }
+ Worker=Worker {
+  start_chat
+ }
+ WorkflowCoder=WorkflowCoder {
+  LICENSE
+  README.md
+  start_chat
+  workflow.rb
+  lib=lib {
+   WorkflowCoder=WorkflowCoder {
+    tasks=tasks {
+     workflow_tools.rb
+    }
+   }
+  }
+  research=research {
+   design_decisions.md
+   search_report.md
+  }
+  test=test {
+   test_helper.rb
+  }
+ }
+}

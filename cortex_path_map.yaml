@@ -1,0 +1,5 @@
+maps:
+  fit_agent:
+    dir: ~/git/workflows/FitAgent
+  cortex:
+    dir: ~/git/workflows/Cortex

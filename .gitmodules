@@ -1,0 +1,15 @@
+[submodule "ComputerUse"]
+	path = ComputerUse
+	url = git@github.com:Rbbt-Workflows/ComputerUse.git
+[submodule "ScoutCoder"]
+	path = ScoutCoder
+	url = git@github.com:Rbbt-Workflows/ScoutCoder.git
+[submodule "WorkflowCoder"]
+	path = WorkflowCoder
+	url = git@github.com:Rbbt-Workflows/WorkflowCoder.git
+[submodule "Cortex"]
+	path = Cortex
+	url = git@github.com:Rbbt-Workflows/Cortex.git
+[submodule "ChatAnalyst"]
+	path = ChatAnalyst
+	url = git@github.com:Rbbt-Workflows/ChatAnalyst.git
