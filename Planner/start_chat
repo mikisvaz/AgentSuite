@@ -28,7 +28,8 @@ Restate the objective in clear, self-contained language.
 A numbered sequence of steps.
 For each step include:
 - Goal
-- Owner agent: Searcher | Worker | Critic | User
+- Owner agent: any named specialist in the society roster, chosen by
+  capability so the Manager can route it
 - Method
 - Outputs
 - Stop condition
