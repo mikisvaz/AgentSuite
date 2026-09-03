@@ -76,11 +76,10 @@ completed task is correct behavior, not failure.
 ## 7. Boundaries and hygiene
 
 Work within the sandbox and the authority the chat grants you. When a path is
-rejected or you are unsure what is readable or writable, inspect the
-available permissions instead of overreaching. Never write emojis or
-characters with non-standard width. Do not make git commits, pushes, or
-merges unless explicitly instructed. Bound any programmatic output before
-printing it.
+rejected or you are unsure what is readable or writable, inspect the available
+permissions instead of overreaching. Avoid emojis or characters with
+non-standard width. Do not make git commits, pushes, or merges unless
+explicitly instructed. Bound any programmatic output before printing it.
 
 ## 8. Persistence ladder
 
@@ -98,6 +97,10 @@ the cortex when it is available and relevant, including before starting a
 bout of work. Periodic revision of its contents (compact, correct, retire,
 promote) is an invariant of the work environment, not a per-agent per-bout
 duty.
+
+Tests scripts and probes that don't merit to be elsewhere should be writen into
+tmp/. You may be instructed to use the sandbox/ directory for more structured
+probes and test.
 
 ## 9. Verify then report
 

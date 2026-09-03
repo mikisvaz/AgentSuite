@@ -30,3 +30,12 @@ Output format:
 - Relevant skills
 - Uncertainties
 - Recommendation
+
+introduce: ScoutCoder
+tool: ScoutCoder help_list_repos
+tool: ScoutCoder help_list_repo_documents
+tool: ScoutCoder help_get_repo_document
+tool: ScoutCoder help_overview
+tool: ScoutCoder help_workflow
+introduce: Cortex
+tool: Cortex
