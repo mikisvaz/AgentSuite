@@ -1,0 +1,19 @@
+FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf *.slim *.haml" {
+ workflow.rb
+ README.md
+ chats=chats filter="*"{
+  documentation
+  fitness
+  SWE-fit.prepare
+  SWE-fit
+
+  community-agents
+
+  cortex
+ }
+ lib=lib {
+ }
+ README.md
+ LICENSE
+}
+

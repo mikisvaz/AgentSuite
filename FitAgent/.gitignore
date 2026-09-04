@@ -1,0 +1,11 @@
+pkg
+.source
+.save
+.crap
+data
+chats
+tmp
+var
+etc
+__pycache__
+cortex_path_map.yaml
