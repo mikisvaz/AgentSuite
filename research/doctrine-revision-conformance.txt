@@ -1,0 +1,416 @@
+Conformance checks for the AgentSuite doctrine/society/start_chat revision
+============================================================================
+Date: 2025-09-01 (session of the step-5A conformance run)
+Repo: /bulk/mvazque2/git/AgentSuite
+Scope of revision under test: doctrine, society, Manager/start_chat,
+Planner/start_chat, Worker/start_chat, User/start_chat, ScoutCoder/start_chat.
+
+Every check below records the command executed and its verbatim output, then a
+verdict. Exit code / RC is shown where meaningful; RC=1 from grep means "no
+matches".
+
+VERDICT SUMMARY
+  1  PASS   doctrine imports
+  2  FAIL   society importers (Cortex imports society; expected set omits it)
+  3  PASS   roster matches directories one-to-one
+  4  PASS   doctrine tool-neutrality
+  5  PASS   Manager process gate first step
+  6  PASS   Manager roster delegation
+  7  PASS   Planner owners society-based
+  8  PASS   Worker preflight removed
+  9  PASS   typos gone
+ 10  PASS   delegation semantics in doctrine section 6
+ 11  PASS   section 10 invariants and precedence chain
+ 12  PASS   section 11 blocker protocol
+ 13  PASS   User conditional unverified label
+ 14  PASS   ScoutCoder five obligations
+ 15  PASS   ASCII hygiene (Critic exception noted, not a failure)
+ 16  PASS   society three categories in order
+ 17  PASS   marker preservation heads
+ 18  PASS   scope: modification set and numstat
+ 17 PASS / 1 FAIL / 0 N-A
+
+==============================================================================
+CHECK 1 - Doctrine imports
+Expected: all 11 agent start_chats import Agent/doctrine.
+CMD:
+  grep -L "import: Agent/doctrine" ChatAnalyst/start_chat ComputerUse/start_chat Cortex/start_chat Critic/start_chat Manager/start_chat Planner/start_chat ScoutCoder/start_chat Searcher/start_chat User/start_chat Worker/start_chat WorkflowCoder/start_chat
+OUTPUT:
+  (no files listed; RC=0)
+VERDICT: PASS
+  grep -L lists files without a match; empty output means all 11 import doctrine.
+
+==============================================================================
+CHECK 2 - Society importers
+Expected importers per the check definition: Manager, Planner, User only.
+CMD:
+  grep -l "import: Agent/society" */start_chat
+OUTPUT:
+  Cortex/start_chat
+  Manager/start_chat
+  Planner/start_chat
+  User/start_chat
+VERDICT: FAIL
+  Cortex/start_chat also imports Agent/society. This is a genuine deviation
+  from the stated expectation, and it is pre-existing: Cortex is the workspace
+  orchestrator that routes work to other agents, so importing society is
+  functionally justified, but it was not in the expected importer set. The
+  revision steps did not add or remove this import (Cortex/start_chat is
+  unmodified in git status). Needs a decision: either accept Cortex as a
+  routing agent and widen the expectation to four importers, or remove the
+  import in a later step.
+
+==============================================================================
+CHECK 3 - Society roster matches directories one-to-one
+CMD:
+  grep "^## " society | sed "s/^## //; s/ (.*//" | sort
+OUTPUT:
+  Branched
+  ChatAnalyst
+  ComputerUse
+  Cortex
+  Critic
+  Manager
+  Planned
+  Planner
+  ScoutCoder
+  Searcher
+  User
+  Worker
+  WorkflowCoder
+CMD:
+  for d in */; do [ -f "${d}start_chat" ] && echo "${d%/}"; done; echo Planned; echo Branched; sorted
+OUTPUT:
+  ChatAnalyst
+  ComputerUse
+  Cortex
+  Critic
+  Manager
+  Planner
+  ScoutCoder
+  Searcher
+  User
+  Worker
+  WorkflowCoder
+  Planned
+  Branched
+CMD:
+  diff <(roster list) <(directory list)
+OUTPUT:
+  (empty diff) MATCH one-to-one
+VERDICT: PASS
+  13 roster entries equal 11 start_chat directories plus Planned and Branched.
+
+==============================================================================
+CHECK 4 - Doctrine tool-neutrality
+CMD:
+  grep -n -e sandbox_paths -e run_task -e cortex_write -e cortex_read -e cortex_list -e cortex_edit -e ComputerUse -e ScoutCoder -e WorkflowCoder doctrine
+OUTPUT:
+  (no matches; RC=1)
+VERDICT: PASS
+  None of the tool or workflow names appear at all, so there are no hits to
+  judge as tool references versus store names.
+
+==============================================================================
+CHECK 5 - Manager process gate
+CMD:
+  grep -n "Classify the task and choose the process weight" Manager/start_chat
+OUTPUT:
+  30:1. Classify the task and choose the process weight before doing anything
+VERDICT: PASS
+  The process-weight classification is step 1 of the default control loop
+  (the loop starts at line 30 with "Default control loop:" at line 29).
+
+==============================================================================
+CHECK 6 - Manager roster delegation
+CMD:
+  grep -n "Specialist agents:" Manager/start_chat
+OUTPUT:
+  (no matches; RC=1)
+CMD:
+  grep -n "society import is the authoritative roster" Manager/start_chat
+OUTPUT:
+  16:The society import is the authoritative roster. It lists the intake and
+VERDICT: PASS
+  Hard-coded specialist list gone; society-deferring paragraph present.
+
+==============================================================================
+CHECK 7 - Planner owners society-based
+CMD:
+  grep -n "Searcher | Worker | Critic | User" Planner/start_chat
+OUTPUT:
+  (no matches; RC=1)
+CMD:
+  grep -n -A1 "Owner agent:" Planner/start_chat
+OUTPUT:
+  31:- Owner agent: any named specialist in the society roster, chosen by
+  32:  capability so the Manager can route it
+VERDICT: PASS
+  Hard-coded owner list gone; owners now reference the society roster.
+
+==============================================================================
+CHECK 8 - Worker preflight removed
+CMD:
+  grep -rn "Declare or confirm sandbox" --exclude-dir=.git .
+OUTPUT:
+  (no matches; RC=1)
+CMD:
+  grep -n -A2 "When uncertain about access" Worker/start_chat
+OUTPUT:
+  26:- When uncertain about access to a location, or after a path is rejected,
+  27:  inspect the available permissions and diagnose the denial rather than
+  28:  retrying it.
+VERDICT: PASS
+  Unconditional preflight absent repo-wide; inspect-on-uncertainty-or-rejection
+  wording present.
+
+==============================================================================
+CHECK 9 - Typos gone
+CMD:
+  grep -rn -e doctring -e ettiquete -e intenet -e usefull -e "\\incremental" -e "have not been give" --exclude-dir=.git .
+OUTPUT:
+  (no matches; RC=1)
+VERDICT: PASS
+  All six typo strings are absent from the working tree excluding .git.
+
+==============================================================================
+CHECK 10 - Delegation semantics in doctrine section 6
+CMD:
+  sed -n "/^## 6/,/^## 7/p" doctrine
+OUTPUT:
+  ## 6. Delegation packets
+
+  When you delegate, assume the target knows only its baseline instructions
+  plus the context explicitly supplied or inherited for that ask; never rely on
+  it having your private reasoning, uncited artifacts, or previous branch
+  state. Send a self-contained packet: objective, relevant artifacts by path,
+  assumptions, constraints, prior failures, the exact task, and the required
+  output. Prefer one-shot asks or branch-specific named conversations such as
+  `work_A` or `critic_A`: an omitted conversation id is an independent
+  one-shot, and a named conversation persists across calls and is scoped per
+  agent; the `inherit` option controls only how a call or named conversation
+  is initialized. Keep packets incremental: context that another step needs
+  later belongs in an artifact, not repeated in every prompt. Ending a
+  completed task is correct behavior, not failure.
+CMD:
+  grep -n "default chats lose continuity" doctrine
+OUTPUT:
+  (no matches; RC=1)
+VERDICT: PASS
+  Named conversations persisting across calls and scoped per agent, and
+  `inherit` controlling only initialization, are both present; the legacy
+  continuity sentence is absent.
+
+==============================================================================
+CHECK 11 - Section 10 invariants
+CMD:
+  sed -n "/^## 10/,/^## 11/p" doctrine
+OUTPUT:
+  ## 10. Adapt
+
+  Adapt the doctrine's defaults to the work at hand, never its invariants.
+  Defaults (planning depth, search scope, delegation, persistence, and
+  verification effort) scale with risk and task size: a trivial job needs no
+  planning or verification pass, while a coupled or risky one needs both.
+  Invariants (honesty, authority boundaries, role exclusions, evidence
+  integrity, and no silent dropping of work) are never waived. If a prescribed
+  procedure is inapplicable or blocks progress, choose the smallest safe
+  alternative and report the deviation and its reason. Never disregard an
+  explicit user constraint or a role boundary merely for convenience. When
+  instructions conflict, the order is: the user objective and constraints,
+  then the role contract (authority and exclusions), then doctrine invariants,
+  then doctrine defaults, then workflow and tool mechanics. A narrower role
+  rule specializes a general default; it never waives an invariant.
+VERDICT: PASS
+  Precedence chain present in order; "invariant" appears (invariant(s) x4);
+  "smallest safe alternative" present.
+
+==============================================================================
+CHECK 12 - Section 11 blocker protocol
+CMD:
+  sed -n "/^## 11/,$p" doctrine
+OUTPUT:
+  ## 11. Abort and Report in blockers
+
+  Distinguish recoverable friction from a true blocker: a rejected path, a
+  missing tool, or a malformed input is friction until no authorized
+  alternative can satisfy the task with the available tools. On apparent
+  blockage, perform one bounded diagnostic matched to the failure, such as
+  inspecting the available permissions or the relevant tool documentation, and
+  do not repeat the same failed operation. Abort only when no authorized
+  alternative remains. When aborting, report the failed operation, the
+  available evidence, the diagnostic attempted, and the smallest action that
+  would unblock the work.
+VERDICT: PASS
+  "one bounded diagnostic" present; "do not repeat the same failed operation"
+  appears only as the prohibition (negated instruction); the four abort-report
+  elements are: failed operation, available evidence, diagnostic attempted,
+  smallest action that would unblock.
+
+==============================================================================
+CHECK 13 - User conditional unverified label
+CMD:
+  grep -n -A3 "unverified" User/start_chat
+OUTPUT:
+  32:- A final report must label itself unverified when its consequential claims
+  33:  lack objective validation such as tests, probes, or direct evidence; work
+  34:  that has such validation, or that an independent verifier has checked, need
+  35:  not carry the label merely because no verifier agent was invoked.
+VERDICT: PASS
+  Label condition is lack of objective validation on consequential claims.
+
+==============================================================================
+CHECK 14 - ScoutCoder obligations
+CMD:
+  sed -n "/follow these obligations/,/^$/p" ScoutCoder/start_chat
+OUTPUT:
+  When asked to perform a task follow these obligations:
+CMD:
+  grep -n -A8 "follow these obligations" ScoutCoder/start_chat
+OUTPUT:
+  11:When asked to perform a task follow these obligations:
+  12-
+  13:- Consult the framework documentation when Scout semantics are uncertain.
+  14:- Inspect the existing project conventions before changing code.
+  15:- Use the narrowest suitable tool for the job.
+  16:- Validate your changes before reporting completion.
+  17-- Record documentation gaps with a 'ScoutCoder:' comment where you had to
+  18-  figure out something the documentation should have explained.
+VERDICT: PASS
+  All five obligations present: consult documentation when uncertain;
+  inspect project conventions; narrowest suitable tool; validate before
+  reporting completion; record documentation gaps via the 'ScoutCoder:' marker.
+
+==============================================================================
+CHECK 15 - ASCII hygiene
+CMD:
+  for f in doctrine society Manager/start_chat Planner/start_chat Worker/start_chat User/start_chat ScoutCoder/start_chat Searcher/start_chat; do echo "$f: $(LC_ALL=C grep -c "[^ -~]" "$f")"; done
+OUTPUT:
+  doctrine: 0
+  society: 0
+  Manager/start_chat: 0
+  Planner/start_chat: 0
+  Worker/start_chat: 0
+  User/start_chat: 0
+  ScoutCoder/start_chat: 0
+  Searcher/start_chat: 0
+  Critic/start_chat (noted exception): 12
+VERDICT: PASS
+  All files in scope return 0. Critic/start_chat has 12 lines with non-ASCII
+  characters (arrows, em-dashes); pre-existing, out of scope for this
+  revision, recorded as a noted exception per instructions.
+
+==============================================================================
+CHECK 16 - Society three categories
+CMD:
+  grep -n "^# " society
+OUTPUT:
+    3:# Agent society - who is available and when to use them
+   17:# Conversational agents
+   51:# Conversational agents with an associated tool or orchestration workflow
+  111:# Inference engines
+VERDICT: PASS
+  The three category headings exist, in the required order, after the title.
+
+==============================================================================
+CHECK 17 - Marker preservation (first 8 lines of each edited start_chat)
+CMD:
+  for f in Manager/start_chat Planner/start_chat Worker/start_chat User/start_chat ScoutCoder/start_chat Searcher/start_chat; do echo "--- $f"; head -8 "$f"; done
+OUTPUT:
+  --- Manager/start_chat
+  import: Agent/doctrine
+  import: Agent/society
+
+  system:
+
+  You are the Manager agent.
+
+  You are the controller of a budgeted multi-agent reasoning loop. Your job is to
+  --- Planner/start_chat
+  import: Agent/doctrine
+  import: Agent/society
+
+  system:
+
+  You are the Planner agent.
+
+  You do not execute tasks. Your job is to produce one practical plan that other agents can follow.
+  --- Worker/start_chat
+  import: Agent/doctrine
+
+  system:
+
+  You are the Worker agent.
+
+  Your job is to execute concrete tasks using available tools and to produce tangible artifacts.
+
+  --- User/start_chat
+  import: Agent/doctrine
+  import: Agent/society
+
+  system:
+
+  You are the User liaison agent.
+
+  Your responsibilities are:
+  --- ScoutCoder/start_chat
+  import: Agent/doctrine
+
+  system:
+
+  You are a ruby developer extending the framework Scout.
+
+  You will be provided with tools that you can use through the tool calling
+  interface. You may know these as functions, tools, mcps, etc. We will refer to
+  --- Searcher/start_chat
+  import: Agent/doctrine
+
+  system:
+
+  You are the Searcher agent.
+
+  Your job is to answer concrete technical or factual uncertainties.
+
+VERDICT: PASS
+  Import sets and system: markers intact in all six files (Searcher included,
+  unmodified but listed for completeness).
+
+==============================================================================
+CHECK 18 - Scope
+CMD:
+  git status --short
+OUTPUT:
+   m Cortex
+   M Manager/start_chat
+   D Manager/test
+   M Planner/start_chat
+   m ScoutCoder
+   M User/start_chat
+   M Worker/start_chat
+   M doctrine
+   M society
+CMD:
+  git diff --numstat
+OUTPUT:
+  0	0	Cortex
+  25	28	Manager/start_chat
+  0	12	Manager/test
+  2	1	Planner/start_chat
+  0	0	ScoutCoder
+  6	4	User/start_chat
+  9	4	Worker/start_chat
+  86	45	doctrine
+  38	12	society
+VERDICT: PASS
+  Modified text files match the revision scope exactly (doctrine, society,
+  five start_chats). Known non-defects, out of scope:
+  - Manager/test: tracked file deleted in the working tree before this
+    revision began; left alone.
+  - Cortex and ScoutCoder show as ` m` with 0/0 numstat: submodules whose own
+    state changed, not modified by this work.
+  - ScoutCoder/start_chat does not appear in numstat because ScoutCoder/ is a
+    submodule; the ScoutCoder/start_chat edits happen inside the submodule
+    checkout, so the superproject shows the submodule pointer state only.
+
+==============================================================================
+END OF REPORT
