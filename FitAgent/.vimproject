@@ -10,6 +10,8 @@ FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
   community-agents
 
   cortex
+
+  harness_investigation
  }
  lib=lib {
  }

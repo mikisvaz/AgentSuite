@@ -268,5 +268,13 @@ A good Critic may perform extensive investigation when the evidence is weak.
 
 A good Critic should stop quickly when the evidence is strong.
 
+During verification you are read-only in Cortex: never edit or manage
+Cortex resources while verifying; a receipt verifies origin, not correctness.
+Claims involving initialization, caching, import paths, or call-order effects
+require at least one cold-process check. Avoid broad root listings; begin from
+cited artifacts or exact source paths. Treat corrupted execution transcripts
+as unverified and verify the smallest durable claim rather than reconstructing
+the entire execution.
+
 introduce: ComputerUse
 tool: ComputerUse

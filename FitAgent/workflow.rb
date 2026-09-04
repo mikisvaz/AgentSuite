@@ -3,6 +3,12 @@ require 'fileutils'
 
 FITAGENT_ROOT = File.dirname(File.expand_path(__FILE__))
 
+# Deterministic scenario catalogue + scorer (no inference anywhere in them)
+$LOAD_PATH.unshift(File.join(FITAGENT_ROOT, 'lib'))
+require 'FitAgent/scenarios'
+require 'FitAgent/scoring'
+require 'FitAgent/runner'
+
 Workflow.directory = Scout.var.jobs.find(:lib)
 module FitAgent
   extend Workflow
@@ -429,5 +435,109 @@ rationale: <one line>
 
     Open.write(out_dir['lineage.tsv'].find, lineage.to_s)
     lineage.to_s
+  end
+
+  # Deterministic scenario catalogue (research/07 §3, research/08): materialize
+  # the frozen patch-probe scenario set as fixtures under <scenario_set>/<id>/
+  # with scenario.yaml, rubric.yaml, patch.txt, work/, expected/ and a
+  # manifest.json digest. Pure generator (seeded), no inference, no endpoint.
+  input :scenario_set, :path, 'Directory to materialize the scenario set into', 'scenarios'
+  input :ids, :array, 'Scenario ids to materialize; defaults to the whole catalogue', []
+  task :catalogue => :json do |scenario_set,ids|
+    # return the Hash itself: the :json result type serializes once; returning
+    # a pre-encoded string would double-encode the job output.
+    FitAgent::Scenarios.materialize(scenario_set, ids: ids)
+  end
+
+  # ---- override: stage a candidate Agent override directory ---------------
+  #
+  # Materializes sandbox/Agent/<name>/start_chat from instructions + tool
+  # lines (grammar per research/05 section 2: `introduce:`/`tool:` lines,
+  # `Workflow [task [input|name=value ...]]` spec strings). Pure write into a
+  # candidate manifest directory; canonical agent definitions and other
+  # workflows' sources are never touched. No inference, no endpoint.
+  input :name, :string, 'Candidate name; becomes sandbox/Agent/<name>/', 'candidate'
+  input :instructions, :text, 'System instructions for the candidate start_chat', ''
+  input :tools, :array, 'Tool spec lines (Workflow [task [inputs]]), verbatim into tool: lines', []
+  task :override => :json do |name,instructions,tools|
+    dir = File.join(Dir.pwd, 'sandbox')
+    info = FitAgent::Runner.write_override(dir, name, instructions, tools)
+    info.merge('path' => info['start_chat'])
+  end
+
+  # Deterministic scorer (research/04): evaluate a recorded run against the
+  # scenario rubrics. Evidence only — the sandbox work trees the agent
+  # actually produced plus the run transcript (main.chat) parsed with
+  # Chat.tool_calls. No model calls, no endpoint, nothing re-executed.
+  #
+  # One row per scenario: verdict, score, functional/message tiers, failures.
+  # A detailed per-scenario breakdown is written to scores.json in the job.
+  input :scenarios, :path, 'Scenario set directory (holds <id>/rubric.yaml; produced by catalogue)', 'scenarios'
+  input :use_case_job, :path, 'Path to a finished FitAgent#use_case job whose .files/sandbox is scored', nil
+  input :sandbox, :path, 'Explicit sandbox directory containing scenarios/ and main.chat; overrides use_case_job', nil
+  task :score => :tsv do |scenarios,use_case_job,sandbox|
+    set = Path.setup(scenarios.to_s).find
+    ids = FitAgent::Scenarios.scenario_ids(set.find)
+    raise ParameterException, "scenario set #{set} contains no scenarios (catalogue not materialized?)" if Array(ids).empty?
+
+    box = nil
+    if sandbox && ! sandbox.to_s.strip.empty?
+      box = Path.setup(sandbox.to_s).find
+    elsif use_case_job && ! use_case_job.to_s.strip.empty?
+      box = Path.setup(use_case_job.to_s.sub(/\.info$/, '') + '.files/sandbox').find
+    else
+      raise ParameterException, 'score needs :sandbox or :use_case_job'
+    end
+    raise ParameterException, "no sandbox #{box}" unless Open.directory?(box)
+    chat = box['main.chat']
+    raise ParameterException, "no main.chat under #{box}" unless chat.exists?
+
+    results = {}
+    ids.each do |id|
+      rubric_file = set[id]['rubric.yaml']
+      raise ParameterException, "no rubric for #{id} under #{set}" unless rubric_file.exists?
+      rubric = YAML.load_file(rubric_file.find)
+      work = box['scenarios'][id]['work']
+      raise ParameterException, "no work tree for #{id} under #{box['scenarios']}" unless Open.directory?(work)
+      results[id] = FitAgent::Scoring.score_scenario(work.find, rubric, chat.find,
+                                                     'use_case_job' => use_case_job.to_s,
+                                                     'sandbox' => box.find)
+    end
+
+    Open.write(file('scores.json'), JSON.pretty_generate(results) + "\n")
+    tsv = TSV.setup({}, key: 'scenario', type: :list)
+    tsv.fields = %w[verdict score functional_ok message_ok failures chat]
+    ids.each do |id|
+      r = results[id]
+      tsv[id] = [r['verdict'], r['score'].to_s,
+                 r['functional']['files'].values.all? { |v| v['ok'] } ? 'true' : 'false',
+                 r['message']['count_ok'].to_s,
+                 r['failures'].join(';'),
+                 r['evidence']['chat']]
+    end
+    tsv.to_s
+  end
+
+  # ---- run_arms: multi-arm scenario runner --------------------------------
+  #
+  # Runs the scenario catalogue for every arm and scores each one
+  # deterministically. An arm is a staged Agent override directory
+  # <arms_dir>/<arm>/Agent/<agent>/start_chat; `baseline` (and any label
+  # without a staged dir) runs the canonical agent with NO override.
+  # Output: results/<experiment>/<arm>/{scores.tsv,scores.json,arms.json}.
+  #
+  # The agent turn itself is injected through :agent_turn (an object
+  # responding to call(scenario_dir, arm_box) that writes main.chat and
+  # mutates the work tree); the default runs the built-in deterministic
+  # stub so this task is testable with no model. Live use_case wiring for
+  # the agent turn arrives in a later unit and will be passed the same way.
+  # No endpoint input anywhere: runs are deterministic-only by contract.
+  input :experiment, :string, 'Experiment name (results dir component)', 'default'
+  input :scenarios_dir, :path, 'Materialized scenario set (catalogue output)', 'scenarios'
+  input :arms_dir, :path, 'Directory holding <arm>/Agent/<agent>/ override dirs', 'arms'
+  input :agent, :string, 'Agent under test (name under Agent/)', 'FitMain'
+  task :run_arms => :json do |experiment,scenarios_dir,arms_dir,agent|
+    FitAgent::Runner.run_arms(experiment, scenarios_dir, arms_dir, agent,
+                              out_dir: File.join(Dir.pwd, 'results'))
   end
 end

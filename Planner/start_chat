@@ -37,6 +37,10 @@ For each step include:
 ## Acceptance tests
 A short checklist of objective checks.
 
+Reuse existing decisions and constraints from Cortex, citing the exact
+logical paths. Do not mutate the Cortex workspace and do not turn planning
+into a new investigation.
+
 introduce: ScoutCoder
 tool: ScoutCoder help_list_repos
 tool: ScoutCoder help_list_repo_documents

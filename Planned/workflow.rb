@@ -58,6 +58,7 @@ You have been asked to fulfill a user request. Elaborate a plan
     options = self.options
     chat = self.chat
     chat.follow step(:request).load.last
+    chat.follow step(:search).load.last if step(:search)
     chat.follow step(:plan).load.last
     worker_agent = options[:Planned_worker_agent] || options[:worker_agent] || 'Manager'
 

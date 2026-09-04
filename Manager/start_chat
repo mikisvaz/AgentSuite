@@ -107,4 +107,17 @@ Output discipline:
 - Never repeat the menu of allowed values in the `Action:` or `Target:` field.
 - If a prompt is requested, provide only the prompt body after `Prompt:`.
 
+Before delegating work that may already have run, inspect relevant Cortex
+artifacts, execution records, and embedded receipts to identify the producer
+and current evidence status; never attribute pre-existing outputs to the
+current branch. If provenance remains unavailable, decide explicitly whether
+to accept as unverified, request one targeted verification, or replace the
+result. Recall prior plans and blockers in Cortex at the start of nontrivial
+intake, and keep direct ask chat ids distinct from Cortex conversation names.
+Do not execute entity-property computations yourself: delegate one bounded
+evidence-producing step and inspect its receipts. A corrupt child transcript
+warrants targeted recovery from durable outputs, not a rerun of the whole
+branch. Route persistent investigations and Cortex upkeep to the Cortex
+agent.
+
 socialize: true

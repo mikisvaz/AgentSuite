@@ -1,0 +1,78 @@
+# Investigation log: FitAgent auto-agent-testing (research note 00)
+
+Index of the research/ notes produced by the investigation bouts of
+2026-09-04/05, with provenance and verification status. The working memory of
+the investigation lives in Cortex conversation
+`fitagent-auto-test-investigation`; durable findings in Cortex artifacts
+under `findings/`, `verifications/`, `design/`, and the `agenda.md` ledger.
+These notes promote the consolidated, still-current subset into the
+repository `research/` tier (per the persistence ladder).
+
+| Note | Title | Status |
+| --- | --- | --- |
+| [01](01-environment-and-host-inventory.md) | Environment and host inventory | validated (direct probes; Critic-reviewed correction) |
+| [02](02-fitagent-current-state-and-gaps.md) | FitAgent current state and gaps | validated (full workflow.rb read) |
+| [03](03-computeruse-patch-mechanism.md) | ComputerUse patch mechanism | validated at source level; byte-level behavior now live-confirmed (note 08) |
+| [04](04-deterministic-transcript-evaluation.md) | Deterministic transcript evaluation | validated (task signatures + bodies read; call convention from source) |
+| [05](05-agent-override-and-tool-provisioning.md) | Agent override and tool provisioning | validated (resolution order, grammar); empirical validation of model-driven rewrites pending |
+| [06](06-weak-inference-point.md) | Weak inference point | mechanism validated; **SPLIT DROPPED by user 2026-09-05** — default endpoint (glm5) for proposals |
+| [07](07-improvement-loop-architecture.md) | Improvement-loop architecture | design; every mechanism claim source-anchored, loop untested |
+| [08](08-live-patch-probe-matrix.md) | Live patch probe matrix | validated (14 scenarios executed against live ComputerUse patch; reproducible via tmp/patch_probes/run_all.sh) |
+
+## Investigations conducted (chronological)
+
+1. **Cortex recall** — checked prior state: conversation
+   `fitagent-auto-test-investigation`, artifacts (agenda, 4 findings, 3
+   verifications, 2 designs). Confirmed nothing in `research/` yet
+   (empty dir), `chats/` empty.
+2. **Host inventory probe** — discovered the AgentSuite mount-view
+   discrepancy: canonical `/bulk/.../AgentSuite` holds the full suite;
+   earlier "ComputerUse absent" conclusion was a mount artifact. Full
+   reads: ComputerUse `tasks/patch.rb` (453 l), `start_chat`, tests;
+   ChatAnalyst `workflow.rb` (1159 l) task surface; Worker `start_chat`.
+3. **Critic verification round** — cold-process re-probe of the
+   availability claims; corrected the evidence basis (stat st_dev remaps
+   under bind mounts → cite mount plan + realpath + md5). Verdict:
+   supersession plan sound (NEEDS_WORK on evidence phrasing, applied).
+4. **FitAgent deep read** — `workflow.rb` (433 l) all four tasks;
+   `workflows/MiniTools/workflow.rb`; `.save/research` legacy
+   documentation (SC26-era experiment: four tool-use failure patterns,
+   run recipes).
+5. **ChatAnalyst evaluation-fit read** — `chat_tool_calls` internals,
+   `chat_report` delegation rollup; established the deterministic rubric
+   mapping (note 04).
+6. **Consolidation** — notes 00–07 (2026-09-04).
+7. **Live patch probe round (2026-09-05)** — executed F01–F08, E01–E06
+   plus E05b against the live ComputerUse patch task via a Scout job
+   harness (tmp/patch_probes/); froze observed ground truth for the
+   rubric: stale-context rejection, lenient header recompute (E03),
+   add-overwrites (E05b), clean deletes (E06), no .orig/.rej residue.
+   Deliverables: note 08 + `verifications/patch-probe-matrix-v1.md`
+   (Cortex) + `tmp/patch_probes/` harness.
+8. **User decisions (2026-09-05)** — weak endpoint dropped (default glm5);
+   design doc v3 and note 06/07 updated accordingly.
+
+## Key established facts (with receipts)
+
+- ComputerUse and ChatAnalyst are available as AgentSuite submodules; the
+  FitAgent sandbox links ComputerUse checkout-anchored (notes 01, 03).
+- `start_chat` is the single override surface: instructions + tooling in
+  one file; PWD-first agent resolution makes staged `sandbox/Agent/`
+  overrides work (note 05).
+- Deterministic rubric evaluation needs no new harness: ChatAnalyst's
+  `export_exec` tasks over the recorded `main.chat` (or the job) suffice
+  (note 04).
+- ~~The weak/strong endpoint split~~ **Dropped (user)**: proposals run on
+  the default endpoint; no framework work needed (note 06 addendum).
+- The loop is additive over existing tasks; the only genuinely new
+  subsystems are the fixture generator, the rubric runner, and the
+  proposal validator (note 07).
+- Patch-tool ground truth is byte-confirmed for the 14-probe matrix
+  (note 08); nested ComputerUse runs need BWRAP_PATH=false, already
+  exported by FitAgent's `use_case` env block.
+
+## Open items carried in the Cortex agenda
+
+- O6: budget defaults for the `fit` loop (proposals in note 07 §6).
+- O7: implement `catalogue`/`override`/`score`/`fit` tasks per
+  design/fitagent-improvement-loop-v1.md v3.

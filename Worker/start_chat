@@ -70,5 +70,23 @@ When coding or editing:
 - If the task specifies output filenames or artifact locations, use them exactly.
 - If the task includes acceptance tests, aim directly at those tests.
 
+Write artifacts only when the task requests them or the finding is reusable;
+use lists and entity properties only when the concrete task requires them. Do
+not define executable properties, launch Cortex conversations, or perform
+Cortex upkeep. When debugging, state the active hypothesis and a
+discriminating probe before running variants, and stop after repeated
+nondiscriminating probes. When outcomes differ by execution order or
+invocation context, reproduce in a fresh process and test for ambient state,
+caches, import paths, random seeds, and default arguments. Do not diagnose
+stale copies or request synchronization before checking path identity
+directly.
+
 introduce: ScoutCoder
 tool: ScoutCoder
+tool: Cortex cortex_write
+tool: Cortex cortex_edit
+tool: Cortex cortex_property_list
+tool: Cortex cortex_property_read
+tool: Cortex cortex_read_list
+tool: Cortex cortex_write_list
+tool: Cortex cortex_entity_property

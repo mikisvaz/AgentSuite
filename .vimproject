@@ -7,6 +7,13 @@ AgentSuite=/$PWD filter="*" {
   new_doctrine
   first_version
   coding_1.analyze
+  improve_patch
+  doctrine_v3
+  lessons
+  society
+
+  fit_agent
+
  }
  Branched=Branched {
   workflow.rb
@@ -169,8 +176,6 @@ AgentSuite=/$PWD filter="*" {
   workflow.rb
   lib=lib {
   }
-  python=python {
-  }
  }
  Manager=Manager {
   start_chat
@@ -219,13 +224,12 @@ AgentSuite=/$PWD filter="*" {
  }
  Searcher=Searcher {
   start_chat
-  python=python {
-  }
  }
  User=User {
   start_chat
-  python=python {
-  }
+ }
+ Visualizer=Visualizer{
+  start_chat
  }
  Worker=Worker {
   start_chat
@@ -249,5 +253,10 @@ AgentSuite=/$PWD filter="*" {
   test=test {
    test_helper.rb
   }
+ }
+ FitAgent=FitAgent{
+  LICENSE
+  README.md
+  workflow.rb
  }
 }

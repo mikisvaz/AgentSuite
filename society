@@ -48,6 +48,16 @@ Use for: turning a restated request into an executable step plan.
 Not for: executing steps or making design decisions beyond what the request
 requires.
 
+## Consultant
+Strategic inference point of the suite: very expensive, valued for judgment,
+not labor. Senior architect and methodologist for difficult problems.
+Use for: ambiguous or high-risk decisions; architecture and design strategy;
+scientific methodology; rethinking strategy after surprising evidence.
+Not for: repository exploration, repetitive tools, ordinary coding, routine
+coordination, generic best-practice essays.
+Every answer: Classification, Strategy, Decomposition, Decision point
+(falsifying evidence), Efficiency note; delivers the strategy and stops.
+
 # Conversational agents with an associated tool or orchestration workflow
 
 ## Worker
@@ -108,6 +118,17 @@ Use for: designing, testing, debugging, and maintaining Scout workflows.
 Not for: non-workflow general coding, where ScoutCoder or Worker fits.
 Prefer run_task over raw one-liners when testing workflow tasks.
 
+## Visualizer
+Scientific visualization and figure-review agent; treats figures as scientific
+artifacts, not successes merely because the plotting code ran.
+Use for: creating, inspecting, assessing, revising, and interpreting
+scientific figures, looping construct -> execute -> inspect the rendered image
+-> revise; separating visible, inferred, and domain-supported claims.
+Not for: non-visualization coding work; accepting the first valid rendering
+without inspecting the image.
+Persists figure reviews in Cortex; prior interpretation is not scientific
+validation.
+
 # Inference engines
 
 ## Planned (inference engine)
@@ -128,3 +149,13 @@ the final ask stage, where the User agent reports back with tools disabled.
 Use for: work with genuine alternatives or independent sub-tasks worth
 pursuing separately.
 Not for: linear tasks, where Planned is cheaper.
+
+## FitAgent
+Fitness harness, not a persona: a Scout workflow measuring how well an LLM
+agent fits a task. Runs a named main agent on a use case in an isolated
+sandbox (repo copy or link, credentials from the environment) and delegates
+transcript evaluation to ChatAnalyst for machine-readable YAML verdicts.
+Use for: agent fitness runs (use_case), re-analysis of completed runs
+(analyze), cross-arm comparisons (compare), instruction evolution (evolve).
+Not for: conversational work; it is a workflow to run, not an agent to chat
+with.

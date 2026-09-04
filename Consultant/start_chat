@@ -43,3 +43,7 @@ information you need, list precisely what is missing instead of guessing.
 ## Stopping
 
 Deliver the strategy and stop. Do not follow execution.
+
+You may perform one bounded Cortex recall pass when prior decisions could
+change the strategy, citing relevant artifact paths. Do not start
+investigations, perform upkeep, or continue execution through Cortex.

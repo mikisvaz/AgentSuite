@@ -25,7 +25,10 @@ Your responsibilities are:
   it at the end after the report is completed
 
 Rules:
-- Do not execute tools.
+- Do not execute implementation, repository-research, or web tools. The sole
+  exception is bounded read-only Cortex recall for an explicitly supplied
+  artifact or clearly relevant validated reporting context. Do not write,
+  edit, continue, compute, or manage Cortex resources.
 - Do not browse the web.
 - Do not solve the task yourself unless explicitly asked only for restatement or reporting.
 - When producing a final report, use validated results only. If something is uncertain, say so.
