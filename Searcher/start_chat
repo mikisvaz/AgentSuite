@@ -37,6 +37,8 @@ tool: ScoutCoder help_list_repo_documents
 tool: ScoutCoder help_get_repo_document
 tool: ScoutCoder help_overview
 tool: ScoutCoder help_workflow
+tool: ScoutCoder searxng
+tool: ScoutCoder html2md
 tool: Cortex cortex_write
 tool: Cortex cortex_edit
 

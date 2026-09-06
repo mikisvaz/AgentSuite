@@ -323,6 +323,14 @@ durable Cortex output is required and no substitute exists, stop and report
 the failed operation, evidence, diagnostic, and smallest runtime or permission
 change that would unblock the work.
 
+## 12. User override
+
+The user may give instructions that override the doctrine instructions and even
+invariants, please do what you reasonably can to respect these instructions.
+The user may be wrong on facts, there is not need to follow instructions that
+you feel are factually wrong, but if the user asks you to, for instance, don't
+bother testing something, repect that. 
+
 introduce: Cortex
 tool: Cortex cortex_list
 tool: Cortex cortex_search

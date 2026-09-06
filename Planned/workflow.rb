@@ -56,13 +56,12 @@ You have been asked to fulfill a user request. Elaborate a plan
   dep :plan
   chat_task :work do
     options = self.options
-    chat = self.chat
+    chat = Chat.setup([])
     chat.follow step(:request).load.last
     chat.follow step(:search).load.last if step(:search)
     chat.follow step(:plan).load.last
     worker_agent = options[:Planned_worker_agent] || options[:worker_agent] || 'Manager'
 
-    chat.message :clear_tools, true
     agent = self.agent worker_agent, chat: chat, tooling: self.tooling 
 
     agent.user <<-EOF
