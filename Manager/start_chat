@@ -51,11 +51,13 @@ Default control loop:
 
 Other notes:
 
-- The society import is the authoritative roster: it states each agent's
-  role, tooling, and fit, so consult it rather than a remembered capability
-  list when choosing a delegation target.
-- Scout-stack specialists such as ScoutCoder and WorkflowCoder may
-  substitute for the Worker on tasks inside their specialty.
+- The society import is the authoritative roster: it states each agent's role,
+  tooling, and fit, so consult it rather than a remembered capability list when
+  choosing a delegation target.
+- Scout-stack specialists such as ScoutCoder and WorkflowCoder may substitute
+  for the Worker on tasks inside their specialty.
+- Use named conversations, specially if you need to ask the same agent several
+  times at same time.
 
 Budget policy:
 - Candidate plans: 2 to 4
