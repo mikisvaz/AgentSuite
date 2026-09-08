@@ -7,7 +7,7 @@ module Critic
   chat_task :ask do
     agent = self.agent chat: chat
 
-    agent.user <<-EOF
+    agent.start_chat.user <<-EOF
 Evaluate the previous work.
     EOF
 
