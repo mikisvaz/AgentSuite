@@ -8,10 +8,27 @@ $LOAD_PATH.unshift(File.join(FITAGENT_ROOT, 'lib'))
 require 'FitAgent/scenarios'
 require 'FitAgent/scoring'
 require 'FitAgent/runner'
+require 'FitAgent/evolve'
+require 'FitAgent/agent_chat'
+require 'FitAgent/proposer'
 
 Workflow.directory = Scout.var.jobs.find(:lib)
 module FitAgent
   extend Workflow
+
+  # ---- target selection --------------------------------------------------
+  # Which workflow the harness fits is DATA (FitAgent::TargetSpec): a config
+  # file naming the target checkout, its tools and default message rules.
+  # The repo-level DEFAULT below names the shipped example — that is a
+  # repository choice, not a lib/ one (nothing under lib/ names any target).
+  DEFAULT_TARGET = File.join(FITAGENT_ROOT, 'examples/computeruse-patch/target.yaml')
+
+  # Load the TargetSpec for a task input value (nil => repo default).
+  # Singleton: task blocks are instance_exec'd on a Step, so callers must
+  # qualify it as FitAgent.load_target.
+  def self.load_target(path = nil)
+    TargetSpec.load(path || DEFAULT_TARGET)
+  end
 
   input :agents, :path, 'Path to agent definitions', Scout.agents.Test
   input :use_case, :path, 'Path to use case dir', Scout.use_case.Test
@@ -20,6 +37,9 @@ module FitAgent
   input :repo, :path, 'Optional target repository to stage inside the sandbox (copied or linked per repo_mode)', nil
   input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live)', 'copy'
   input :exclude, :array, 'Path patterns to exclude when staging :repo in copy mode', ['var', '.git', 'tmp']
+  # DEPRECATED (fit-era): superseded by the catalogue/run_arms/score/fit task
+  # chain, which stages per-arm worktrees and scores deterministically; kept
+  # for compatibility with existing job references.
   task :use_case => :text do |agents,use_case,endpoint,main_agent,repo,repo_mode,exclude|
 
     # Prepare sandbox with use case
@@ -95,8 +115,9 @@ module FitAgent
     # FitAgent always ships MiniTools into the sandbox: the agent under test
     # gets a working set of execution primitives (sh, read, write, list) no
     # matter which checkout the run was started from. Heavyweight tool
-    # workflows (ComputerUse etc.) are often unavailable from inside the
-    # sandbox (checkout layout, missing repo, offline autoinstall).
+    # workflows (the configured target workflow etc.) are often unavailable
+    # from inside the sandbox (checkout layout, missing repo, offline
+    # autoinstall).
     introduced = ['MiniTools']
     agents = Path.setup(agents.to_s)
     agents.glob("**/start_chat").each do |f|
@@ -169,6 +190,8 @@ module FitAgent
   input :experiment, :string, "Experiment tag recorded in the report header for cross-repo bookkeeping", "Default"
   input :endpoint, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)', :qwen
   extension :md
+  # DEPRECATED (fit-era): superseded by the deterministic Scoring.score_scenario
+  # rubric path (score task); kept for compatibility with existing job references.
   task :analyze => :text do |agents,use_case,main_agent,repo,repo_mode,exclude,use_case_job,instructions,experiment,endpoint|
     use_case = dependencies.first
     main_chat = use_case.file('sandbox/main.chat')
@@ -246,6 +269,8 @@ rationale: <one line>
   input :repo, :path, 'Target repository holding arms/<experiment>.yaml and receiving results/<experiment>/', 'sandbox/demo_repo'
   input :repo_mode, :select, 'How to stage each arm repo', 'copy'
   input :endpoint, :select, 'Default endpoint for arms that do not define one', :qwen
+  # DEPRECATED (fit-era): superseded by the run_arms task (per-arm scenario
+  # worktrees + scores.tsv/json); kept for compatibility with existing job references.
   task :compare => :tsv do |arms,experiment,repo,repo_mode,endpoint|
     repo = Path.setup(repo.to_s).find
     arms_file = repo['arms'][experiment + '.yaml']
@@ -443,7 +468,13 @@ rationale: <one line>
   # manifest.json digest. Pure generator (seeded), no inference, no endpoint.
   input :scenario_set, :path, 'Directory to materialize the scenario set into', 'scenarios'
   input :ids, :array, 'Scenario ids to materialize; defaults to the whole catalogue', []
-  task :catalogue => :json do |scenario_set,ids|
+  input :target, :path, 'Target config (FitAgent::TargetSpec file) whose catalogue is materialized', DEFAULT_TARGET
+  task :catalogue => :json do |scenario_set,ids,target|
+    # Materialize THROUGH the selected target: its catalogue is registered
+    # (replacing any previously loaded one) and its default message rules
+    # become the define() fallbacks. Deprecated use_case/analyze/compare
+    # resolve through the same default target.
+    FitAgent::Scenarios.load(FitAgent.load_target(target))
     # return the Hash itself: the :json result type serializes once; returning
     # a pre-encoded string would double-encode the job output.
     FitAgent::Scenarios.materialize(scenario_set, ids: ids)
@@ -536,8 +567,56 @@ rationale: <one line>
   input :scenarios_dir, :path, 'Materialized scenario set (catalogue output)', 'scenarios'
   input :arms_dir, :path, 'Directory holding <arm>/Agent/<agent>/ override dirs', 'arms'
   input :agent, :string, 'Agent under test (name under Agent/)', 'FitMain'
-  task :run_arms => :json do |experiment,scenarios_dir,arms_dir,agent|
+  input :target, :path, 'Target config (FitAgent::TargetSpec file)', DEFAULT_TARGET
+  task :run_arms => :json do |experiment,scenarios_dir,arms_dir,agent,target|
     FitAgent::Runner.run_arms(experiment, scenarios_dir, arms_dir, agent,
                               out_dir: File.join(Dir.pwd, 'results'))
+  end
+
+  # The live improvement loop entry point (research/07 §2): propose a new
+  # start_chat, stage it as candidates/<gen>, run baseline + best-so-far +
+  # candidate over the scenario set, score deterministically, stop on
+  # all-pass / no-op / regression / budget. The proposal itself is produced
+  # by the default-endpoint proposer; the agent-under-test turn is the live
+  # agent chat. No endpoint input anywhere: every inference rides the
+  # configured default by omission.
+  input :experiment, :string, 'Experiment name (results dir component)', 'default'
+  input :scenarios_dir, :path, 'Materialized scenario set (catalogue output)', 'scenarios'
+  input :arms_dir, :path, 'Directory holding <arm>/Agent/<agent>/ override dirs', 'arms'
+  input :agent, :string, 'Agent under test (name under Agent/)', 'FitMain'
+  input :generations, :integer, 'Generation budget for the loop', 3
+  input :proposer, :string, 'Proposer: default (live model) or stub (deterministic, for tests)', 'default'
+  input :target, :path, 'Target config (FitAgent::TargetSpec file)', DEFAULT_TARGET
+  task :fit => :json do |experiment,scenarios_dir,arms_dir,agent,generations,proposer,target|
+    fit_target = FitAgent.load_target(target)
+    proposer_obj = case proposer.to_s
+                   when 'stub' then FitAgent::Evolve::StubProposer.new
+                   else FitAgent::DefaultProposer.new
+                   end
+    history = FitAgent::Evolve.evolve_loop(experiment, scenarios_dir, arms_dir, agent,
+                                           proposer_obj,
+                                           agent_factory: ->(arm) {
+                                             if proposer.to_s == 'stub'
+                                               FitAgent::Runner::StubAgent.new
+                                             else
+                                               FitAgent::LiveAgentChat.new(target: fit_target,
+                                                                           agent_dir: File.join(arms_dir.to_s, arm.to_s))
+                                             end
+                                           },
+                                           budget: generations,
+                                           out_dir: File.join(Dir.pwd, 'results'))
+    raise ScoutException, 'fit: the loop produced no valid candidate' if Array(history).empty?
+
+    stopped = FitAgent::Evolve.stop?(history, budget: generations)
+    best = FitAgent::Evolve.best_candidate(history)
+    raise ScoutException, 'fit: no valid candidate survived the loop' if best.nil?
+
+    winner = { 'experiment' => experiment, 'agent' => agent,
+               'digest' => history.select { |h| h['candidate'] == best }.last['digest'],
+               'candidate' => best, 'stop_reason' => stopped,
+               'generations' => history.length }
+    Open.write(File.join(Dir.pwd, 'results', experiment.to_s, 'winner.json'),
+               JSON.pretty_generate(winner) + "\n")
+    winner
   end
 end

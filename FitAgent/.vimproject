@@ -2,16 +2,16 @@ FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
  workflow.rb
  README.md
  chats=chats filter="*"{
+  SWE-example
+  SWE-fit
+  SWE-fit.prepare
+  agent_meta
+  community-agents
+  cortex
   documentation
   fitness
-  SWE-fit.prepare
-  SWE-fit
-
-  community-agents
-
-  cortex
-
   harness_investigation
+  harness_investigation.analyze
  }
  lib=lib {
  }

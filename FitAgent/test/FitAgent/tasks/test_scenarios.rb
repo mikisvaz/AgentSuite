@@ -18,7 +18,7 @@ class TestScenarios < Test::Unit::TestCase
   def test_materialize_all_scenarios
     manifest = FitAgent::Scenarios.materialize(@set)
     ids = manifest['scenarios'].map { |s| s['id'] }
-    assert_equal %w[E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08], ids
+    assert_equal %w[C01 C02 E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08], ids
     assert manifest['set_digest'].is_a?(String) && manifest['set_digest'].length == 32
     assert File.file?(@set['manifest.json'].find)
     ids.each do |id|

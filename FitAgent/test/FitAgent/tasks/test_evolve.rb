@@ -25,6 +25,27 @@ class TestEvolve < Test::Unit::TestCase
 
   # ---- stop rules ------------------------------------------------------------
 
+  # Unit B verdict-2: out_dir is required. The loop used to default to
+  # Dir.pwd/results and silently write wherever the caller stood; passing no
+  # out_dir (or a blank one) must now raise before any file is touched.
+  def test_evolve_loop_requires_explicit_out_dir
+    e = assert_raise(ArgumentError) do
+      FitAgent::Evolve.evolve_loop('noout', @base['scenarios'].find, @base['arms'].find,
+                                   'FitMain', FitAgent::Evolve::StubProposer.new)
+    end
+    assert_match(/out_dir is required/, e.message)
+
+    e2 = assert_raise(ArgumentError) do
+      FitAgent::Evolve.evolve_loop('blankout', @base['scenarios'].find, @base['arms'].find,
+                                   'FitMain', FitAgent::Evolve::StubProposer.new,
+                                   out_dir: '   ')
+    end
+    assert_match(/out_dir is required/, e2.message)
+
+    # and nothing was written anywhere near the CWD
+    refute File.exist?(File.join(Dir.pwd, 'results', 'noout'))
+  end
+
   def test_stop_rules_table
     base = { 'generation' => 1, 'candidate' => 'candidates/1', 'digest' => 'd1',
              'score' => 0.5, 'pass_all' => false, 'verdicts' => {} }
@@ -125,6 +146,35 @@ class TestEvolve < Test::Unit::TestCase
     assert allpass.include?('All scenarios PASS'), allpass
   end
 
+  # The live run results/patch-mini-1 died at generation 1 because the model
+  # emitted tool descriptions instead of spec lines; the prompt must now pin
+  # the exact grammar with valid examples and the empty-array escape hatch.
+  def test_propose_prompt_contains_tools_grammar_and_examples
+    prompt = FitAgent::Evolve.propose_prompt('exp', [], 'r')
+    grammar = 'Workflow [task [input|name=value|noinputs ...]]'
+    assert prompt.include?(grammar), "prompt must quote the exact grammar:\n#{prompt}"
+    assert prompt.include?('ComputerUse patch'), prompt
+    assert prompt.include?('ScoutCoder help_workflow'), prompt
+    assert prompt.include?('Baking cake name=chocolate'), prompt
+    assert prompt.include?('MiniTools sum noinputs'), prompt
+    # spec lines, not descriptions
+    assert prompt.include?('never a description'), prompt
+    # empty tools is valid and means keep defaults
+    assert prompt.include?('tools: [] is valid and means: keep the default tooling.'), prompt
+    # every example the prompt teaches must itself satisfy the validator
+    %w[ComputerUse\ patch ScoutCoder\ help_workflow Baking\ cake\ name=chocolate
+       MiniTools\ sum\ noinputs].each do |spec|
+      assert_equal [], FitAgent::Evolve.tool_spec_errors(spec, 0),
+                   "prompt example #{spec.inspect} must validate"
+    end
+    # grammar block is present in both the first-generation and the
+    # failing-scenarios shapes (deterministic string building)
+    failing = FitAgent::Evolve.propose_prompt('exp', [
+      { 'arm' => 'a', 'scenario' => 'F01', 'verdict' => 'FAIL', 'score' => 0.0, 'failures' => ['x'] }
+    ], 'r')
+    assert failing.include?(grammar), failing
+  end
+
   # ---- loop ------------------------------------------------------------------
 
   def test_loop_runs_generations_and_records_evolution_json
@@ -155,6 +205,11 @@ class TestEvolve < Test::Unit::TestCase
     assert_equal 'evo', evo['experiment']
     assert_equal 2, evo['history'].length
     assert_equal 'all_pass', evo['stopped']
+    # every generation ran baseline + best-so-far + new candidate
+    assert_equal ['baseline', 'candidates/1'], history.first['arms_run']
+    assert_equal ['baseline', 'candidates/1', 'candidates/2'], history.last['arms_run']
+    assert_equal 1.0, history.last['comparison']['candidates/2']['score']
+    assert_equal false, history.first['comparison']['candidates/1']['pass_all']
     # candidates staged under candidates/<gen>
     assert File.file?(@base['arms']['candidates']['1']['Agent']['FitMain']['start_chat'].find)
     assert File.file?(@base['arms']['candidates']['2']['Agent']['FitMain']['start_chat'].find)

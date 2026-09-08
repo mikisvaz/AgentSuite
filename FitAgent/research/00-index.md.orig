@@ -20,7 +20,6 @@ repository `research/` tier (per the persistence ladder).
 | [08](08-live-patch-probe-matrix.md) | Live patch probe matrix | validated (14 scenarios executed against live ComputerUse patch; reproducible via tmp/patch_probes/run_all.sh) |
 | [09](09-implementation-report.md) | Implementation report (loop built) | validated (46 tests / 360 assertions green incl. live e2e) + independently reviewed (Critic cold-process PASS) |
 | [10](10-refactor-round.md) | Refactor round record (execution layer unified; library/task cleanup) | validated (golden replay + byte-identical replay diff + gated live smoke; suite 74/512/3 green; paths on disk re-verified this turn) |
-| [11](11-computeruse-decoupling.md) | ComputerUse decoupling round record (target became a parameter; example moved to examples/) | validated (lib/ gate empty; frozen digests equal before/after; dummy second target; one sanctioned live smoke F01 PASS/1.0; suite 77/530/3 green) |
 
 ## Investigations conducted (chronological)
 

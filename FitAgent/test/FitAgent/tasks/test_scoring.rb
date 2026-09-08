@@ -93,14 +93,19 @@ class TestScoring < Test::Unit::TestCase
   def test_error_scenario_stale_context_passes_when_rejected
     materialize ['E01']
     chat = File.join(@base, 'main.chat')
-    write_chat(chat, [{ 'name' => 'patch', 'arguments' => { 'patch' => '...' }, 'id' => 'c1' } =>
-                        { 'exit_status' => 1, 'applied' => false, 'used_strip' => '',
-                          'suggestion' => 'Could not auto-detect -p.' }])
 
+    # rubric v1.1: E01 expects applied=false + the FAILED marker in tool
+    # output (GNU patch exit code surfaces as -1 through the sandboxed CMD
+    # layer, so exit_status equality was dropped from the frozen rubric)
+    write_chat(chat, [{ 'name' => 'patch', 'arguments' => { 'patch' => '...' }, 'id' => 'c1' } =>
+                        { 'applied' => false, 'used_strip' => nil, 'exit_status' => -1,
+                          'tried_strips' => [{ 'strip' => 1, 'stderr' => 'Hunk #1 FAILED',
+                                               'exit_status' => -1 }],
+                          'suggestion' => 'Could not auto-detect -p.' }])
     result = FitAgent::Scoring.score_scenario(@set['E01']['work'].find, rubric_for('E01'), chat)
     assert_equal 'PASS', result['verdict']
     assert_equal false, result['message']['expect']['applied']['got']
-    assert_equal 1, result['message']['expect']['exit_status']['got']
+    assert_equal true, result['message']['output_contains']
   end
 
   def test_error_scenario_ambiguous_output_contains

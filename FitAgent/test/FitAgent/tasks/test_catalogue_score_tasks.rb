@@ -24,10 +24,10 @@ class TestCatalogueScoreTasks < Test::Unit::TestCase
     job.produce
     assert job.done?
     manifest = JSON.parse(Open.read(job.path))
-    assert_equal 'patch-v1', manifest['version']
+    assert_equal 'patch-v2', manifest['version']
     assert manifest['set_digest']
     ids = manifest['scenarios'].map { |s| s['id'] }
-    assert_equal %w[E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08], ids.sort
+    assert_equal %w[C01 C02 E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08], ids.sort
     ids.each do |id|
       sc = @base['scenarios'][id]
       assert sc['rubric.yaml'].exists?, "no rubric for #{id}"
@@ -102,12 +102,13 @@ class TestCatalogueScoreTasks < Test::Unit::TestCase
     tsv = TSV_setup_from(job)
     # E05 (add-file) and E05b (add-overwrites) expect file CREATION; the fake
     # run creates them from expected/, so all functional rows should match.
-    assert_equal [], tsv.keys - %w[E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08]
-    # E01/E02 rubrics expect a CONTROLLED FAILURE (applied=false / Ambiguous
-    # output); the synthetic chat here is success-shaped, so only the
-    # success-shaped scenarios must PASS.
-    success_ids = %w[E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08]
-    fail_ids = %w[E01 E02]
+    assert_equal [], tsv.keys - %w[C01 C02 E01 E02 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08]
+    # E01/E02/C02 rubrics expect a CONTROLLED FAILURE (applied=false /
+    # Ambiguous output); the synthetic chat here is success-shaped, so only
+    # the success-shaped scenarios must PASS. C01 (fragment material) accepts
+    # a success-shaped chat and a perfect tree -> PASS.
+    success_ids = %w[C01 E03 E04 E05 E05b E06 F01 F02 F03 F04 F05 F06 F07 F08]
+    fail_ids = %w[E01 E02 C02]
     success_ids.each do |id|
       assert_equal ['PASS'], tsv[id].first(1), "scenario #{id}: #{tsv[id].inspect}"
     end

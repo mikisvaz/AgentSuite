@@ -1,4 +1,5 @@
 require 'scout-ai'
+require 'FitAgent/scenarios'
 require 'FitAgent/runner'
 require 'digest/sha1'
 
@@ -73,10 +74,40 @@ module FitAgent
           end
         end
         lines << ''
+        lines.concat(tools_grammar_lines)
+        lines << ''
         lines << 'Rewrite the agent instructions so the failing scenarios pass while'
         lines << 'passing scenarios stay passing. Output the proposal as YAML with the'
         lines << 'keys instructions (string) and tools (array of tool spec lines).'
         lines.join("\n") + "\n"
+      end
+
+      # Tools grammar block appended to every proposal prompt. The live run
+      # results/patch-mini-1 died because the model emitted tool descriptions
+      # / Hashes instead of spec lines, so the grammar, concrete valid
+      # examples, the "spec lines, not descriptions" note and the "empty is
+      # valid" escape hatch are all pinned here explicitly.
+# The concrete example spec line quoted in the grammar block: the
+# primary tool of the CONFIGURED target (data from its config file,
+# never a workflow name hardcoded here), falling back to a generic
+# placeholder that still satisfies the grammar.
+def default_tool_example
+  Scenarios.loaded_target&.primary_tool || 'Workflow task'
+end
+
+def tools_grammar_lines(example = default_tool_example)
+        [
+          'Tools grammar (strict; every tools entry must match it):',
+          '  Workflow [task [input|name=value|noinputs ...]]',
+          'Each tools entry is ONE spec line following that grammar — it is a',
+          'workflow/task/input reference, never a description, signature,',
+          'explanation or structured object. Valid examples:',
+          "  #{example}",
+          '  ScoutCoder help_workflow',
+          '  Baking cake name=chocolate',
+          '  MiniTools sum noinputs',
+          'tools: [] is valid and means: keep the default tooling.'
+        ]
       end
 
       def summarize_rubric(rubric_summary)
@@ -180,8 +211,10 @@ module FitAgent
 
         gens = history.map { |h| h['generation'].to_i }
         last = history.last
+        # rule 1 budget: generation count reached the budget
         return 'budget_exhausted' if gens.max.to_i >= budget
 
+        # rule 2 all_pass: latest generation passes every scenario
         return 'all_pass' if last['pass_all']
 
         # two consecutive no-op proposals (identical manifest digests)
@@ -211,6 +244,9 @@ module FitAgent
       #   agent_factory factory for the agent-turn object (Runner contract;
       #                 default StubAgent — deterministic, no model)
       #   budget        max generations
+      #   out_dir       results root (REQUIRED since Unit B: the loop used to
+      #                 default to Dir.pwd/results and silently write wherever
+      #                 the caller happened to stand; now it raises instead)
       #
       # Writes results/<experiment>/evolution.json with per-generation
       # records (candidate manifest digest, scores, stop-reason evaluation)
@@ -223,16 +259,15 @@ module FitAgent
         budget = budget.to_i
         raise ArgumentError, 'budget must be >= 1' if budget < 1
         raise ArgumentError, "proposer #{proposer.inspect} must respond to call" unless proposer.respond_to?(:call)
+        raise ArgumentError, 'out_dir is required (was: silent Dir.pwd/results default)' if out_dir.nil? || out_dir.to_s.strip.empty?
 
-        out_root = out_dir || File.join(Dir.pwd, 'results')
+        out_root = out_dir
         evolution_path = File.join(out_root.to_s, experiment.to_s, 'evolution.json')
 
         history = []
         gen = 1
-        prompt_seed = nil
         while gen <= budget
           prompt = propose_prompt(experiment, flat_scores(history), rubric_summary_for(scenarios_dir))
-          prompt_seed = prompt if gen == 1
           raw = proposer.call(experiment, prompt, generation: gen)
           proposal, attempts = validate_with_repairs(raw, proposer)
           if proposal.nil?
@@ -243,10 +278,21 @@ module FitAgent
           candidate = "candidates/#{gen}"
           override = Runner.write_override(File.join(arms_dir.to_s, candidate), agent,
                                            proposal['instructions'], proposal['tools'])
-          run = Runner.run_arm(experiment, scenarios_dir, candidate,
-                               arms_dir, agent, agent_factory.call(candidate),
-                               out_dir: out_root)
+          # arms for this generation: baseline + best-so-far + new candidate
+          # (run_arms prepends baseline itself; deterministic scoring means
+          # re-running baseline/best each generation yields identical rows,
+          # keeping the comparison inside every generation record fresh).
+          best = best_candidate(history)
+          arms = ([best, candidate].compact)
+          runs = Runner.run_arms(experiment, scenarios_dir, arms_dir, agent,
+                                 agent_factory, arms: arms, out_dir: out_root)
+          run = runs[candidate]
           record = generation_record(experiment, gen, candidate, agent, override, run, attempts)
+          record['arms_run'] = [Runner::BASELINE] + arms
+          record['comparison'] = runs.keys.each_with_object({}) do |arm, h|
+            h[arm] = { 'score' => mean_score(runs[arm]['results']),
+                       'pass_all' => runs[arm]['results'].values.all? { |r| r['verdict'] == 'PASS' } }
+          end
           history << record
 
           Open.write(evolution_path, JSON.pretty_generate('experiment' => experiment,
@@ -276,6 +322,13 @@ module FitAgent
               'failures' => Array(h['failures'][scenario]) }
           end
         end
+      end
+
+      # Best non-dead generation so far (highest mean score; ties -> earliest).
+      def best_candidate(history)
+        alive = Array(history).reject { |h| h['dead'] }
+        return nil if alive.empty?
+        alive.max_by { |h| h['score'].to_f }['candidate']
       end
 
       def rubric_summary_for(scenarios_dir)
@@ -333,10 +386,12 @@ module FitAgent
     # afterwards (so the no-op-twice stop rule triggers deterministically).
     # The live default-endpoint proposer plugs in with the same interface.
     class StubProposer
-      def initialize(instructions: 'Apply the scenario patch exactly as given.',
-                     tools: ['ComputerUse patch'])
-        @instructions = instructions
-        @tools = Array(tools)
+def initialize(instructions: 'Apply the scenario patch exactly as given.',
+               tools: nil)
+  @instructions = instructions
+  # tools: nil means "derive from the configured target" (its primary
+  # tool spec); an explicit array always wins.
+  @tools = tools.nil? ? [Evolve.default_tool_example] : Array(tools)
         @repairs = 0
       end
 

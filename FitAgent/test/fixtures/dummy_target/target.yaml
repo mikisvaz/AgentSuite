@@ -1,0 +1,25 @@
+# Minimal dummy SECOND target: proves the harness core needs no lib/ edit
+# to fit a different workflow. Nothing here references the example target;
+# the tiny workflow below is self-contained.
+#
+#   name           computeruse-patch example uses a real checkout; this one
+#                  names a fake workflow "Dummy" whose checkout is created
+#                  by the test itself (workflow_dir is env-expanded).
+#   workflow_dir   points at this directory; the child requires
+#                  <workflow_dir>/workflow.rb (test writes a tiny one).
+#   tools          the tool spec handed to the agent grammar.
+#   message_rules  defaults merged into every scenario define() call; the
+#                  dummy scenarios declare their own, so the merged rules
+#                  below are also exercised.
+name: dummy
+workflow_dir: ${FITAGENT_DUMMY_DIR}
+catalogue: catalogue.rb
+agent: Worker
+tools:
+  - Dummy echo
+message_rules:
+  tool: echo
+  min_calls: 1
+  max_calls: 2
+  expect:
+    applied: true

@@ -1,5 +1,6 @@
 require 'scout-ai'
 require 'FitAgent/scoring'
+require 'FitAgent/reporting'
 require 'fileutils'
 require 'json'
 require 'yaml'
@@ -184,16 +185,13 @@ module FitAgent
           runs[id] = { 'chat' => chat, 'work' => File.join(dir, 'work') }
         end
 
-        FileUtils.mkdir_p arm_out
-        Open.write(File.join(arm_out, 'scores.json'), JSON.pretty_generate(results) + "\n")
-        Open.write(File.join(arm_out, 'arms.json'),
-                   JSON.pretty_generate('experiment' => experiment, 'arm' => arm,
-                                         'agent' => agent,
-                                         'override' => has_override ? override_dir : nil,
-                                         'scenarios' => results.keys.sort,
-                                         'runs' => runs) + "\n")
-        tsv = scores_tsv(results)
-        Open.write(File.join(arm_out, 'scores.tsv'), tsv)
+        # Reporting lives in FitAgent::Reporting (Unit B split): policy here,
+        # output-file projection there. Bytes written are identical to the
+        # pre-split inline writes (replay-proven).
+        tsv = Reporting.write_arm_outputs(arm_out,
+                                          experiment: experiment, arm: arm, agent: agent,
+                                          override: has_override ? override_dir : nil,
+                                          results: results, runs: runs)
         { 'arm' => arm, 'results' => results, 'scores_tsv' => tsv, 'dir' => arm_out }
       end
 
@@ -226,18 +224,11 @@ module FitAgent
         end.map { |d| File.basename(d) }.sort
       end
 
+      # scores_tsv moved to FitAgent::Reporting.scores_tsv (Unit B verdict-1
+      # policy/reporting split). Kept as a thin forwarder so external callers
+      # and tests addressing Runner.scores_tsv keep working.
       def scores_tsv(results)
-        tsv = TSV.setup({}, key: 'scenario', type: :list)
-        tsv.fields = %w[verdict score functional_ok message_ok failures chat]
-        results.keys.sort.each do |id|
-          r = results[id]
-          tsv[id] = [r['verdict'], r['score'].to_s,
-                     r['functional']['files'].values.all? { |v| v['ok'] } ? 'true' : 'false',
-                     r['message']['count_ok'].to_s,
-                     r['failures'].join(';'),
-                     r['evidence']['chat']]
-        end
-        tsv.to_s
+        Reporting.scores_tsv(results)
       end
     end
 

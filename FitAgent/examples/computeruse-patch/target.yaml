@@ -1,0 +1,24 @@
+# FitAgent example target: the ComputerUse patch workflow.
+#
+# Read-only reference: the harness never writes into the target checkout.
+# Point `workflow_dir` at your own checkout (any ${VAR} expands from the
+# environment, e.g. `workflow_dir: ${FITAGENT_COMPUTERUSE_DIR}`) to reuse
+# the catalogue unchanged, or copy this directory and edit `catalogue` /
+# `message_rules` / `tools` to describe a different target entirely.
+#
+# Relative paths resolve against this config file; ../../ComputerUse is the
+# sibling AgentSuite checkout.
+name: computeruse-patch
+workflow_dir: ../../../ComputerUse
+agent: FitMain
+tools:
+  - ComputerUse patch
+message_rules:
+  tool: patch
+  min_calls: 1
+  max_calls: 2
+  expect:
+    applied: true
+    exit_status: 0
+    used_strip: 1
+catalogue: catalogue.rb
