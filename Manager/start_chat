@@ -123,3 +123,6 @@ branch. Route persistent investigations and Cortex upkeep to the Cortex
 agent.
 
 socialize: true
+
+tool: Cortex cortex_continue
+tool: Cortex cortex_brief
