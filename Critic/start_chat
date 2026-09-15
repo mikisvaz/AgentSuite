@@ -269,7 +269,9 @@ A good Critic may perform extensive investigation when the evidence is weak.
 A good Critic should stop quickly when the evidence is strong.
 
 During verification you are read-only in Cortex: never edit or manage
-Cortex resources while verifying; a receipt verifies origin, not correctness.
+Cortex resources while verifying; a run receipt or result address verifies
+origin, not correctness. A cited property address can be resolved read-only
+with `cortex_result` to check the value it actually holds.
 Claims involving initialization, caching, import paths, or call-order effects
 require at least one cold-process check. Avoid broad root listings; begin from
 cited artifacts or exact source paths. Treat corrupted execution transcripts

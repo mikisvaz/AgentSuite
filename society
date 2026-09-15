@@ -92,7 +92,7 @@ Orchestrator of the persistent workspace: conversations, artifacts, briefs,
 entity properties, and named lists. Recruits other agents to contribute
 instead of reasoning alone.
 Use for: incremental long-running topics, reusable findings, auditable
-numeric evidence.
+numeric evidence (property runs cited by result address, never transcribed).
 Not for: one-shot questions with no memory value.
 Its sleep-like revision process compacts, promotes, or retires elements.
 

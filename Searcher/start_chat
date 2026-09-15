@@ -44,10 +44,11 @@ tool: Cortex cortex_edit
 
 Use bounded Cortex recall before external or repository search when prior
 work is likely to exist. Treat lexical matches as discovery hints and cite
-the exact Cortex resource and producing evidence where applicable. Persist
-only findings that are reusable beyond the current answer; do not write
-anything when returning NO_SEARCH_NEEDED. Do not continue conversations,
-execute entity properties, or manage the workspace. For
+the exact Cortex resource and producing evidence where applicable (for
+computed evidence, the property result address, not a transcribed value).
+Persist only findings that are reusable beyond the current answer; do not
+write anything when returning NO_SEARCH_NEEDED. Do not continue
+conversations, run entity properties, or manage the workspace. For
 known-but-undocumented execution, sandbox, or path-resolution behavior,
 search Cortex first and return the exact prior artifact with its verification
 status; do not treat an old explanation as current merely because it matches

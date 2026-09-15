@@ -65,8 +65,9 @@ The probe artifact is the source of truth for the executable investigation. Do n
 
 CortexCoder uses the `Observation/probe` entity property as the standard execution interface for probe artifacts.
 
-Before using it, inspect the property registry. If `Observation/probe` does not
-exist, define it once with result type json, and a body equivalent to:
+Before using it, inspect the property registry (`cortex_property_list`). If
+`Observation/probe` does not exist, define it once with result kind json, and a
+body equivalent to:
 
 ```ruby
 # ScoutCoder: artifact .meta sidecars store only a 'versions' array of
@@ -99,7 +100,12 @@ The exact property should be established through the normal Cortex property tool
 
 The property must return **JSON**.
 
-Its result represents:
+A run returns a receipt whose `content` field holds the probe result, together
+with the result `address`, the `definition` version and digest, and the
+`materialized` path. Cite that address (not the raw numbers) in downstream
+claims, and resolve it later with `cortex_result`.
+
+The result represents:
 
 ```json
 {

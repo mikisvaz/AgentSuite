@@ -40,7 +40,10 @@ relevant Cortex state. Choose the narrowest useful Cortex operation:
 - when the exact resource is known, use a bounded `cortex_read`;
 - to locate material by content, use a narrow `cortex_search`;
 - when orientation is needed, use paginated `cortex_list`, then inspect only
-  relevant resources.
+  relevant resources;
+- for computed evidence about an entity, check existing materialized results
+  (`cortex_list type=properties`, `cortex_activity`) and resolve a known
+  address with `cortex_result` before recomputing.
 
 Use bounded message ranges and line pages rather than loading whole resources.
 Cortex search hits and mentions are discovery hints, not evidence of relevance
@@ -127,10 +130,13 @@ stale citations.
 When a claim can be produced by a Cortex executable entity property, prefer
 that computation over manual transcription. Discover definitions with
 `cortex_property_list`, inspect them before relying on them, and use
-`cortex_property_validate` before activating a new or changed definition.
-Use a named Cortex list for repeated or multi-entity work, then execute with
-`cortex_entity_property`. Cite the returned `property_job`,
-`definition_version`, and `definition_digest` as the evidence reference.
+`cortex_property_validate` before activating a new or changed definition. Use a
+named Cortex list for repeated or multi-entity work, then execute with
+`cortex_property_run`. Cite the returned result `address`, its `definition`
+version and digest, and the `materialized` path as the evidence reference, and
+resolve any address later with `cortex_result` instead of transcribing its
+contents. Definition changes move result addresses, so re-run a property rather
+than trusting a stale address.
 
 Entity property definitions are trusted executable code. Defining, updating,
 or removing one is a code change, not an ordinary workspace note, and must
@@ -211,7 +217,8 @@ restrictions.
 ## 8. Cortex and the persistence ladder
 
 Use Cortex through its tools. Do not directly modify `var/cortex`, `.meta`,
-`.history`, or the execution registry. Address resources by namespace and
+`.history`, the retired properties registry, or the `.info` sidecars and
+materialized results under `var/jobs`. Address resources by namespace and
 relative logical name; never use absolute paths, `~`, or `..`. Let Cortex
 resolve path maps, and heed reported map provenance, ambiguity, and read-only
 status before writing or reorganizing anything.
@@ -224,8 +231,10 @@ Cortex resources have distinct purposes:
 - lists are named entity sets managed with list tools;
 - entities contain executable property definitions managed only by property
   tools;
-- properties are engine-written execution records and evidence references,
-  not files for manual editing.
+- properties hold the retired execution registry, kept as read-only history;
+  current property evidence is the materialized result tree under `var/jobs`,
+  addressed by result `address` and read through `cortex_result`, never by
+  editing files.
 
 Use this operating sequence, skipping steps whose answer is already known:
 
@@ -236,7 +245,9 @@ Use this operating sequence, skipping steps whose answer is already known:
    specialists with `cortex_brief`.
 5. Consolidate reusable conclusions with `cortex_write`; use `cortex_edit`
    for a targeted correction rather than resending a whole artifact.
-6. Use list and property tools for structured executable evidence.
+6. Compute evidence with `cortex_property_run` (lists by reference), and
+   resolve existing results by `address` with `cortex_result` instead of
+   recomputing or transcribing them.
 7. Use rename, move, or remove only for deliberate workspace management.
    Removal is irreversible at the workspace interface.
 

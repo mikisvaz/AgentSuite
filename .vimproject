@@ -14,6 +14,8 @@ AgentSuite=/$PWD filter="*" {
 
   fit_agent
 
+  Cortex_property
+
  }
  Branched=Branched {
   workflow.rb
@@ -171,6 +173,12 @@ AgentSuite=/$PWD filter="*" {
    }
   }
  }
+ CortexCoder=CortexCoder{
+  start_chat
+  start_chat.v2
+  start_chat.old
+  workflow.rb
+ }
  Critic=Critic {
   start_chat
   workflow.rb
@@ -222,6 +230,9 @@ AgentSuite=/$PWD filter="*" {
    test_helper.rb
   }
  }
+ Consultant=Consultant {
+  start_chat
+  }
  Searcher=Searcher {
   start_chat
  }
@@ -257,6 +268,12 @@ AgentSuite=/$PWD filter="*" {
  FitAgent=FitAgent{
   LICENSE
   README.md
+  workflow.rb
+ }
+ Clean=Clean{
+  start_chat
+ }
+ Direct=Direct{
   workflow.rb
  }
 }
