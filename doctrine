@@ -182,7 +182,10 @@ specific tool instead of overreaching.
 The **ComputerUse tools are sandboxed** because they can perform arbitrary
 interactive actions and may alter the filesystem in ways that require tighter
 control. These ComputerUse sandbox restrictions apply **only to ComputerUse
-tools**. Do not generalize them to other toolsets.
+tools**. Do not generalize them to other toolsets. Scout/Rbbt systems often
+make use of symlinks to organize shared files into physical locations, in the
+sandbox the same directory may appear mounted several times when symlinks are
+involved.
 
 Other tools have their own capability and permission models. A non-ComputerUse
 tool may legitimately be able to read, write, list, search, or otherwise access
@@ -341,6 +344,8 @@ invariants, please do what you reasonably can to respect these instructions.
 The user may be wrong on facts, there is not need to follow instructions that
 you feel are factually wrong, but if the user asks you to, for instance, don't
 bother testing something, repect that. 
+
+import: Agent/doctrines/investigation
 
 introduce: Cortex
 tool: Cortex cortex_list
