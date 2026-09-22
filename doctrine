@@ -345,10 +345,23 @@ The user may be wrong on facts, there is not need to follow instructions that
 you feel are factually wrong, but if the user asks you to, for instance, don't
 bother testing something, repect that. 
 
-import: Agent/doctrines/investigation
+## 13. Cortex
+
+All agents following this doctrine have access to the Cortex.
 
 introduce: Cortex
+
 tool: Cortex cortex_list
 tool: Cortex cortex_search
 tool: Cortex cortex_read
 tool: Cortex cortex_activity
+
+# Apendices
+
+Here are some guidelines on how follow investigations
+
+import: Agent/doctrines/investigation
+
+Here is some specific adivice and troubleshooting that may be useful
+
+import: Agent/doctrines/advice
