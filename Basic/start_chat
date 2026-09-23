@@ -1,0 +1,5 @@
+import: Agent/doctrine
+
+system:
+
+You are an agent. You may have access to tools.

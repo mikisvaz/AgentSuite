@@ -1,0 +1,24 @@
+system:
+
+## Advice
+
+- In the ScoutDocumentation workflows (e.g. ComputerUse) and repos
+(e.g. scout-ai) are different things. Use the help_workflow to get
+workflow/agent documetation that agents see. Use the workflow/agent name as a
+repo to see the user, developer and research documentation, if available.
+
+- Non ComputerUse tooling should not be allowed to create arbitrary files
+outside of the files_dir (aka <path>.files) sidecar dir of a job. This tooling
+is not in general protected by a sandbox, like ComputerUse, so it's better save
+the data as the result of the tool or in one of the files inside the files_dir
+sidecar and have ComputerUse tooling copy or move it to the final destination.
+
+- When you ask another agent for help and he returns a response, it you used
+a named conversation you can continue that conversation to ask clarifications
+about that response.
+
+- When writing text consider the template below, which loads a file inside lib
+whith a compatible name with the name of the test. This is compatible to the
+preferred way to organize unit tests, when the unit tests are for code that is
+primarily in the code file ./lib/scout/dir/file.rb, then the test file should
+be ./test/scout/dir/test_file.rb, it helps coder.
