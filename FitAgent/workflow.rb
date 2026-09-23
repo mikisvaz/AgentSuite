@@ -15,6 +15,7 @@ require 'FitAgent/proposer'
 Workflow.directory = Scout.var.jobs.find(:lib)
 module FitAgent
   extend Workflow
+  self.include_workflow AgentWorkflow
 
   # ---- target selection --------------------------------------------------
   # Which workflow the harness fits is DATA (FitAgent::TargetSpec): a config
@@ -619,4 +620,47 @@ rationale: <one line>
                JSON.pretty_generate(winner) + "\n")
     winner
   end
+
+  input :agent, :string, "Agent name or 'none'", nil
+  input :doctrine, :text, "Additional doctrine, incorporated as a system role message", nil
+  chat_task :agent_ask do 
+    agent_name, doctrine = self.recursive_inputs.values_at :agent, :doctrine
+    agent = nil if agent_name == 'none'
+    agent = self.agent agent_name, return_tool_calls: true
+    agent.start_chat.follow({role: :system, content: doctrine}) if doctrine
+    agent.follow self.chat.reject{|m| %w(agent system tool).include? m[:role].to_s }
+    agent
+  end
+
+  desc <<-EOF
+Evaluate the performance of an agent in a scenario based on an evaluation rubric.
+  EOF
+  dep :agent_ask
+  input :rubric, :path, 'File path to the rubric', nil, required: true
+  chat_task :evaluate_agent do
+    agent = self.agent 'FitAgent'
+    agent.workflow = nil
+    agent.user <<-EOF
+Evaluate the scenario proposed in the following messages
+    EOF
+    agent.follow self.chat
+    agent.user <<-EOF
+The rubric we want to evaluate is below
+    EOF
+    agent.file inputs[:rubric]
+    agent.user <<-EOF
+Below is the agents response
+    EOF
+    agent.follow step(:agent_ask).load
+
+    agent.user <<-EOF
+Please return your evaluation based on the agent response above.
+    EOF
+
+    agent
+  end
+
+  export_exec :evaluate_agent
+
+
 end

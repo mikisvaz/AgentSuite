@@ -1,5 +1,6 @@
 FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf *.slim *.haml" {
  workflow.rb
+ start_chat
  README.md
  chats=chats filter="*"{
   SWE-example
@@ -12,6 +13,9 @@ FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
   fitness
   harness_investigation
   harness_investigation.analyze
+
+  training
+
  }
  lib=lib {
  }

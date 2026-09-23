@@ -1,8 +1,27 @@
 AgentSuite=/$PWD filter="*" {
  LICENSE
  doctrine
+ doctrines=doctrines{
+  investigation
+  investigations=investigations{
+   code
+   biology
+   finances
+   math
+  }
+  advice
+ }
  society
  intro
+ doc=doc{
+  guidelines=guidelines{
+   README.md
+   evaluation-and-maintenance.md
+   principles.md
+   roles-and-attribution.md
+   workflow-lifecycle.md
+  }
+ }
  chats=~/chats/AgentSuite{
   new_doctrine
   first_version
@@ -52,6 +71,7 @@ AgentSuite=/$PWD filter="*" {
      filesystem.rb
      patch.rb
      playwright.rb
+     precise_edit.rb
      web.rb
     }
    }
@@ -270,7 +290,11 @@ AgentSuite=/$PWD filter="*" {
   README.md
   workflow.rb
  }
+
  Clean=Clean{
+  start_chat
+ }
+ Basic=Basic{
   start_chat
  }
  Direct=Direct{
