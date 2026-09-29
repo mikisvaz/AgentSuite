@@ -60,7 +60,7 @@ You have been asked to fulfill a user request. Elaborate a plan
     chat.follow step(:request).load.last
     chat.follow step(:search).load.last if step(:search)
     chat.follow step(:plan).load.last
-    worker_agent = options[:Planned_worker_agent] || options[:worker_agent] || 'Manager'
+    worker_agent = config :worker_agent, default: (options[:Planned_worker_agent] || options[:worker_agent] || 'Manager')
 
     agent = self.agent worker_agent, chat: chat, tooling: self.tooling 
 
