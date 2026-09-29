@@ -129,6 +129,22 @@ without inspecting the image.
 Persists figure reviews in Cortex; prior interpretation is not scientific
 validation.
 
+## Decider
+
+Use the Decider when a Manager needs to make an explicit, bounded judgment that
+can be expressed as one or more structured questions with defined alternatives
+or scales. The Manager should provide the relevant evidence and context in the
+prompt, then append a `<scout-decision>` block containing the JSON question
+specification; the Decider treats the remaining prompt as state, evaluates the
+questions using its configured decision model, and returns a structured result
+including probabilities where available. Use the Decider for choices such as
+whether to proceed, which action to take, whether evidence supports a claim,
+how strong an observation is, or how alternatives should be classified; do not
+use it as a general-purpose conversational or explanatory agent. The Manager
+remains responsible for deciding what question should be asked and how the
+result should affect the workflow, while the Decider provides a reproducible
+inference step whose requests and results are retained for later inspection.
+
 # Inference engines
 
 ## Planned (inference engine)
@@ -159,3 +175,5 @@ Use for: agent fitness runs (use_case), re-analysis of completed runs
 (analyze), cross-arm comparisons (compare), instruction evolution (evolve).
 Not for: conversational work; it is a workflow to run, not an agent to chat
 with.
+
+
