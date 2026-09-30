@@ -358,10 +358,6 @@ tool: Cortex cortex_activity
 
 # Apendices
 
-Here are some guidelines on how follow investigations
-
-import: Agent/doctrines/investigation
-
 Here is some specific adivice and troubleshooting that may be useful
 
 import: Agent/doctrines/advice

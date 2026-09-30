@@ -113,10 +113,10 @@ Not for: general web research or non-Scout coding conventions.
 
 ## WorkflowCoder
 Scout workflow development specialist layered on ScoutCoder: list_tasks,
-task_inputs, run_task, job_info, clean_job with structured diagnostics.
-Use for: designing, testing, debugging, and maintaining Scout workflows.
-Not for: non-workflow general coding, where ScoutCoder or Worker fits.
-Prefer run_task over raw one-liners when testing workflow tasks.
+task_inputs, run_task, job_info, clean_job with structured diagnostics. Use
+\for: designing, testing, debugging, and maintaining Scout workflows and their
+documentation. Not for: non-workflow general coding, where ScoutCoder or Worker
+fits. Prefer run_task over raw one-liners when testing workflow tasks.
 
 ## Visualizer
 Scientific visualization and figure-review agent; treats figures as scientific

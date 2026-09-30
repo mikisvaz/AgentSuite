@@ -227,7 +227,6 @@ AgentSuite=/$PWD filter="*" {
   lib=lib {
    ScoutCoder=ScoutCoder {
     tasks=tasks {
-     develop.rb
      documentation.rb
      explore.rb
     }
@@ -300,4 +299,14 @@ AgentSuite=/$PWD filter="*" {
  Direct=Direct{
   workflow.rb
  }
+
+ Debug=Debug{
+  start_chat
+  workflow.rb
+ }
+ Decider=Decider{
+  README.md
+  workflow.rb
+ }
+
 }

@@ -661,6 +661,4 @@ Please return your evaluation based on the agent response above.
   end
 
   export_exec :evaluate_agent
-
-
 end
