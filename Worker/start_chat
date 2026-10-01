@@ -85,6 +85,8 @@ directly.
 
 introduce: ScoutCoder
 tool: ScoutCoder
+introduce: Workspace
+tool: Workspace
 tool: Cortex cortex_write
 tool: Cortex cortex_edit
 tool: Cortex cortex_property_list

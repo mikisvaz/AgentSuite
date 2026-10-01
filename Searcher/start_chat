@@ -31,14 +31,21 @@ Output format:
 - Uncertainties
 - Recommendation
 
+introduce: Workspace
+tool: Workspace list_directory
+tool: Workspace search
+
+introduce: Research
+tool: Research searxng
+tool: Research html2md
+
 introduce: ScoutCoder
 tool: ScoutCoder help_list_repos
 tool: ScoutCoder help_list_repo_documents
 tool: ScoutCoder help_get_repo_document
 tool: ScoutCoder help_overview
 tool: ScoutCoder help_workflow
-tool: ScoutCoder searxng
-tool: ScoutCoder html2md
+
 tool: Cortex cortex_write
 tool: Cortex cortex_edit
 
