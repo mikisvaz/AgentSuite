@@ -31,32 +31,182 @@ module FitAgent
     TargetSpec.load(path || DEFAULT_TARGET)
   end
 
-  input :agents, :path, 'Path to agent definitions', Scout.agents.Test
-  input :use_case, :path, 'Path to use case dir', Scout.use_case.Test
-  input :endpoint, :select, 'Endpoint to use for both the run and the analyst', :qwen
+  #input :agents, :path, 'Path to agent definitions'
+  #input :use_case, :path, 'Path to use case dir', nil, required: true
+  #input :endpoint, :select, 'Endpoint to use for both the run and the analyst', :gglm
+  #input :main_agent, :string, 'Main agent to run', 'FitMain'
+  #input :repo, :path, 'Optional target repository to stage inside the sandbox (copied or linked per repo_mode)', nil
+  #input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live)', 'copy'
+  #input :exclude, :array, 'Path patterns to exclude when staging :repo in copy mode', ['var', '.git', 'tmp']
+  #task :use_case_old => :text do |agents,use_case,endpoint,main_agent,repo,repo_mode,exclude|
+
+  #  agents = Path.setup(agents.to_s).find if agents
+
+  #  # Accept a use_case JOB path (result file of a previous FitAgent#use_case
+  #  # run): remap to the staged use_case dir inside that job so analyze can be
+  #  # re-invoked over an existing run without re-staging from a result file.
+  #  use_case = Path.setup(use_case.to_s).find
+  #  staged = use_case.to_s.sub(/\.info$/, '') + '.files/sandbox/use_case'
+  #  use_case = staged if Open.directory?(staged) && ! Open.directory?(use_case)
+
+  #  # Stage the target repository, if any, so the agent actually works on the
+  #  # code under test instead of an empty sandbox (supports "any repository").
+  #  if repo && Open.exists?(repo)
+  #    repo = Path.setup(repo.to_s)
+  #    repo_name = File.basename(repo.to_s.sub(/\/$/,''))
+  #    target = file(repo_name)
+
+  #    case repo_mode.to_s
+  #    when 'link'
+  #      Open.ln_s(repo.realpath, target) unless Open.exists?(target)
+  #    else
+  #      if Open.directory?(repo['.git'])
+  #        CMD.cmd("git clone -q --no-hardlinks '#{repo}' #{target}")
+  #      else
+  #        CMD.cmd("rsync -a --exclude var --exclude .git --exclude tmp --exclude etc/AI '#{repo}/' #{target}/")
+  #      end
+  #      # Never let endpoint credentials travel with a staged repository copy.
+  #      Open.rm_rf target['etc/AI'].find if Open.exists?(target['etc/AI'].find)
+  #    end
+  #    sandbox = target
+  #  else
+  #    run_dir = sandbox
+  #  end
+
+  #  # Defensive: a stray FILE named sandbox (from an aborted run) would make
+  #  # mkdir_p raise EEXIST; remove it so the sandbox dir can be created.
+  #  FileUtils.rm_f(sandbox) if File.exist?(sandbox) && ! File.directory?(sandbox)
+  #  FileUtils.mkdir_p sandbox unless Open.directory?(sandbox)
+  #  Open.cp use_case, sandbox
+  #  Open.mkdir sandbox.lib unless Open.exists?(sandbox.lib)
+  #  # Local var/cache inside sandbox: with ~/.scout read-only today, Scout.var
+  #  # would otherwise resolve the ask-cache to ~/.scout/var/cache (EROFS).
+  #  # A sandbox-local var dir wins the resolution order and keeps writes inside the job.
+  #  Open.mkdir sandbox.var.cache.ask
+
+  #  # Copy endpoint definitions (etc/AI) into the sandbox so the inner agent
+  #  # resolves -e <endpoint> from its own cwd instead of a global ~/.scout.
+  #  # Hygiene: the openwebui backend does NOT resolve env: placeholders, so a
+  #  # literal env: value would 401. Instead the sandbox file materializes the
+  #  # key from SCOUT_AI_<NAME>_KEY when present; the file then contains the
+  #  # key, but it lives only in the per-run job sandbox, is never committed,
+  #  # and git-ignored patterns cover it. When the env var is absent we copy
+  #  # the repo etc/AI verbatim and warn (keeps offline/other setups working).
+  #  endpoint_etc = Path.setup('etc/AI')
+  #  if endpoint_etc.exists?
+  #    Open.mkdir sandbox.etc.AI.find
+  #    Dir.glob(File.join(endpoint_etc.find, '*')).sort.each do |ep_file|
+  #      ep_name = File.basename(ep_file.to_s)
+  #      body = Open.read(ep_file.to_s)
+  #      env_key = ENV["SCOUT_AI_#{ep_name.upcase}_KEY"]
+  #      if env_key
+  #        body = body.gsub(/^(key\s*:\s*)\S.*$/) { "#{$1}#{env_key}" }
+  #        Log.info "FitAgent: sandbox key for endpoint #{ep_name} injected from env SCOUT_AI_#{ep_name.upcase}_KEY"
+  #      else
+  #        Log.warn "FitAgent: SCOUT_AI_#{ep_name.upcase}_KEY not set; copying etc/AI/#{ep_name} verbatim into the run sandbox"
+  #      end
+  #      Open.write(sandbox.etc.AI[ep_name].find, body)
+  #    end
+  #  end
+
+  #  # Add agent directory
+  #  Open.cp agents, sandbox.Agent if agents
+
+  #  # Link the workflows referenced by the agent suite (introduce:/tool:
+  #  # entries) into the sandbox, so the inner agent resolves them locally
+  #  # instead of attempting a GitHub clone that fails offline/behind proxies.
+  #  # FitAgent always ships MiniTools into the sandbox: the agent under test
+  #  # gets a working set of execution primitives (sh, read, write, list) no
+  #  # matter which checkout the run was started from. Heavyweight tool
+  #  # workflows (the configured target workflow etc.) are often unavailable
+  #  # from inside the sandbox (checkout layout, missing repo, offline
+  #  # autoinstall).
+  #  introduced = ['MiniTools']
+  #  agents = Path.setup(agents.to_s)
+  #  agents.glob("**/start_chat").each do |f|
+  #    next unless File.file?(f.to_s)
+  #    Open.read(f).scan(/^\s*(?:introduce|tool):\s*(\S+)/).each do |m|
+  #      introduced << m.first unless introduced.include?(m.first)
+  #    end
+  #  end if agents.exists?
+  #  sandbox_workflows = sandbox.workflows
+  #  Open.mkdir sandbox_workflows unless Open.exists?(sandbox_workflows)
+  #  wf_search = [File.join(FITAGENT_ROOT, 'workflows'), File.dirname(FITAGENT_ROOT),
+  #               'workflows', Workflow.workflow_dir.to_s].compact.map(&:to_s).uniq
+  #  introduced.each do |name|
+  #    next if name == 'none' || Open.exists?(sandbox_workflows[name])
+  #    found = wf_search.map { |p| File.join(p.to_s, name) }.find { |p| Open.directory?(p) }
+  #    FileUtils.ln_s(File.realpath(found), sandbox_workflows[name]) if found
+  #  end
+
+  #  # Run
+  #  Misc.in_dir run_dir do 
+  #    Misc.with_env_hash({
+  #      'SCOUT_NO_ASK_CACHE' => 'recursive',
+  #      'ASK_PERSIST' => 'false',
+  #      'SCOUT_WORKFLOW_AUTOINSTALL' => 'false',
+
+  #      # ~/.scout is read-only in this session; inner agent process gets a
+  #      # writable HOME with etc/software symlinked to the real one.
+  #      #'SCOUT_WORKFLOW_DIR' => '/tmp/scouthome/.scout/workflows',
+  #      #'HOME' => '/tmp/scouthome',
+  #      # We are already inside an outer bwrap sandbox here; nested user
+  #      # namespaces are denied by the kernel, so the agent's exec tools must
+  #      # not try to create their own bwrap (documented escape hatch).
+  #      'BWRAP_PATH' => 'false',
+  #    }) do
+  #      CMD.cmd_log('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log 0 -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs'", save_stderr: file('log.txt')).join
+  #    end
+  #  end
+  #end
+
+  input :agents, :path, 'Path to agent definitions'
+  input :use_case, :path, 'Path to use case dir', nil, required: true
+  input :endpoint, :select, 'Endpoint to use for both the run and the analyst', :gglm
   input :main_agent, :string, 'Main agent to run', 'FitMain'
   input :repo, :path, 'Optional target repository to stage inside the sandbox (copied or linked per repo_mode)', nil
   input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live)', 'copy'
   input :exclude, :array, 'Path patterns to exclude when staging :repo in copy mode', ['var', '.git', 'tmp']
-  # DEPRECATED (fit-era): superseded by the catalogue/run_arms/score/fit task
-  # chain, which stages per-arm worktrees and scores deterministically; kept
-  # for compatibility with existing job references.
   task :use_case => :text do |agents,use_case,endpoint,main_agent,repo,repo_mode,exclude|
 
-    # Prepare sandbox with use case
-    use_case = Path.setup(use_case.to_s).find
+    agents = Path.setup(agents.to_s).find if agents
+
     # Accept a use_case JOB path (result file of a previous FitAgent#use_case
     # run): remap to the staged use_case dir inside that job so analyze can be
     # re-invoked over an existing run without re-staging from a result file.
+    use_case = Path.setup(use_case.to_s).find
     staged = use_case.to_s.sub(/\.info$/, '') + '.files/sandbox/use_case'
     use_case = staged if Open.directory?(staged) && ! Open.directory?(use_case)
-    agents = Path.setup(agents.to_s).find
-    sandbox = file('sandbox')
-    # Defensive: a stray FILE named sandbox (from an aborted run) would make
-    # mkdir_p raise EEXIST; remove it so the sandbox dir can be created.
-    FileUtils.rm_f(sandbox) if File.exist?(sandbox) && ! File.directory?(sandbox)
-    FileUtils.mkdir_p sandbox unless Open.directory?(sandbox)
-    Open.cp use_case, sandbox
+
+    Open.mkdir files_dir
+    # Stage the target repository, if any, so the agent actually works on the
+    # code under test instead of an empty sandbox (supports "any repository").
+    if repo && Open.exists?(repo)
+      repo = Path.setup(repo.to_s)
+      repo_name = File.basename(repo.to_s.sub(/\/$/,''))
+      target = file(repo_name)
+
+      case repo_mode.to_s
+      when 'link'
+        Open.ln_s(repo.realpath, target) unless Open.exists?(target)
+      else
+        if Open.directory?(repo['.git'])
+          CMD.cmd("git clone -q --no-hardlinks '#{repo}' #{target}")
+        else
+          CMD.cmd_log("rsync -a --exclude var --exclude .git --exclude tmp --exclude etc/AI '#{repo}/' #{target}/")
+        end
+        # Never let endpoint credentials travel with a staged repository copy.
+        Open.rm_rf target['etc/AI'].find if Open.exists?(target['etc/AI'].find)
+      end
+      sandbox = target
+    else
+      sandbox = file('sandbox')
+    end
+
+    use_case.glob('*').each do |file|
+      Open.cp file, sandbox[File.basename(file)]
+    end
+
     Open.mkdir sandbox.lib unless Open.exists?(sandbox.lib)
     # Local var/cache inside sandbox: with ~/.scout read-only today, Scout.var
     # would otherwise resolve the ask-cache to ~/.scout/var/cache (EROFS).
@@ -89,26 +239,7 @@ module FitAgent
     end
 
     # Add agent directory
-    Open.cp agents, sandbox.Agent
-
-    # Stage the target repository, if any, so the agent actually works on the
-    # code under test instead of an empty sandbox (supports "any repository").
-    if repo && Open.exists?(repo)
-      repo = Path.setup(repo.to_s)
-      target = sandbox[File.basename(repo.to_s.sub(/\/$/,''))]
-      case repo_mode.to_s
-      when 'link'
-        FileUtils.ln_s(repo.realpath, target) unless Open.exists?(target)
-      else
-        if Open.directory?(repo['.git'])
-          CMD.cmd("git clone -q --no-hardlinks '#{repo}' #{target}")
-        else
-          CMD.cmd("rsync -a --exclude var --exclude .git --exclude tmp --exclude etc/AI '#{repo}/' #{target}/")
-        end
-        # Never let endpoint credentials travel with a staged repository copy.
-        Open.rm_rf target['etc/AI'].find if Open.exists?(target['etc/AI'].find)
-      end
-    end
+    Open.cp agents, sandbox.Agent if agents
 
     # Link the workflows referenced by the agent suite (introduce:/tool:
     # entries) into the sandbox, so the inner agent resolves them locally
@@ -153,10 +284,11 @@ module FitAgent
         # not try to create their own bwrap (documented escape hatch).
         'BWRAP_PATH' => 'false',
       }) do
-        CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log 0 -ck 'directory #{Scout.var.jobs.find(:lib)} workflow_jobs'", save_stderr: file('log.txt')).join
+        CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log 0 -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs'", save_stderr: file('log.txt'))
       end
     end
   end
+
 
   # Forwarded inputs (same names as use_case) so the dependency resolves to
   # the same job the matrix runner already ran (cache hit, no agent rerun).
