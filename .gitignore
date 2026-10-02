@@ -6,5 +6,6 @@ data
 chats
 tmp
 var
+scenarios
 __pycache__
 cortex_path_map.yaml

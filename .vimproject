@@ -35,6 +35,8 @@ AgentSuite=/$PWD filter="*" {
 
   Cortex_property
 
+  version_3.intro
+  version_3.semantic
  }
  Branched=Branched {
   workflow.rb
@@ -228,7 +230,6 @@ AgentSuite=/$PWD filter="*" {
    ScoutCoder=ScoutCoder {
     tasks=tasks {
      documentation.rb
-     explore.rb
     }
    }
   }
@@ -307,6 +308,35 @@ AgentSuite=/$PWD filter="*" {
  Decider=Decider{
   README.md
   workflow.rb
+ }
+
+ Workspace=Workspace{
+  README.md
+  workflow.rb
+  lib=lib{
+   Workspace=Workspace{
+    exceptions.rb
+    tasks=tasks{
+     exec.rb
+     filesystem.rb
+     patch.rb
+     precise_edit.rb
+     tsv.rb
+    }
+   }
+  }
+ }
+ Research=Research{
+  README.md
+  workflow.rb
+  lib=lib{
+   Research=Research{
+    tasks=tasks{
+     documents.rb
+     web.rb
+    }
+   }
+  }
  }
 
 }
