@@ -47,57 +47,35 @@ module Workspace
     dirs
   end
 
-  helper :inside? do |directory,path|
-    return path if File.expand_path(directory) == File.expand_path(path)
-
-    if Open.exists?(path) || Open.directory?(path)
-      return path if Open.realpath(directory) == Open.realpath(path)
-      if Misc.path_relative_to(File.expand_path(Open.realpath(directory)), File.expand_path(Open.realpath(path))).nil?
-        raise SandboxAccessViolation, "File #{path} not under #{directory}"
-      end
-    else
-      if Misc.path_relative_to(File.expand_path(directory), File.expand_path(path)).nil?
-        raise SandboxAccessViolation, "File #{path} not under #{directory}"
-      end
-    end
-    return path
-  end
-
+  # Authorization goes through the shared LLM::Sandbox containment policy.
+  # The original path spelling is preserved for all filesystem operations;
+  # Decision#canonical_path is an authorization/diagnostic value only.
+  #
+  # ScoutCoder: LLM::Sandbox.resolve_path treats '~...' as a relative path
+  # (it does not expand the home directory), so '~' spellings must be
+  # expanded by the caller before authorize_path to keep home grants working.
   helper :normalize do |path, type=:read|
     path = '.' if path == '' || TrueClass === path
-    path = "./#{path}" unless path.start_with?('/') || path.start_with?('./') || path.start_with?('~')
+    path = File.expand_path(path) if path.start_with?('~')
 
-    begin
-      inside?(Workspace.root, path)
-    rescue 
-      Workspace.allowed_paths.each do |dir|
-        dir = File.expand_path(dir)
-        dir = Path.setup dir unless Path === dir
-        begin
-          return inside?(dir, path)
-        rescue 
-          next
-        end
-      end
+    mode = type.to_s == 'read' ? :read : :write
 
-      Workspace.allowed_read_paths.each do |dir|
-        dir = File.expand_path(dir)
-        dir = Path.setup dir unless Path === dir
-        begin
-          return inside?(dir, path)
-        rescue 
-          next
-        end
-      end if type.to_s == 'read'
+    decision = LLM::Sandbox.authorize_path(path,
+                                           root: Workspace.root.to_s,
+                                           writable_paths: Workspace.allowed_paths.map(&:to_s),
+                                           read_paths: Workspace.allowed_read_paths.map(&:to_s),
+                                           mode: mode,
+                                           base_path: Dir.pwd)
 
-      if type.to_s == 'read'
-        all_paths = [Workspace.root, Workspace.allowed_paths, Workspace.allowed_read_paths].flatten.compact.uniq
+    unless decision.allowed
+      if mode == :read
         raise SandboxAccessViolation, "Path #{path} not read allowed. Allowed paths:\n    #{describe_allowed_paths}"
       else
-        all_paths = [Workspace.root, Workspace.allowed_paths].flatten.compact.uniq
         raise SandboxAccessViolation, "Path #{path} not write allowed. Allowed paths:\n    #{describe_allowed_paths}"
       end
     end
+
+    path
   end
 
 

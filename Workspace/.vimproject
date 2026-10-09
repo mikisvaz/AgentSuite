@@ -1,0 +1,37 @@
+Workspace=/$PWD filter="*" {
+ README.md
+ workflow.rb
+ doc=doc {
+  user=user {
+   TSV.md
+  }
+ }
+ chats=chats{
+  sandbox
+
+  paths
+ }
+ lib=lib {
+  Workspace=Workspace {
+   exceptions.rb
+   tasks=tasks {
+    exec.rb
+    filesystem.rb
+    patch.rb
+    precise_edit.rb
+    tsv.rb
+   }
+  }
+ }
+ test=test {
+  test_helper.rb
+  Workspace=Workspace {
+   tasks=tasks {
+    test_exec_helpers.rb
+    test_patch.rb
+    test_precise_edit.rb
+    test_tsv.rb
+   }
+  }
+ }
+}
