@@ -1,0 +1,373 @@
+# Scout Vocabulary
+
+## 0. How to reason about Scout
+
+Scout is a broad environment for agents to work, compute, build software, investigate domains and preserve the results of their work. It contains several kinds of tools and abstractions because these serve different purposes.
+
+An agent does not need to understand every part of Scout. It needs to understand the concepts relevant to its current work and know how to discover additional capabilities when necessary.
+
+When a task can be completed through an existing tool, use that tool rather than reconstructing its implementation. When a capability is missing, identify which existing abstraction should own it before introducing another.
+
+Do not treat all objects as instances of one universal ontology. Scientific entities, computations, software resources, data artifacts and scientific claims are different kinds of things. They can refer to and operate on one another without becoming the same thing.
+
+The aim is to use the simplest available interface that preserves the capabilities needed for the work.
+
+## 1. Agents and their environment
+
+### Agent
+
+An agent is an actor that uses intelligence, context and tools to pursue objectives. Its instructions establish how it should work; its tools determine what it can do; its environment determines what it can access.
+
+An agent does not need to understand the implementation of every tool it uses. It needs to understand the tool's purpose, inputs, outputs and relevant limitations.
+
+When an agent encounters a missing capability, it may use a more general tool, delegate its development, or extend the environment if it has the appropriate capabilities.
+
+### Tool
+
+A tool is an operation exposed to an agent through a defined interface. A tool may read data, execute a computation, modify an artifact or delegate work.
+
+Use a specialized tool when it provides the required operation with a suitable contract. Use a general-purpose tool when the work is not covered by a specialized interface.
+
+A tool is the interface to a capability, not necessarily the capability's implementation.
+
+### Objective and agent task
+
+An objective states what outcome is desired. An agent task assigns work intended to advance that objective.
+
+A task assigned to an agent is not necessarily a Scout workflow task. The agent may satisfy its task by running computations, manipulating files, investigating evidence, modifying software or delegating further work.
+
+First determine the desired outcome. Then determine which capabilities and artifacts are needed to achieve it.
+
+### Workspace
+
+The Workspace provides access to files and other working artifacts. It is a general-purpose environment for reading, writing, inspecting and organizing work.
+
+A file can be useful without belonging to any domain ontology or being registered in a knowledge system. Do not impose semantic structure on an artifact when ordinary file operations are sufficient.
+
+When another system needs to consume a Workspace artifact, make the artifact accessible through the relevant interface.
+
+## 2. Workflows and computation
+
+### Scout workflow
+
+A Scout workflow defines an application or computational domain. It can provide tasks, tools, resources, entity definitions, entity properties and knowledge bases relevant to that domain.
+
+The workflow establishes which computational and domain capabilities are available in a particular environment.
+
+When work requires a reusable domain capability, look for an appropriate workflow that already provides it. When such a capability is missing, determine whether an existing workflow should be extended or a new one created.
+
+A Scout workflow is not the same thing as a sequence of agent conversations. An agent may use several workflows while pursuing one objective.
+
+### Workflow task
+
+A workflow task is a declared computational operation that can be invoked through Scout's workflow machinery.
+
+A task specifies a reusable unit of work, with inputs, outputs and execution behavior. Its purpose is to make computation available for repeated or composed use rather than requiring an agent to recreate the computation each time.
+
+A task definition is not the execution of that task. To obtain a result, execute the task and inspect its outcome.
+
+When the same computation needs to be used by multiple agents or investigations, prefer a reusable task over duplicating its implementation.
+
+### Job or execution
+
+A job is a particular execution of a computational operation. It has an execution outcome and may have a status, result files or other execution records.
+
+The task describes what can be executed; the job represents an execution of it. Multiple jobs may use the same task with different inputs or execution conditions.
+
+When a result appears incorrect, distinguish a defect in the task definition from a failure in a particular execution or an unexpected input.
+
+### Step
+
+A Step is an execution-related unit used by workflow machinery when representing or coordinating work and its dependencies. It is not synonymous with the scientific objective, the reusable task definition or the final result.
+
+Use this term when the relevant workflow interface exposes Step-level behavior. Otherwise, an agent should not need to reason about Steps merely to invoke a task.
+
+### Python workflow
+
+A Python workflow makes Python-based computation available through Scout's workflow environment.
+
+A Python implementation can be used when Python is the suitable computational substrate, while the surrounding workflow provides the applicable execution and integration conventions.
+
+Choosing Python does not mean abandoning Scout's workflow contracts or creating an unrelated execution mechanism.
+
+### Resource
+
+A resource is a named or managed capability, data source or other object that an environment makes available for use.
+
+A resource may be consumed by a task or used by an agent. Its meaning depends on the interface through which it is exposed.
+
+A file on disk is not automatically a registered resource. Conversely, an agent need not know where a resource is physically stored if its interface provides the required operation.
+
+## 3. Scientific entities and knowledge
+
+### Entity type
+
+An entity type represents a kind of object in a domain ontology and establishes how objects of that kind are identified and what properties or relationships can be associated with them.
+
+For example, `Gene` may be an entity type in a biological environment. Its identity conventions determine what it means to refer to a particular gene.
+
+An entity type defines a domain-level concept. It is not merely a data table or a computational task.
+
+### Entity
+
+An entity represents a particular domain object according to an entity type's identity conventions.
+
+For example, a particular gene is an entity of type `Gene`. Its identifier must be interpreted according to the declared conventions, including any necessary organism or namespace qualification.
+
+When asking a question about a domain object, identify the entity and then determine which properties and relationships provide the information needed.
+
+### Entity property
+
+An entity property defines a capability for obtaining a characteristic, annotation, value or related information for entities of a given type.
+
+For example, `Gene.pubmed_articles` could define how to obtain publications associated with a gene.
+
+A property definition is not the same as the value it produces. The definition establishes how the value can be obtained; evaluating the property produces a result.
+
+A property may obtain data from an existing resource, invoke computation or use other domain capabilities. Its implementation mechanism should not need to be exposed to an agent that only wants to use the property.
+
+When a property is missing, determine whether the missing element is the scientific definition, its computational implementation, its registration or its execution interface.
+
+### Property value
+
+A property value is the result of evaluating an entity property for an entity under particular inputs and execution conditions.
+
+A result may be a scalar, a collection, structured data or a reference to a larger artifact.
+
+A computed value is not automatically a verified scientific conclusion. Its interpretation depends on the method, input data and evidence supporting it.
+
+### Association
+
+An association represents a relationship between domain entities.
+
+For example, a gene may be associated with a pathway, a mutation with a sample, or a publication with a gene. The meaning of the association depends on its definition and supporting data.
+
+Use associations when the scientific relationship itself matters. A property may expose or compute an association, but the relationship and the operation used to obtain it are conceptually distinct.
+
+### Entity list
+
+An entity list is a collection of entities intended to be handled together.
+
+A property can be evaluated for each member of a list, producing results that remain associated with their corresponding entities.
+
+When querying a list, preserve input identity and handle individual failures explicitly. A missing result for one entity must not silently become a result for another or be confused with a valid empty result.
+
+### Knowledge base
+
+A knowledge base provides access to structured domain knowledge through an appropriate query or lookup interface. It may expose records, relationships or associations that are useful for scientific work.
+
+A knowledge base can be backed by tables, files, databases or other resources. The agent should interact through the relevant knowledge interface rather than assuming a particular storage implementation.
+
+Registering a knowledge source makes it available through its intended interface; it does not by itself establish that every record is complete or biologically correct.
+
+### Database
+
+A database stores and provides operations over structured records. Depending on its implementation, it may support querying, inserting or updating records.
+
+A database is a storage and access mechanism; a knowledge base is a domain-oriented way of exposing knowledge. They may overlap in implementation, but they are not interchangeable concepts.
+
+Before changing a database, identify its data contract and the intended mutation operations. Reading knowledge and changing its persistent source are different actions.
+
+## 4. Files, tables and results
+
+### File
+
+A file is a physical artifact that can store data, code, documentation or results.
+
+A file can be inspected and modified through the Workspace without requiring it to be registered in a higher-level system.
+
+When a file becomes an input to reusable computation or a source of structured domain knowledge, establish the necessary interface to that file.
+
+### TSV
+
+A TSV is a tab-separated table with rows and columns. It is a simple, inspectable format that can be used by agents and by ordinary computational tools.
+
+A TSV may contain raw observations, identifiers, entity declarations, associations or derived values. The content and applicable conventions determine its meaning.
+
+A TSV is not automatically an ontology merely because it contains scientific identifiers. When Scout's registration and schema conventions interpret a TSV semantically, it can contribute structured knowledge to the entity system.
+
+Preserve the distinction between source data and derived data. If entity properties add computed annotations to a table, consider creating a derived or materialized view instead of silently overwriting the source.
+
+TSVs are valuable because the same data can remain inspectable by humans and usable by Ruby, Python, R or other tools.
+
+### Artifact
+
+An artifact is a named or referable output worth preserving for inspection, reuse, communication or further work.
+
+An artifact may be a file, TSV, report, dataset, computational result or other meaningful output. Not every temporary intermediate needs to become a persistent artifact.
+
+Preserve artifacts when later work needs them, and provide enough context to understand what they contain and how they were produced.
+
+### Report
+
+A report communicates what work was performed, what results were obtained, what evidence supports the findings, and what remains uncertain.
+
+A report should distinguish executed work from proposed work and observed results from interpretations. It should point to relevant artifacts when those artifacts provide the actual data or evidence.
+
+A report summarizes an investigation; it does not substitute for preserving the underlying results needed to inspect or reproduce it.
+
+## 5. Building and extending the environment
+
+### ScoutCoder
+
+ScoutCoder is a development interface through which coding agents can construct and modify Scout resources using the appropriate Scout primitives.
+
+A coding agent should use ScoutCoder to create or extend reusable capabilities when the task requires changes to the computational environment.
+
+The exact development operation depends on the resource being built. Creating a workflow task, defining an entity and defining an entity property may share development machinery without having identical implementation or execution behavior.
+
+ScoutCoder is a means of constructing the environment, not the interface a science agent should need for routine scientific queries.
+
+### Path and filesystem path
+
+A filesystem path identifies a location in a filesystem.
+
+A Scout Path represents a development resource managed through the Path engine, with a resource kind and applicable operations and lifecycle.
+
+These concepts are related but not equivalent. A Scout Path may be associated with files used to define a resource, but its purpose is to expose the appropriate development operations over that resource.
+
+### Path engine
+
+The Path engine provides a common development interface for supported resource kinds, such as workflow tasks, entities and entity properties.
+
+It allows coding agents to create, inspect, edit, validate and manage candidate definitions through an appropriate resource-specific contract.
+
+The Path engine establishes and manages development resources. It is not the universal mechanism for executing workflow tasks or evaluating entity properties.
+
+When a Path operation succeeds, verify the lifecycle stage it actually establishes. Creating or promoting a definition does not automatically prove that a workflow can discover and execute it.
+
+### Probe
+
+A probe is a small experiment designed to establish how the running system behaves or to resolve a specific uncertainty.
+
+Use a probe when an implementation depends on an unverified contract, such as whether a newly defined entity property becomes available to a workflow.
+
+A probe should distinguish observations from assumptions. Its purpose is to make the next engineering decision better informed, not to conceal uncertainty behind a larger implementation.
+
+### Validation and testing
+
+A test checks a defined expectation. Validation checks whether a resource or result satisfies the relevant contract. A smoke test establishes that a minimal operational path works.
+
+These forms of checking are complementary. Successful resource creation does not prove correct execution, and successful execution does not necessarily prove scientific validity.
+
+Choose tests that correspond to the claim being made about the system.
+
+### Promotion
+
+Promotion makes an accepted development resource persistent or available at a broader intended scope.
+
+A candidate that works temporarily is not necessarily ready for project-wide or workflow-wide reuse. Promotion should follow the applicable validation and lifecycle rules.
+
+The exact promotion path depends on the resource kind and the actual Scout implementation; do not assume every resource uses the same lifecycle.
+
+## 6. Caching and composability
+
+### Reuse and refresh
+
+Scout may reuse previous outputs rather than recomputing them. This can make repeated computation efficient and support reproducible workflows.
+
+A refresh option requests behavior beyond the ordinary reuse path, according to the contract of the tool that exposes it. It must not be assumed to reload source code, update registration, invalidate every cache or guarantee that external data are current.
+
+Use the default behavior for ordinary queries. Request refresh only when there is a concrete reason to change the normal evaluation behavior, and identify which kind of freshness is relevant.
+
+### Return path
+
+A return-path option exposes a result through a path that can be consumed by other tools or computations.
+
+Use it when a result needs to be passed through the Workspace, inspected as a file, or composed into subsequent work. Otherwise, prefer the ordinary result interface.
+
+A returned path is a way to access a result, not a claim that the result is scientifically correct or permanently stored.
+
+## 7. Working knowledge and scientific reasoning
+
+### Cortex
+
+Cortex is a working and staging environment for knowledge developed during an investigation. It can support conversations, investigations, artifacts and links between evidence and conclusions.
+
+Cortex can refer to data and computational resources owned by other parts of the environment. It does not need to become the permanent owner of every TSV, entity definition, knowledge base or workflow task.
+
+Use Cortex to organize and preserve the working state of an investigation, while keeping the underlying resources in their appropriate systems.
+
+### Observation
+
+An observation is a recorded result, measurement, statement or other piece of information relevant to an investigation.
+
+An observation establishes what was recorded and under what circumstances; it does not automatically establish the interpretation one might draw from it.
+
+Preserve enough context to distinguish direct observation from later processing or interpretation.
+
+### Claim
+
+A claim is a proposition asserted on the basis of observations, sources or other reasoning.
+
+A claim should be connected to the evidence that supports or contradicts it. The strength of the claim should not exceed what that evidence establishes.
+
+### Hypothesis
+
+A hypothesis is a proposed explanation or relationship that can guide further investigation.
+
+A hypothesis may motivate new computations, data retrieval or experiments. Its existence does not establish that it is true.
+
+### Evidence
+
+Evidence is information relevant to evaluating a claim or hypothesis. It may support, contradict or leave a proposition unresolved.
+
+Computational provenance identifies how a result was produced. Scientific evidence concerns what that result establishes about the domain. The two are related, but they answer different questions.
+
+### Investigation
+
+An investigation is an organized effort to answer a question or advance a scientific objective through work, results and reasoning.
+
+An investigation may combine entity queries, workflow tasks, scripts, knowledge bases, documents and human decisions. Its objective does not prescribe a single representation for every intermediate operation.
+
+Use the representation suited to each part of the work, then connect the resulting artifacts and evidence into a coherent account of the investigation.
+
+## 8. Context given to an agent
+
+### Doctrine
+
+Doctrine defines general principles that apply across the relevant agents and projects.
+
+Doctrine should teach stable distinctions and decision rules: use the simplest suitable interface; preserve evidence; distinguish definitions from executions and results; and investigate important uncertainty before committing to a design.
+
+Doctrine should not duplicate all subsystem manuals or describe every tool parameter.
+
+### Instructions
+
+Instructions explain how an agent should operate in a particular role or with a particular subsystem.
+
+ScoutCoder instructions should explain how to construct and validate Scout resources. Science-agent instructions should explain how to use the scientific environment and report evidence-grounded findings.
+
+Instructions should refer to the shared vocabulary instead of repeatedly redefining its terms.
+
+### Project information
+
+Project information describes the actual environment in which the agent is working: its purpose, available workflows, domain ontology, existing resources, current state and relevant conventions.
+
+Project information establishes which capabilities exist in this project. It should not confuse a desired capability with one that has already been implemented and verified.
+
+### Prompt
+
+The prompt establishes the immediate task, its purpose, constraints and acceptance criteria.
+
+A prompt should use the established vocabulary to specify what is needed, rather than reproducing the entire development manual. It should identify important unresolved decisions when those decisions could materially affect the result.
+
+## 9. Rules that connect the vocabulary
+
+When I need a computation, I look for a workflow task or another existing executable capability. I do not confuse the task definition with a particular execution or its result.
+
+When I need information about a scientific object, I identify its entity type and identity, then discover and evaluate the relevant entity property or association.
+
+When I need to manipulate tabular data, I can use a TSV directly. When that data needs domain semantics, I use the appropriate schema and registration mechanism.
+
+When I need to create a new reusable capability, I use the appropriate development interface. I distinguish defining a resource, making it discoverable, executing it, validating it and promoting it.
+
+When I need to combine results, I preserve their identities and use artifacts or paths where appropriate. I do not force every result through the same storage or representation.
+
+When I make a scientific statement, I distinguish the observation, the resulting claim, the hypothesis being investigated and the evidence available for each.
+
+When I encounter a missing capability, I first determine which existing abstraction should provide it. I add a new abstraction only when the existing contracts do not provide a suitable way to do the work.
+
+When I do not know how an interface behaves, I investigate the uncertainty with the smallest useful experiment. I do not silently treat an assumption as an established contract.
+
+The purpose of this vocabulary is to make these decisions familiar enough that the agent can reason about them briefly, without repeatedly reconstructing Scout's conceptual architecture.

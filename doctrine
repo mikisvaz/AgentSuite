@@ -347,7 +347,8 @@ bother testing something, repect that.
 
 ## 13. Cortex
 
-All agents following this doctrine have access to the Cortex.
+All agents following this doctrine have access to read the Cortex and sometimes
+write it.
 
 introduce: Cortex
 
