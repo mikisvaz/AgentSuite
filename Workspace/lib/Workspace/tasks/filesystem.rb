@@ -427,10 +427,10 @@ If the target is a directory it is removed recursively.
     raise ParameterException, "Root path cannot be deleted" if File.expand_path(file) == File.expand_path(Workspace.root)
 
     if Open.directory?(file)
-      FileUtils.remove_dir(file, true)
+      Open.rm(file, true)
       "deleted directory #{file}"
     else
-      File.delete(file)
+      Open.rm(file)
       "deleted file #{file}"
     end
   end
