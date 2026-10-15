@@ -39,7 +39,7 @@ module Semantics
 
     def checkout_root
       # lib/Semantics/tasks/entity_query.rb -> checkout root is three up.
-      File.expand_path('../../..', __dir__)
+      Dir.pwd
     end
 
     # One record per discovered entity module: name, constant, base kind and
@@ -73,8 +73,8 @@ module Semantics
       name = entity_type.to_s
       known = semantics_entity_names
       unless known.include?(name)
-        raise ParameterException,
-              "unknown entity type #{name.inspect}; known: #{known.sort.join(', ')}"
+        #raise ParameterException,
+        #      "unknown entity type #{name.inspect}; known: #{known.sort.join(', ')}"
       end
       constant = constant_name(name)
       unless Object.const_defined?(constant, false)
@@ -112,7 +112,7 @@ module Semantics
     # invoked on make_array returns the full Array (the bare single-entity
     # wrapper would collapse it to its first element).
     def dispatch_single(mod, entity_id, property, arguments)
-      receiver = mod.setup(entity_id).make_array
+      receiver = mod.setup(entity_id)
       if arguments.empty?
         receiver.send(property)
       else

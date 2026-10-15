@@ -4,6 +4,7 @@ Misc.add_libdir if __FILE__ == $PROGRAM_NAME
 
 #require 'scout/sources/Semantics'
 
+Workflow.require_workflow 'workflow.rb'
 module Semantics
   extend Workflow
   extend ::LiveWorkflow
