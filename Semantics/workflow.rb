@@ -4,13 +4,13 @@ Misc.add_libdir if __FILE__ == $PROGRAM_NAME
 
 #require 'scout/sources/Semantics'
 
-Workflow.require_workflow 'workflow.rb'
 module Semantics
   extend Workflow
-  extend ::LiveWorkflow
 
 
 end
+
+Semantics.extend LiveWorkflow
 
 require_relative 'lib/Semantics/tasks/entity_query'
 require_relative 'lib/Semantics/tasks/entity_property'
