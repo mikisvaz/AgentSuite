@@ -207,6 +207,9 @@ AgentSuite=/$PWD filter="*" {
   lib=lib {
   }
  }
+ ContractWorker=ContractWorker{
+  workflow.rb
+ }
  Manager=Manager {
   start_chat
   lib=lib {

@@ -163,7 +163,7 @@ module FitAgent
   input :agents, :path, 'Path to agent definitions'
   input :use_case, :path, 'Path to use case dir', nil, required: true
   input :endpoint, :select, 'Endpoint to use for both the run and the analyst', :gglm
-  input :main_agent, :string, 'Main agent to run', 'FitMain'
+  input :main_agent, :string, 'Main agent to run', 'MainAgent'
   input :repo, :path, 'Optional target repository to stage inside the sandbox (copied or linked per repo_mode)', nil
   input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live)', 'copy'
   input :exclude, :array, 'Path patterns to exclude when staging :repo in copy mode', ['var', '.git', 'tmp']
@@ -284,7 +284,7 @@ module FitAgent
         # not try to create their own bwrap (documented escape hatch).
         'BWRAP_PATH' => 'false',
       }) do
-        CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log 0 -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs'", save_stderr: file('log.txt'))
+        CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log 0 -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs'", save_stderr: file('log.txt'), pipe: true)
       end
     end
   end
@@ -295,7 +295,7 @@ module FitAgent
   # Dynamic dep: when +use_case_job+ (path to a previous use_case result)
   # is given, attach to that finished job instead of resolving from inputs,
   # so analyze can be re-run over existing runs with no agent re-execution.
-  dep do |inputname,inputs|
+  dep :use_case do |inputname,inputs|
     uj = inputs[:use_case_job]
     if uj && ! uj.to_s.strip.empty?
       uj = Path.setup(uj.to_s).find
@@ -312,16 +312,10 @@ module FitAgent
                    exclude: inputs[:exclude])
     end
   end
-  input :agents, :path, 'Forwarded to use_case dependency', 'agents/Test'
-  input :use_case, :path, 'Forwarded to use_case dependency', 'use_case/Test'
-  input :main_agent, :string, 'Forwarded to use_case dependency', 'FitMain'
-  input :repo, :path, 'Forwarded to use_case dependency', nil
-  input :repo_mode, :select, 'Forwarded to use_case dependency', 'copy'
-  input :exclude, :array, 'Forwarded to use_case dependency', ['var', '.git', 'tmp']
   input :use_case_job, :path, 'Path to a previous FitAgent#use_case job result; analyze attaches to it without re-running the agent', nil
   input :instructions, :text, "Instructions for the ChatAnalyst, defaults to use case instructions or default instructions"
   input :experiment, :string, "Experiment tag recorded in the report header for cross-repo bookkeeping", "Default"
-  input :endpoint, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)', :qwen
+  input :endpoint_analyst, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)', :qwen
   extension :md
   # DEPRECATED (fit-era): superseded by the deterministic Scoring.score_scenario
   # rubric path (score task); kept for compatibility with existing job references.
