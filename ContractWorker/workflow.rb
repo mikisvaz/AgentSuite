@@ -1,4 +1,3 @@
-
 require 'scout'
 
 Misc.add_libdir if __FILE__ == $PROGRAM_NAME
@@ -47,6 +46,9 @@ no persistent probe traces, and no changes beyond the documentation genuinely
 missing from the existing Cortex skills.** The deliverable is a concise task
 map, an assessment of existing skill coverage, and only the incremental skill
 documentation required to make the next worker effective. 
+
+Respond with a report advicing agents on what Cortex skills to follow, and
+other useful tips.
     EOF
 
     agent
@@ -61,7 +63,7 @@ documentation required to make the next worker effective.
     agent = self.agent worker_agent, chat: chat, tooling: self.tooling 
 
     agent.user <<-EOF
-You have been asked to fulfill a user request. Proceed with the plan
+You have been asked to fulfill a user request. You should find relevant skills as Cortex artifacts
     EOF
 
     agent
