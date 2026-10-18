@@ -1,50 +1,18 @@
 module Workspace
 
-  TMP_DIRS = Path.setup("tmp").find_all
-
   def self.get_allowed_paths(type)
-    type_defaults = {
-      exec_paths: %w(/bin /usr /lib /lib64 /etc).join(":"),
-      allowed_paths: (TMP_DIRS + %w(/tmp ~/tmp)).join(":"),
-      dirs: %w().join(":"),
-      read_paths: %w().join(":"),
-      thread: Thread.current['allowed_paths'],
-      thread_read: Thread.current['allowed_read_paths']
-    }
-    
-    IndiferentHash.setup(type_defaults)
-
-    dir_str = Scout::Config.get(type, :Workspace, :workspace, :sandbox, default: type_defaults[type], env: type.to_s.upcase)
-
-    return [] if dir_str.nil?
-    dirs = String === dir_str ? dir_str.split(/[,:]/) : dir_str
-    dirs.collect{|dir| 
-      dir = Path.setup(File.expand_path(dir))
-      if dir.located?
-        dir
-      else
-        dir.find_all
-      end
-    }.flatten
+    LLM::Sandbox.grant_paths(type, scope: 'Workspace')
   end
-
 
   @root = Dir.pwd
   singleton_class.attr_accessor :root
 
   def self.allowed_paths
-    dirs = Workspace.get_allowed_paths(:allowed_paths) 
-    dirs += Workspace.get_allowed_paths(:dirs) 
-    dirs += Workspace.get_allowed_paths(:thread) 
-    dirs
+    LLM::Sandbox.writable_grants(scope: 'Workspace')
   end
 
   def self.allowed_read_paths
-    dirs = Workspace.get_allowed_paths(:allowed_read_paths)
-    dirs += Workspace.get_allowed_paths(:exec_paths)
-    dirs += Workspace.get_allowed_paths(:read_paths)
-    dirs += Workspace.get_allowed_paths(:thread_read) 
-    dirs
+    LLM::Sandbox.readable_grants(scope: 'Workspace')
   end
 
   # Authorization goes through the shared LLM::Sandbox containment policy.
@@ -56,6 +24,8 @@ module Workspace
   # expanded by the caller before authorize_path to keep home grants working.
   helper :normalize do |path, type=:read|
     path = '.' if path == '' || TrueClass === path
+
+    path = path.find(:current) if Path === path && ! path.located?
     path = File.expand_path(path) if path.start_with?('~')
 
     mode = type.to_s == 'read' ? :read : :write
@@ -121,40 +91,14 @@ module Workspace
   # One line per allowlist entry, annotated with read/write semantics, so
   # denial messages are self-explanatory.
   helper :describe_allowed_paths do
-    writable = [Workspace.root, Workspace.allowed_paths].flatten.compact.uniq.collect{|p| File.expand_path(p.to_s) }
-    readable = Workspace.allowed_read_paths.flatten.compact.uniq.collect{|p| File.expand_path(p.to_s) }
-    lines = writable.collect{|p| "#{p} (read-write)" }
-    lines.concat((readable - writable).collect{|p| "#{p} (read-only)" })
-    (lines * "\n    ") + "\n  Run task 'sandbox_paths' for details (file/dir, symlinks, mounts)"
+    LLM::Sandbox.describe_grants(scope: 'Workspace',
+                                 root: Workspace.root.to_s,
+                                 hint: "Run task 'sandbox_paths' for details (file/dir, symlinks, mounts)")
   end
 
   # Which allowlist source granted a given expanded path.
   helper :path_origin do |path|
-    expanded = File.expand_path(path.to_s)
-    sources = {
-      root: [Workspace.root.to_s],
-      dirs: Workspace.get_allowed_paths(:dirs),
-      allowed_paths: Workspace.get_allowed_paths(:allowed_paths),
-      thread: Workspace.get_allowed_paths(:thread),
-      exec_paths: Workspace.get_allowed_paths(:exec_paths),
-      read_paths: Workspace.get_allowed_paths(:read_paths),
-      allowed_read_paths: Workspace.get_allowed_paths(:allowed_read_paths),
-      thread_read: Workspace.get_allowed_paths(:thread_read),
-      bwrap_paths: Workspace.get_allowed_paths(:bwrap_paths),
-      bwrap_read_paths: Workspace.get_allowed_paths(:bwrap_read_paths),
-    }
-    sources.each do |origin, paths|
-      next if paths.nil?
-      candidates = paths.collect do |p|
-        begin
-          File.expand_path(p.to_s)
-        rescue
-          p.to_s
-        end
-      end
-      return origin if candidates.include?(expanded)
-    end
-    nil
+    LLM::Sandbox.grant_origin(path, scope: 'Workspace', root: Workspace.root.to_s)
   end
 
   # Reproduce, without executing anything, the mount plan that

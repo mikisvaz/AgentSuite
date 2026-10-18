@@ -44,6 +44,11 @@ executed without a sandbox if bwrap tool is not available in the system or if
 explicitly deactivated by setting the environment variable 'BWRAP_PATH' to
 'false'. Each invocation runs in a fresh Bash, Python, Ruby or R process;
 variables from previous calls are not available.
+The two permission layers summarized above (Ruby allowlist vs bwrap mounts)
+are one half of a shared model; which tools are sandboxed, the differences
+between the layers, and the recovery procedure for a path that exists but a
+tool cannot see are documented authoritatively in the scout-ai developer
+document `doc/developer/Sandbox.md`.
 
 A note on etiquette for AI agents: If you are going to be generating files with
 data and scripts to perform tasks or test developments, please consider writing
