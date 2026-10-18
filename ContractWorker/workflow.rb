@@ -72,8 +72,6 @@ You have been asked to fulfill a user request. You should find relevant skills a
   dep :work
   chat_task :ask do
     chat = self.chat
-    chat.follow step(:request).load
-    chat.follow step(:plan).load
     chat.follow step(:work).load
     chat.message :clear_tools, true
 
