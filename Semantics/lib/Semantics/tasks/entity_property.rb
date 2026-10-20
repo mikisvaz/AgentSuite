@@ -28,14 +28,16 @@ module Semantics
     # and return compact result entries with pointers, so the payloads are
     # readable from the job output tree instead of the in-memory result.
     payload_dir = nil
-    param_names = (mod.properties[prop] || []).collect { |kind, pname| pname }
-    if param_names.include?(:output_dir) && args[:output_dir].nil?
+    param_types = {} 
+    (mod.properties[prop] || []).collect { |kind, pname| param_types[pname] = kind}
+    param_names = param_types.keys
+    if param_names.include?(:output_dir) && Hash === args && args[:output_dir].nil?
       payload_dir = File.join(files_dir.to_s, 'property_output')
       args[:output_dir] = payload_dir
     end
 
     begin
-      result = EntityQuery.dispatch_single(mod, entity, prop, args)
+      result = EntityQuery.dispatch_single(mod, entity, prop, args, param_types)
       record = { status: 'done',
                  entity: entity.to_s,
                  property: prop.to_s,

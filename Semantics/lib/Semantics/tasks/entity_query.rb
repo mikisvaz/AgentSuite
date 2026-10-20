@@ -99,11 +99,15 @@ module Semantics
         begin
           parsed = JSON.parse(arguments)
         rescue JSON::ParserError
-          raise ParameterException, "arguments is not valid JSON: #{arguments.inspect}"
+          parsed = arguments
         end
-        raise ParameterException, "arguments JSON is not an object: #{arguments.inspect}" unless Hash === parsed
-        # JSON keys arrive as Strings; property kwargs are Symbols.
-        return parsed.transform_keys(&:to_sym)
+
+        case parsed
+        when Hash
+          return IndiferentHash.setup(parsed)
+        else
+          return parsed
+        end
       end
       raise ParameterException, "arguments must be a Hash or a JSON object string, got #{arguments.class}"
     end
@@ -111,12 +115,24 @@ module Semantics
     # The single-entity dispatch idiom verified in step 3: a :array property
     # invoked on make_array returns the full Array (the bare single-entity
     # wrapper would collapse it to its first element).
-    def dispatch_single(mod, entity_id, property, arguments)
+    def dispatch_single(mod, entity_id, property, arguments, param_types = {})
       receiver = mod.setup(entity_id)
       if arguments.empty?
         receiver.send(property)
+      elsif Hash === arguments && param_types && param_types.any?
+        opt_params = []
+        key_params = {}
+        param_types.each do |param,kind|
+          if kind == :key
+            key_params[param] = arguments[param]
+          else
+            opt_params << arguments[param]
+          end
+        end
+
+        receiver.send(property, *opt_params, **key_params)
       else
-        receiver.send(property, **arguments)
+        receiver.send(property, arguments)
       end
     end
 

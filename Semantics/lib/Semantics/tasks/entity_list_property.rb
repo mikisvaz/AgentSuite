@@ -18,23 +18,33 @@ module Semantics
   # A modest politeness delay separates dispatches (NCBI 429s are real).
   input :entity_type, :string, 'Entity type name (e.g. as listed by the list_entities task)', nil, required: true
   input :property, :string, 'Property name registered on the entity type', nil, required: true
-  input :entities, :text, 'Entity identifiers, one per line', nil, required: true
+  input :entities, :array, 'Entity identifiers', nil, required: true
   input :arguments, :text, 'Optional property arguments as a JSON object string (e.g. {"max": 2})', nil
   task :entity_list_property => :json do |entity_type, property, entities, arguments|
     mod, prop = EntityQuery.resolve_property!(entity_type, property)
     args = EntityQuery.parse_arguments(arguments)
 
-    ids = entities.to_s.split("\n").collect { |line| line.strip }.reject { |line| line.empty? }
-    raise ParameterException, 'entities is empty' if ids.empty?
+    mod.setup(entities)
+    raise ParameterException, 'entities is empty' if entities.empty?
 
-    records = ids.each_with_index.collect do |entity_id, index|
-      EntityQuery.politeness_delay(index)
-      begin
-        result = EntityQuery.dispatch_single(mod, entity_id, prop, args)
-        { entity: entity_id, status: :done, result: result }
-      rescue StandardError, SystemCallError => error
-        { entity: entity_id, status: :failed,
-          error: { class: error.class.to_s, message: error.message } }
+    param_types = {} 
+    (mod.properties[prop] || []).collect { |kind, pname| param_types[pname] = kind}
+    param_names = param_types.keys
+
+    records = []
+    res = EntityQuery.dispatch_single(mod, entities, prop, args, param_types)
+    if Array === res
+      res.each_with_index do |result,i|
+        entity_id = entities[i]
+        records << { entity: entity_id, status: :done, result: result }
+      end
+    elsif Hash === res
+      entities.each do |entity|
+        if res[entity]
+          records << { entity: entity, status: :done, result: result }
+        else
+          records << { entity: entity, status: :failed }
+        end
       end
     end
 
