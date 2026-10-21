@@ -34,6 +34,7 @@ Output format:
 introduce: Workspace
 tool: Workspace list_directory
 tool: Workspace search
+tool: Workspace read
 
 introduce: Research
 tool: Research searxng

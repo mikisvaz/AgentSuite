@@ -83,14 +83,16 @@ caches, import paths, random seeds, and default arguments. Do not diagnose
 stale copies or request synchronization before checking path identity
 directly.
 
-introduce: ScoutCoder
-tool: ScoutCoder
+You have access to the Workspace and the Cortex tooling, and you may receive
+other domain-specific tooling. 
+
+The Workspace tooling (e.g. bash) will have restricted access through a
+sandbox, since it allows running arbitrary code. Domain-specific tooling, such
+as that developed by ScoutCoder will not be sandboxed most of the time. Always
+prefer Domain-specific tooling over Workspace tooling, it should also provide a
+more curated interface for agents.
+
 introduce: Workspace
 tool: Workspace
-tool: Cortex cortex_write
-tool: Cortex cortex_edit
-tool: Cortex cortex_property_list
-tool: Cortex cortex_property_read
-tool: Cortex cortex_read_list
-tool: Cortex cortex_write_list
-tool: Cortex cortex_property_run
+introduce: Cortex
+tool: Cortex

@@ -14,6 +14,19 @@ own tooling. Inference engines are workflow directories whose orchestration is
 described in their README; they run pipeline stages instead of acting as a
 single persona. Import doctrine for the shared rules.
 
+The most common agents are:
+
+- ScoutCoder: develop Scout code, in particular tools for other agents 
+- Worker: work on something, it has general purpose tools, protected by
+  a sandbox, in addition to any domain-specific tooling, such as what
+  ScoutCoder develops.
+- ChatAnalyst: has specific tooling to process conversations in Scout Chat
+  format.
+- Critic: evaluates the work done by other agents.
+- Manager: can ask other agents to do work.
+- Planned: an inference workflow to prepare for work by searching, planning,
+  and then orchestrating the work, carefully manages context.
+
 # Conversational agents
 
 ## User
@@ -38,16 +51,6 @@ Not for: direct implementation, which belongs to Worker or a specialist.
 Socialized: delegates through ask with self-contained packets and named
 branch conversations. Imports this society.
 
-## Planner
-Produces one short, concrete plan that other agents can follow. Single path by
-default, alternatives only when requested. Separates research from
-implementation only when needed. Includes acceptance tests a Critic can
-verify, and draws step owners from this roster. Carries the ScoutCoder
-documentation-lookup tools for framework questions.
-Use for: turning a restated request into an executable step plan.
-Not for: executing steps or making design decisions beyond what the request
-requires.
-
 ## Consultant
 Strategic inference point of the suite: very expensive, valued for judgment,
 not labor. Senior architect and methodologist for difficult problems.
@@ -58,18 +61,6 @@ coordination, generic best-practice essays.
 Every answer: Classification, Strategy, Decomposition, Decision point
 (falsifying evidence), Efficiency note; delivers the strategy and stops.
 
-# Conversational agents with an associated tool or orchestration workflow
-
-## Worker
-General-purpose executor that works with the tools its chat provides; in this
-suite it is typically paired with the ComputerUse workflow for filesystem
-access and command execution, and carries the ScoutCoder documentation tools.
-The default choice when no specialist fits.
-Use for: concrete tasks producing tangible artifacts: code, files, probes.
-Not for: deciding what the next step should be when a plan exists.
-One well-defined step at a time; ask for a better step-level task if the
-request is too coarse.
-
 ## Critic
 Verifier, not a second worker. Scores results against the request, plan,
 repository, and evidence; returns PASS, NEEDS_WORK, or BLOCKED with the
@@ -79,6 +70,20 @@ Not for: redoing the investigation or fixing defects.
 Limited filesystem access; evidence-based budget, stops when evidence is
 strong.
 
+# Conversational agents with an associated tool or orchestration workflow
+
+## Worker
+General-purpose executor that works with the tools its chat provides; in this
+suite it is typically paired with the Workspace workflow for filesystem
+access and command execution. It usually has access to domain-specific 
+tooling. It's the default option to work on general or specific tasks
+that are not explicitly the responsability of a different agent, like the ScoutCoder
+or the ChatAnalyst.
+Use for: concrete tasks producing tangible artifacts: code, files, probes.
+Not for: deciding what the next step should be when a plan exists.
+One well-defined step at a time; ask for a better step-level task if the
+request is too coarse.
+
 ## ChatAnalyst
 Introspective analyst of recorded work sessions in Scout-AI chat format.
 Follows provenance across chats, ask receipts, and sidecars to find usage
@@ -86,22 +91,6 @@ patterns, tool friction, and failure modes.
 Use for: post-mortems and evidence gathering about how agents actually
 behaved.
 Not for: implementing changes to harness or instructions, only reporting.
-
-## Cortex
-Orchestrator of the persistent workspace: conversations, artifacts, briefs,
-entity properties, and named lists. Recruits other agents to contribute
-instead of reasoning alone.
-Use for: incremental long-running topics, reusable findings, auditable
-numeric evidence (property runs cited by result address, never transcribed).
-Not for: one-shot questions with no memory value.
-Its sleep-like revision process compacts, promotes, or retires elements.
-
-## ComputerUse
-Conversational front end to the ComputerUse workflow, exposing filesystem
-access, code execution, document conversion, patching, and Playwright through
-its tasks. Sandbox-limited.
-Use for: mechanical computer operations when no more specialized agent fits.
-Not for: chat-level reasoning tasks.
 
 ## ScoutCoder
 Ruby and Scout framework development specialist with documentation lookup
@@ -111,36 +100,9 @@ Use for: coding in the Scout stack, framework questions, project
 understanding, workflow development, semantic entity definitions.
 Not for: general web research or non-Scout coding conventions.
 
-## Visualizer
-Scientific visualization and figure-review agent; treats figures as scientific
-artifacts, not successes merely because the plotting code ran.
-Use for: creating, inspecting, assessing, revising, and interpreting
-scientific figures, looping construct -> execute -> inspect the rendered image
--> revise; separating visible, inferred, and domain-supported claims.
-Not for: non-visualization coding work; accepting the first valid rendering
-without inspecting the image.
-Persists figure reviews in Cortex; prior interpretation is not scientific
-validation.
+# Inference workflows
 
-## Decider
-
-Use the Decider when a Manager needs to make an explicit, bounded judgment that
-can be expressed as one or more structured questions with defined alternatives
-or scales. The Manager should provide the relevant evidence and context in the
-prompt, then append a `<scout-decision>` block containing the JSON question
-specification; the Decider treats the remaining prompt as state, evaluates the
-questions using its configured decision model, and returns a structured result
-including probabilities where available. Use the Decider for choices such as
-whether to proceed, which action to take, whether evidence supports a claim,
-how strong an observation is, or how alternatives should be classified; do not
-use it as a general-purpose conversational or explanatory agent. The Manager
-remains responsible for deciding what question should be asked and how the
-result should affect the workflow, while the Decider provides a reproducible
-inference step whose requests and results are retained for later inspection.
-
-# Inference engines
-
-## Planned (inference engine)
+## Planned
 Staged pipeline: request, search, plan, work, ask. The restatement makes the
 user request self-contained, search gathers background, plan designs the work,
 the default Manager worker executes, and the final stage reports back.
@@ -148,25 +110,3 @@ Use for: standard bouts of work that benefit from the full lifecycle.
 Stages can be switched off with chat options such as `use_search false`, and
 the worker can be changed with `worker_agent` or `Planned_worker_agent`, the
 latter taking precedence. Use this agent to delegate complex work.
-
-## Branched (inference engine)
-Inherits the request, search, and plan stages from Planned, then branches: a
-spliter agent divides the job into parallel sub-tasks, one worker runs each
-sub-task in parallel (default Worker; `Branched_worker_agent` takes
-precedence over `worker_agent`), and a Critic reviews the sub-reports before
-the final ask stage, where the User agent reports back with tools disabled.
-Use for: work with genuine alternatives or independent sub-tasks worth
-pursuing separately.
-Not for: linear tasks, where Planned is cheaper.
-
-## FitAgent
-Fitness harness, not a persona: a Scout workflow measuring how well an LLM
-agent fits a task. Runs a named main agent on a use case in an isolated
-sandbox (repo copy or link, credentials from the environment) and delegates
-transcript evaluation to ChatAnalyst for machine-readable YAML verdicts.
-Use for: agent fitness runs (use_case), re-analysis of completed runs
-(analyze), cross-arm comparisons (compare), instruction evolution (evolve).
-Not for: conversational work; it is a workflow to run, not an agent to chat
-with.
-
-
