@@ -13,7 +13,7 @@ function over (agent instructions, use case, endpoint, repository).
 | Task | What it does |
 | ---- | ------------ |
 | `use_case` | Stage a sandbox (use case + agent defs + endpoints + repo), run the agent via `scout-ai agent ask`, persist the transcript and a `verdict.yml` |
-| `analyze` | Evaluate a completed run. Accepts `use_case_job:` (path of a previous `use_case` job) to re-analyze an existing run without re-running the agent |
+| `analyze` | Evaluate a completed run. Accepts `job_use_case:` (path of a previous `use_case` job) to re-analyze an existing run without re-running the agent |
 | `compare` | Run N arms (agent + use case + repo variants) through `use_case` + `analyze` and emit a cross-arm table |
 | `evolve` | Automated instruction evolution: seed agent -> generation matrix -> analyst feedback -> LLM-proposed instruction variant -> next generation. Records `agents/Gen*` and `lineage.tsv` |
 
@@ -38,7 +38,7 @@ scout workflow task FitAgent use_case \
     --repo /path/to/target-repo --repo_mode copy
 
 # 3. Analyze / compare / evolve as usual
-scout workflow task FitAgent analyze --use_case_job <job-path>
+scout workflow task FitAgent analyze --job_use_case <job-path>
 # compare: arm definitions live in <repo>/arms/<experiment>.yaml
 scout workflow task FitAgent compare --repo /path/to/target-repo --experiment three_arm
 # evolve: writes agents/<name>_Gen* and results/<exp>/lineage.tsv in the repo
