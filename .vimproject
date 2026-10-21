@@ -1,5 +1,6 @@
 AgentSuite=/$PWD filter="*" {
  LICENSE
+ scout
  doctrine
  doctrines=doctrines{
   investigation
@@ -13,6 +14,7 @@ AgentSuite=/$PWD filter="*" {
  }
  society
  intro
+ catalogue
  doc=doc{
   guidelines=guidelines{
    README.md
@@ -291,7 +293,15 @@ AgentSuite=/$PWD filter="*" {
  FitAgent=FitAgent{
   LICENSE
   README.md
+  start_chat
   workflow.rb
+  lib=lib{
+   FitAgent=FitAgent{
+    tasks=tasks{
+     use_case.rb
+    }
+   }
+  }
  }
 
  Clean=Clean{
@@ -332,6 +342,7 @@ AgentSuite=/$PWD filter="*" {
  Research=Research{
   README.md
   workflow.rb
+  start_chat
   lib=lib{
    Research=Research{
     tasks=tasks{
@@ -342,4 +353,13 @@ AgentSuite=/$PWD filter="*" {
   }
  }
 
+ Filesystem=Filesystem{
+  workflow.rb
+ }
+
+ sandbox=sandbox{
+  history=history{
+   process.rb
+  }
+ }
 }
