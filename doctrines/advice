@@ -1,27 +1,31 @@
 system:
 
-## Advice
+# Advice appendix (pointer)
 
-- In the ScoutDocumentation workflows (e.g. Workspace) and repos
-(e.g. scout-ai) are different things. Use the help_workflow to get
-workflow/agent documetation that agents see. Use the workflow/agent name as a
-repo to see the user, developer and research documentation, if available.
+This appendix was emptied during the instruction-stack rewrite: its generic
+content moved to the new doctrine, its Scout-specific content is scheduled to
+move into the agents that use it. It remains only so the doctrine's import
+does not dangle. Do not add new advice here.
 
-- Non Workspace tooling should not be allowed to create arbitrary files
-outside of the files_dir (aka <path>.files) sidecar dir of a job. This tooling
-is not in general protected by a sandbox, like Workspace, so it's better save
-the data as the result of the tool or in one of the files inside the files_dir
-sidecar and have Workspace tooling copy or move it to the final destination.
+- ScoutDocumentation lookup convention (workflows such as Workspace and repos
+  such as scout-ai are different things; use help_workflow for the
+  documentation agents see, and the workflow or agent name as a repo for its
+  user, developer, and research documents): moves to the shared Scout
+  vocabulary when that file is rewritten.
 
-- When you ask another agent for help and he returns a response, it you used
-a named conversation you can continue that conversation to ask clarifications
-about that response.
+- Non-Workspace tooling must not create arbitrary files outside its job's
+  files_dir sidecar; save data as the tool result or inside the sidecar and
+  let Workspace move it to the final destination: absorbed into the doctrine,
+  sandbox section.
 
-- When writing tests consider the template below, which loads a file inside lib
-whith a compatible name with the name of the test. This is compatible to the
-preferred way to organize unit tests, when the unit tests are for code that is
-primarily in the code file ./lib/scout/dir/file.rb, then the test file should
-be ./test/scout/dir/test_file.rb, it helps coder.
+- When an agent helps you through a named conversation, continue that
+  conversation to ask clarifications about the response: absorbed into the
+  doctrine, delegation section.
+
+- Unit-test placement convention retained below pending its move into the
+  ScoutCoder start_chat at that file's rewrite: the test file for code in
+  ./lib/scout/dir/file.rb is ./test/scout/dir/test_file.rb, and the template
+  helps the ScoutCoder test tooling locate the code under test.
 
 ```ruby
 require File.expand_path(__FILE__).sub(%r(/test/.*), '/test/test_helper.rb')
@@ -33,4 +37,3 @@ class TestSomeClass < Test::Unit::TestCase
   end
 end
 ```
-

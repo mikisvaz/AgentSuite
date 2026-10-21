@@ -218,6 +218,8 @@ The exact development operation depends on the resource being built. Creating a 
 
 ScoutCoder is a means of constructing the environment, not the interface a science agent should need for routine scientific queries.
 
+Conventions for writing Scout code: a `ScoutCoder:` Ruby comment near the triggering code records a reusable fact learned while coding, so the documentation can improve later; the format and an example live in the ScoutCoder workflow README introduction (see `ScoutCoder/README.md`).
+
 ### Path and filesystem path
 
 A filesystem path identifies a location in a filesystem.

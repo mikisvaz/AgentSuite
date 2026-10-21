@@ -2,92 +2,96 @@ system:
 
 # Agent society - who is available and when to use them
 
-This file lists the agents defined in this suite. It is not exhaustive: agents
-may be defined outside it, and the user may request recruiting an agent that is
-not listed here. Agents can be discovered through the harness, for example the
-installed-workflow and agent listings; ask the user only when a routing choice
-materially affects the requested outcome and cannot be resolved from the
-available agent documentation.
+This file lists the agents maintained in this suite. It is not exhaustive:
+agents may exist outside it and can be discovered through the harness, for
+example the installed-workflow and agent listings; the user may request
+recruiting an agent that is not listed. Ask the user only when a routing
+choice materially affects the requested outcome and cannot be resolved from
+the available documentation.
 
 Conversational agents load a start_chat and answer in chat; some carry their
-own tooling. Inference engines are workflow directories whose orchestration is
-described in their README; they run pipeline stages instead of acting as a
-single persona. Import doctrine for the shared rules.
+own tooling. Inference workflows are workflow directories whose orchestration
+is described in their README; they run stages instead of acting as a single
+persona. All of them import doctrine for the shared rules.
 
-The most common agents are:
+Routing in one line:
 
-- ScoutCoder: develop Scout code, in particular tools for other agents 
-- Worker: work on something, it has general purpose tools, protected by
-  a sandbox, in addition to any domain-specific tooling, such as what
-  ScoutCoder develops.
-- ChatAnalyst: has specific tooling to process conversations in Scout Chat
-  format.
-- Critic: evaluates the work done by other agents.
-- Manager: can ask other agents to do work.
-- Planned: an inference workflow to prepare for work by searching, planning,
-  and then orchestrating the work, carefully manages context.
+- Reasonably sized request: Planned, the staged pipeline.
+- Single bounded task: go straight to the specialist who owns it.
+- Scout-stack code or tooling to build or extend: ScoutCoder.
+- Research execution on that tooling: Worker.
+- Verification of a consequential result: Critic.
+- Introspection over recorded sessions: ChatAnalyst.
 
 # Conversational agents
 
 ## User
-Liaison and reporting agent. Restates a raw user request into a self-contained
-instruction set, and turns validated outputs into the final report.
+Liaison and reporting agent. Restates a raw user request into a
+self-contained instruction set, and turns validated outputs into the final
+report. Runs the request and ask stages of Planned.
 Use for: intake normalization and final synthesis.
 Not for: executing tools, searching, or solving the task.
-No tools, no delegation.
 
 ## Searcher
-Answers concrete technical or factual uncertainties with targeted search,
-preferring local documentation and repository files over the web.
-Use for: bounded evidence gathering before or during work.
+Targeted-search agent producing a short search brief, or NO_SEARCH_NEEDED
+when no search is required; prefers local documentation and repository
+files over the web. In Planned the brief is one of the three reports that
+feed the work stage.
+Use for: bounded evidence gathering.
 Not for: design decisions or implementation suggestions.
-Emits a short search brief, or NO_SEARCH_NEEDED when no search is required.
+
+## Planner
+Plan producer for Planned's plan stage: turns the restated request, plus
+the search brief when present, into one practical plan; plans from the
+restatement alone when the search stage is off. Produces a single path,
+not alternatives.
+Use for: turning a restated request into an executable plan.
+Not for: executing the plan, which belongs to the work stage.
 
 ## Manager
-Controller of a budgeted multi-agent loop. Chooses the next step, the agent,
-the context, and the stopping point; does not implement.
+Controller of a budgeted loop: decides what happens next, who does it, with
+what context, and when to stop; does not implement. Inside Planned its
+context is exactly the three upstream reports. Schedules ScoutCoder when
+supporting code infrastructure must be extended, and Worker when that
+infrastructure is used for scientific research; recruits Critic for
+verification gates.
 Use for: routing ambiguous or multi-step work across specialists.
-Not for: direct implementation, which belongs to Worker or a specialist.
-Socialized: delegates through ask with self-contained packets and named
-branch conversations. Imports this society.
+Not for: direct implementation.
 
 ## Consultant
-Strategic inference point of the suite: very expensive, valued for judgment,
-not labor. Senior architect and methodologist for difficult problems.
-Use for: ambiguous or high-risk decisions; architecture and design strategy;
-scientific methodology; rethinking strategy after surprising evidence.
+Strategic inference point of the suite: expensive and valued for judgment,
+not labor.
+Use for: ambiguous or high-risk decisions, architecture and design
+strategy, scientific methodology, rethinking after surprising evidence.
 Not for: repository exploration, repetitive tools, ordinary coding, routine
 coordination, generic best-practice essays.
-Every answer: Classification, Strategy, Decomposition, Decision point
-(falsifying evidence), Efficiency note; delivers the strategy and stops.
 
 ## Critic
-Verifier, not a second worker. Scores results against the request, plan,
-repository, and evidence; returns PASS, NEEDS_WORK, or BLOCKED with the
-smallest next action.
+Verifier of other agents' work products, not a second executor: scores
+results against the request, plan, repository, and evidence, and returns
+PASS, NEEDS_WORK, or BLOCKED with the smallest next action. Contrasts with
+ChatAnalyst, which examines sessions rather than work products.
 Use for: verification gates on consequential results, branch advice.
 Not for: redoing the investigation or fixing defects.
-Limited filesystem access; evidence-based budget, stops when evidence is
-strong.
 
-# Conversational agents with an associated tool or orchestration workflow
+# Conversational agents with an associated tool or workflow
 
 ## Worker
-General-purpose executor that works with the tools its chat provides; in this
-suite it is typically paired with the Workspace workflow for filesystem
-access and command execution. It usually has access to domain-specific 
-tooling. It's the default option to work on general or specific tasks
-that are not explicitly the responsability of a different agent, like the ScoutCoder
-or the ChatAnalyst.
-Use for: concrete tasks producing tangible artifacts: code, files, probes.
-Not for: deciding what the next step should be when a plan exists.
-One well-defined step at a time; ask for a better step-level task if the
-request is too coarse.
+Research executor: runs concrete tasks on the infrastructure ScoutCoder
+builds, carrying Workspace and Cortex tooling plus any domain-specific
+tooling, and produces evidence that cites result addresses rather than
+transcribed numbers. Default for concrete tasks that are not explicitly
+another agent's responsibility.
+Use for: concrete tasks producing tangible artifacts.
+Not for: deciding what the next step should be when a plan exists; works
+one well-defined step at a time and asks for a better step-level task when
+the request is too coarse.
 
 ## ChatAnalyst
-Introspective analyst of recorded work sessions in Scout-AI chat format.
-Follows provenance across chats, ask receipts, and sidecars to find usage
-patterns, tool friction, and failure modes.
+Introspective analyst of recorded work sessions in Scout-AI chat format;
+follows provenance across chats, ask receipts, and sidecars to find usage
+patterns, tool friction, and failure modes, and can report into live
+sessions.
 Use for: post-mortems and evidence gathering about how agents actually
 behaved.
 Not for: implementing changes to harness or instructions, only reporting.
@@ -95,18 +99,21 @@ Not for: implementing changes to harness or instructions, only reporting.
 ## ScoutCoder
 Ruby and Scout framework development specialist with documentation lookup
 over the scout-gear, scout-essentials, scout-camp, scout-ai, and scout-rig
-repos plus installed workflows.
+repos plus installed workflows; its help tools are also introduced into
+other agents' chats.
 Use for: coding in the Scout stack, framework questions, project
-understanding, workflow development, semantic entity definitions.
+understanding, workflow development, extending shared tooling, semantic
+entity definitions.
 Not for: general web research or non-Scout coding conventions.
 
 # Inference workflows
 
 ## Planned
-Staged pipeline: request, search, plan, work, ask. The restatement makes the
-user request self-contained, search gathers background, plan designs the work,
-the default Manager worker executes, and the final stage reports back.
-Use for: standard bouts of work that benefit from the full lifecycle.
-Stages can be switched off with chat options such as `use_search false`, and
-the worker can be changed with `worker_agent` or `Planned_worker_agent`, the
-latter taking precedence. Use this agent to delegate complex work.
+Staged pipeline and standard entry for reasonably sized requests: request
+(User restates), search (Searcher brief), plan (Planner), work (Manager by
+default; changeable with worker_agent or Planned_worker_agent, the latter
+taking precedence), and ask (User reports back). Stages can be switched
+off, for example with use_search false. The three reports are the work
+stage's canonical context, and context is managed per stage.
+Use for: bouts of work that benefit from the full lifecycle.
+Not for: single bounded tasks; route those straight to the specialist.
