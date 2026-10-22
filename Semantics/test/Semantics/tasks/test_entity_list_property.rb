@@ -4,118 +4,130 @@ require 'json'
 $LOAD_PATH.unshift(File.expand_path('lib', File.dirname(File.expand_path(File.join(__dir__, '../../..')))))
 require File.expand_path('../../../workflow.rb', File.dirname(File.expand_path(__FILE__)))
 
-# Tests for lib/Semantics/tasks/entity_list_property.rb (per-entity fan-out).
+# Tests for lib/Semantics/tasks/entity_list_property.rb (list fan-out).
 #
-# Structure assertions only, as specified: per-entity status logic must hold
-# for both the live path and the network-down path (bogus id failing or, with
-# network up, returning an empty done result; valid ids done either way), so
-# the tests never assert specific PMIDs.
-class TestSemanticsEntityPropertyList < Test::Unit::TestCase
-  PMID_RE = /\A\d{6,9}\z/
+# The checkout carries no entity drafts, so the tests register probe entity
+# modules covering every dispatch shape, then run the real task jobs. Every
+# dispatch mode is exercised: :single, :array, :multiple (one-shot list
+# dispatch through the special accessor) and typeless :both (per-entity
+# fallback, because a 'both' block receives the receiver as-is).
+class TestSemanticsEntityListProperty < Test::Unit::TestCase
+  module ProbeListWidget
+    extend EntityWorkflow
+    property :probe_doubled => :single do |factor = 2|
+      self.to_s.to_i * factor
+    end
+    property :probe_summary => :multiple do
+      collect { |item| "m:#{item}" }
+    end
+    property :probe_tagged => :array do
+      collect { |item| "#{item}-tag" }
+    end
+    property :probe_plain do
+      "plain:#{self}"
+    end
+    property :probe_boom => :single do
+      raise "boom for #{self}" unless self.to_s.start_with?('ok')
+      "value:#{self}"
+    end
+  end
 
   def setup
-    @entity_type = Dir.glob(File.expand_path('../../../share/entities/*.rb', __dir__))
-                      .collect { |file| File.basename(file, '.rb') }.first
-    # These tests assert the PMID-list property shape (String PMIDs);
-    # the sibling pubmed_article_details property returns Hash entries
-    # and is covered by its own paired share-side test.
-    @property = 'pubmed_articles'
-        entity_module = Object.const_get(@entity_type.split('_').collect(&:capitalize).join, false)
-    @fixture_ids = entity_module.const_get(:FIXTURE_PUBMED_ARTICLES).keys
-    @bogus_id = 'ZZZQQQNOTAGENE123'
-    assert @fixture_ids.length >= 2, 'need at least two fixture-bearing ids for the fan-out test'
+    @entity_type = 'probe_list_widget'
   end
 
-  def test_list_query_returns_per_entity_records
-    entities = [@fixture_ids[0], @fixture_ids[1], @bogus_id].join("\n")
+  def run_list(property, entities: %w[4 2], arguments: nil)
     job = Semantics.job(:entity_list_property, entity_type: @entity_type,
-                                                property: @property,
-                                                entities: entities)
+                                               property: property,
+                                               entities: entities,
+                                               arguments: arguments)
     job.clean
-    result = job.run
+    job.run
+  end
 
+  def test_single_property_fans_out_per_entity
+    result = run_list('probe_doubled')
     assert_equal 'done', result[:status]
-    assert_equal @entity_type, result[:entity_type]
-    assert_equal @property, result[:property]
+    assert_equal 'list', result[:dispatch_mode]
+    assert_equal 2, result[:count]
+    assert_equal 2, result[:done]
+    assert_equal 0, result[:failed]
+    assert_equal [{ entity: '4', status: :done, result: 8 },
+                  { entity: '2', status: :done, result: 4 }], result[:records]
+  end
+
+  def test_multiple_property_gets_whole_list
+    result = run_list('probe_summary')
+    assert_equal 'list', result[:dispatch_mode]
+    assert_equal %w[m:4 m:2], result[:records].collect { |r| r[:result] }
+  end
+
+  def test_array_property_is_collected_element_wise
+    result = run_list('probe_tagged')
+    assert_equal 'list', result[:dispatch_mode]
+    assert_equal %w[4-tag 2-tag], result[:records].collect { |r| r[:result] }
+  end
+
+  def test_typeless_property_falls_back_to_per_entity
+    result = run_list('probe_plain')
+    assert_equal 'per_entity', result[:dispatch_mode]
+    assert_equal %w[plain:4 plain:2], result[:records].collect { |r| r[:result] }
+  end
+
+  def test_arguments_are_forwarded_in_list_mode
+    result = run_list('probe_doubled', arguments: '{"factor": 10}')
+    assert_equal 'list', result[:dispatch_mode]
+    assert_equal [40, 20], result[:records].collect { |r| r[:result] }
+  end
+
+  def test_one_failure_never_blocks_the_rest
+    result = run_list('probe_boom', entities: %w[ok-1 boom ok-2])
     assert_equal 3, result[:count]
-    assert_equal result[:count], result[:done] + result[:failed]
+    assert_equal 2, result[:done]
+    assert_equal 1, result[:failed]
 
     records = result[:records]
-    assert_equal 3, records.length
-    assert_equal [@fixture_ids[0], @fixture_ids[1], @bogus_id], records.collect { |record| record[:entity] }
+    assert_equal 'ok-1', records[0][:entity]
+    assert_equal :done, records[0][:status]
+    assert_equal 'value:ok-1', records[0][:result]
+    assert_equal 'boom', records[1][:entity]
+    assert_equal :failed, records[1][:status]
+    assert records[1][:error][:message].include?('boom for'), 'error envelope lost the message'
+    assert_equal 'ok-2', records[2][:entity]
+    assert_equal :done, records[2][:status]
+  end
 
-    # Every record is either done (with a result field) or failed (with an
-    # error envelope). Both are acceptable shapes; the bogus id may be either
-    # depending on network state (empty live result or a network-down raise).
-    records.each do |record|
-      case record[:status]
-      when :done
-        assert record.key?(:result), "done record without result: #{record.inspect}"
-      when :failed
-        assert record.key?(:error), "failed record without error: #{record.inspect}"
-        assert record[:error][:class], 'error envelope without class'
-        assert record[:error][:message], 'error envelope without message'
-      else
-        flunk "record status must be :done or :failed, got #{record[:status].inspect}"
-      end
-    end
-
-    # Valid (fixture-bearing) entities are done under BOTH network regimes:
-    # live results when the network is up, fixture PMIDs when it is down.
-    records[0..1].each do |record|
-      assert_equal :done, record[:status], "valid entity #{record[:entity]} not done: #{record.inspect}"
-      assert record[:result].is_a?(Array), "result is not an Array: #{record[:result].inspect}"
-      assert record[:result].all? { |pmid| pmid =~ PMID_RE },
-             "non-PMID entries for #{record[:entity]}: #{record[:result].inspect}"
-    end
-
+  def test_receipt_carries_job_identity
+    result = run_list('probe_doubled')
     receipt = result[:receipt]
     assert_equal false, receipt[:step_backed]
-    assert File.exist?(receipt[:job][:path])
+    assert File.exist?(receipt[:job][:path]), 'receipt job file missing'
     assert_equal 'entity_list_property', receipt[:job][:task]
-
-    $stderr.puts "PATH[list]=" +
-                 records.collect { |record| "#{record[:entity]}:#{record[:status]}" }.join(',')
+    assert_equal 'Semantics', receipt[:job][:workflow]
   end
 
-  def test_one_entity_failure_does_not_block_the_rest
-    # A bogus FIRST entity followed by valid ones: the failure is recorded
-    # and the valid entities still dispatch.
-    entities = [@bogus_id, @fixture_ids[0]].join("\n")
+  def test_empty_entities_abort_loudly
     job = Semantics.job(:entity_list_property, entity_type: @entity_type,
-                                                property: @property,
-                                                entities: entities)
-    job.clean
-    result = job.run
-
-    assert_equal 2, result[:count]
-    records = result[:records]
-    assert_equal @bogus_id, records.first[:entity]
-    # Network up: bogus is :done with []. Network down: :failed with an error
-    # envelope. Either way the valid entity must be :done with PMIDs.
-    valid = records.last
-    assert_equal :done, valid[:status], "valid entity failed after bogus entity: #{valid.inspect}"
-    assert valid[:result].is_a?(Array) && !valid[:result].empty?
-  end
-
-  def test_arguments_kwarg_applies_to_each_entity
-    entities = @fixture_ids[0..1].join("\n")
-    job = Semantics.job(:entity_list_property, entity_type: @entity_type,
-                                                property: @property,
-                                                entities: entities,
-                                                arguments: '{"max": 2}')
-    job.clean
-    result = job.run
-    result[:records].each do |record|
-      next unless record[:status] == :done
-      assert record[:result].length <= 2, "max: 2 not honored for #{record[:entity]}: #{record[:result].inspect}"
+                                                property: 'probe_doubled',
+                                                entities: '')
+    assert_raise ParameterException do
+      job.run
     end
   end
 
-  def test_empty_entities_aborts
+  def test_unknown_property_aborts_loudly
     job = Semantics.job(:entity_list_property, entity_type: @entity_type,
-                                                property: @property,
-                                                entities: '')
+                                                property: 'no_such_property',
+                                                entities: %w[4 2])
+    assert_raise ParameterException do
+      job.run
+    end
+  end
+
+  def test_unknown_entity_type_aborts_loudly
+    job = Semantics.job(:entity_list_property, entity_type: 'no_such_entity_type',
+                                                property: 'probe_doubled',
+                                                entities: %w[4 2])
     assert_raise ParameterException do
       job.run
     end

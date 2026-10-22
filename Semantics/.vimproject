@@ -2,8 +2,17 @@ Semantics=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass 
  workflow.rb
  chats=chats filter="*"{
   implementation
+
+  entity
  }
  lib=lib {
+  Semantics=Semantics{
+   tasks=tasks{
+    entity_list_property.rb
+    entity_property.rb
+    entity_query.rb
+   }
+  }
  }
  share=share filter="*"{
  }

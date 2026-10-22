@@ -27,14 +27,8 @@ module Semantics
     # Properties then write their bulk payloads (e.g. article abstracts) there
     # and return compact result entries with pointers, so the payloads are
     # readable from the job output tree instead of the in-memory result.
-    payload_dir = nil
-    param_types = {} 
-    (mod.properties[prop] || []).collect { |kind, pname| param_types[pname] = kind}
-    param_names = param_types.keys
-    if param_names.include?(:output_dir) && Hash === args && args[:output_dir].nil?
-      payload_dir = File.join(files_dir.to_s, 'property_output')
-      args[:output_dir] = payload_dir
-    end
+    param_types = EntityQuery.parameter_types(mod, prop)
+    payload_dir = EntityQuery.route_payload_dir!(self, param_types, args)
 
     begin
       result = EntityQuery.dispatch_single(mod, entity, prop, args, param_types)
@@ -53,4 +47,6 @@ module Semantics
         receipt: EntityQuery.receipt(self, entity, prop, args) }
     end
   end
+
+  export_exec :entity_property
 end

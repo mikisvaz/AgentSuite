@@ -7,80 +7,94 @@ require File.expand_path('../../../workflow.rb', File.dirname(File.expand_path(_
 # Tests for lib/Semantics/tasks/entity_query.rb (Semantics::EntityQuery and
 # the list_entities task).
 #
-# Discovery must come from registration, not literals: the assertions derive
-# the expected gene/property names from the share/ draft filenames, so a grep
-# of this file for entity names must come up empty by design. This test file
-# DOES contain the names in comments only for documentation, never in code.
+# Discovery is REGISTRY-driven (Entity::MODULES), so these tests register
+# their own probe entity module — the same registration a loaded
+# share/entities draft performs — and assert discovery finds it through the
+# task. No share/ layout is assumed: the checkout may carry zero drafts.
 class TestSemanticsListEntities < Test::Unit::TestCase
+  module ProbeDiscoveryWidget
+    extend EntityWorkflow
+    property :probe_single => :single do |factor = 2|
+      self.to_s.to_i * factor
+    end
+    property :probe_multiple => :multiple do
+      collect { |item| "m:#{item}" }
+    end
+    property :probe_plain do
+      "plain:#{self}"
+    end
+  end
+
   def setup
-    @draft_names = Dir.glob(File.expand_path('../../../share/entities/*.rb', __dir__))
-                      .collect { |file| File.basename(file, '.rb') }
-    assert !@draft_names.empty?, 'no share/entities drafts found; test setup invalid'
+    @probe_name = 'probe_discovery_widget'
   end
 
-  def test_lists_all_drafted_entities_as_registered
-    listing = Semantics.job(:list_entities).run
+  def test_lists_registered_probe_and_framework_entities
+    listing = Semantics.job(:list_entities).clean.run
 
-    listed = listing.collect { |record| record[:entity] }
-    assert_equal @draft_names.sort, listed.sort,
-                 'list_entities did not report every drafted entity type'
+    names = listing.collect { |record| record[:entity] }
+    assert names.include?(@probe_name),
+           "registry listing does not include the probe entity: #{names.inspect}"
+    assert names.include?('association_item'),
+           'registry listing does not include the framework AssociationItem'
 
-    listing.each do |record|
-      assert_equal true, record[:registered], "#{record[:entity]} reported as not registered"
-      assert_equal true, record[:entity_workflow], "#{record[:entity]} does not extend EntityWorkflow"
-      assert record[:properties].any? { |prop| prop[:property] == 'job' },
-             "#{record[:entity]} is missing the framework :job property"
-    end
+    probe = listing.find { |record| record[:entity] == @probe_name }
+    assert probe[:constant].end_with?('ProbeDiscoveryWidget'),
+           "unexpected constant name: #{probe[:constant].inspect}"
+    assert_equal true, probe[:entity_workflow]
   end
 
-  def test_lists_the_generated_property_without_literals
-    listing = Semantics.job(:list_entities).run
+  def test_lists_properties_with_effective_dispatch_and_parameters
+    probe = Semantics.job(:list_entities).clean.run
+                   .find { |record| record[:entity] == @probe_name }
+    props = probe[:properties].collect { |p| [p[:property], p] }.to_h
 
-    gene_record = listing.find { |record| record[:entity] == @draft_names.first }
-    property_names = gene_record[:properties].collect { |prop| prop[:property] }
-    draft_properties = Dir.glob(File.expand_path('../../../share/entity_properties/**/*.rb', __dir__))
-                          .collect { |file| File.basename(file, '.rb') }
-    assert_equal draft_properties.sort, (property_names - ['job']).sort,
-                 'registered properties do not match the drafted property files'
+    assert props.key?('probe_single'), "probe_single not listed: #{props.keys.inspect}"
+    assert_equal 'single', props['probe_single'][:dispatch]
+    assert_equal [{ kind: 'opt', name: 'factor' }], props['probe_single'][:parameters]
+    assert_equal 'multiple', props['probe_multiple'][:dispatch]
+    assert_equal 'both', props['probe_plain'][:dispatch], 'typeless property must report :both'
+    assert_equal false, props['probe_plain'][:persisted]
+    assert props.key?('job'), 'EntityWorkflow entity is missing the framework :job property'
   end
 
-  def test_task_source_carries_no_entity_literals
-    task_source = File.read(File.expand_path('../../../lib/Semantics/tasks/entity_query.rb', __dir__))
-    @draft_names.each do |name|
-      constant = name.split('_').collect(&:capitalize).join
-      assert_nil task_source =~ /#{Regexp.escape(constant)}(?![A-Za-z_])/,
-                 "task source mentions entity constant #{constant}"
-    end
-    draft_properties = Dir.glob(File.expand_path('../../../share/entity_properties/**/*.rb', __dir__))
-                          .collect { |file| File.basename(file, '.rb') }
-    draft_properties.each do |property|
-      assert_nil task_source =~ /#{Regexp.escape(property)}/,
-                 "task source mentions property name #{property}"
-    end
+  def test_source_reports_ownership_boundary
+    probe = Semantics.job(:list_entities).clean.run
+                   .find { |record| record[:entity] == @probe_name }
+    # The probe module is not defined by a checkout file; source must say so
+    # instead of inventing one.
+    assert_nil probe[:source], "inline probe reported a checkout source: #{probe[:source].inspect}"
+
+    framework = Semantics.job(:list_entities).clean.run
+                      .find { |record| record[:entity] == 'association_item' }
+    assert_nil framework[:source], 'framework entity must not claim checkout ownership'
   end
 
   def test_resolve_property_rejects_unknowns
-    assert_raise ParameterException do
+    assert_raise(ParameterException) do
       Semantics::EntityQuery.resolve_property!('no_such_entity_type', 'whatever')
     end
-    known = @draft_names.first
-    assert_raise ParameterException do
-      Semantics::EntityQuery.resolve_property!(known, 'no_such_property')
+    assert_raise(ParameterException) do
+      Semantics::EntityQuery.resolve_property!(@probe_name, 'no_such_property')
     end
-    mod, prop = Semantics::EntityQuery.resolve_property!(
-      known,
-      Dir.glob(File.expand_path("../../../share/entity_properties/#{known}/*.rb", __dir__))
-         .collect { |file| File.basename(file, '.rb') }.first
-    )
-    assert mod.is_a?(Module), 'resolve_property! did not return a module'
+    mod, prop = Semantics::EntityQuery.resolve_property!(@probe_name, 'probe_single')
+    assert_equal ProbeDiscoveryWidget, mod
+    assert_equal :probe_single, prop
+  end
+
+  def test_resolve_property_accepts_constant_name
+    mod, = Semantics::EntityQuery.resolve_property!('ProbeDiscoveryWidget', 'probe_plain')
+    assert_equal ProbeDiscoveryWidget, mod, 'constant spelling must resolve like the snake_case one'
+  end
+
+  def test_entity_name_uses_last_constant_segment
+    assert_equal @probe_name, Semantics::EntityQuery.entity_name(ProbeDiscoveryWidget)
   end
 
   def test_parse_arguments_accepts_json_hash_and_nil
     assert_equal({}, Semantics::EntityQuery.parse_arguments(nil))
     assert_equal({}, Semantics::EntityQuery.parse_arguments(''))
     assert_equal({ max: 2 }, Semantics::EntityQuery.parse_arguments('{"max": 2}'))
-    # A plain Hash passes through unchanged (String keys stay String keys;
-    # only the JSON-string path symbolizes keys).
     assert_equal({ 'max' => 2 }, Semantics::EntityQuery.parse_arguments('max' => 2))
     assert_raise ParameterException do
       Semantics::EntityQuery.parse_arguments('[1,2,3]')
@@ -90,6 +104,14 @@ class TestSemanticsListEntities < Test::Unit::TestCase
     end
     assert_raise ParameterException do
       Semantics::EntityQuery.parse_arguments(42)
+    end
+  end
+
+  def test_task_source_carries_no_entity_literals
+    source = File.read(File.expand_path('../../../lib/Semantics/tasks/entity_query.rb', __dir__))
+    %w[Gene TP53 pubmed].each do |literal|
+      assert_nil source =~ /#{literal}/,
+                 "task source mentions #{literal}; discovery must stay literal-free"
     end
   end
 end

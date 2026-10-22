@@ -5,7 +5,7 @@ Misc.add_libdir if __FILE__ == $PROGRAM_NAME
 #require 'scout/sources/Semantics'
 
 if File.expand_path(__FILE__) != File.expand_path('./workflow.rb')
-  #Workflow.require_workflow './workflow.rb', silent: true if File.exist?('./workflow.rb') 
+  Workflow.require_workflow './workflow.rb', silent: true if File.exist?('./workflow.rb') 
 end
 
 module Semantics

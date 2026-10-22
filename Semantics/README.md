@@ -1,9 +1,9 @@
 # Semantics
 
-Semantic access layer for Scout agents: discover the entity types defined
-in this checkout, list the properties registered on each, and evaluate a
-property for a single entity or for a list of entities, with a provenance
-receipt on every execution.
+Semantic access layer for Scout agents: discover the entity types
+registered in the running process, list the properties registered on each,
+and evaluate a property for a single entity or for a list of entities, with
+a provenance receipt on every execution.
 
 Semantics is deliberately thin. It does not define what a gene, a pathway
 or any other scientific object is, and it does not implement scientific
@@ -133,19 +133,28 @@ some properties call rate-limited public services.
 # Tasks
 
 ## list_entities
-List the entity types defined in this checkout and their registered properties
+List registered entity types and their properties
 
 Discovery task. It takes no inputs and returns one JSON record per entity
-type found in this checkout (a draft under `share/entities/` or a promoted
-file under `lib/Semantics/entity/`). Each record includes the entity
-module's name, base, annotations, identifier formats and files, and the
-properties registered on it with their dispatch types.
+type registered in the running process, listing every property with its
+effective dispatch, persistence flag and block parameter signature.
 
-Discovery is layout-driven: an entity type is a Semantics entity when the
-checkout carries a file for it. Runtime registration
-(`Entity::MODULES`) is then consulted to list its properties. A draft that
-fails to load is loud at load time, never a silent omission from the
-listing.
+Discovery is REGISTRY-driven, mirroring ScoutCoder's
+`EntityDefinitionSupport.entity_modules`: the runtime registry
+(`Entity::MODULES`) is the authoritative list of every module that extended
+`Entity`/`EntityWorkflow` in this process, deduplicated across reloads. It
+is deliberately NOT layout-driven (no directory scan): a draft that fails
+to load cannot be discovered by reading directories, while a registered
+module whose file moved still can; drafts are discovered exactly when they
+load successfully, and a failing draft is loud at load time rather than a
+silent omission from the listing.
+
+The listing therefore includes framework entities (e.g. `AssociationItem`)
+and entities owned by other workflows that happen to be loaded, not just
+this checkout's own drafts. Each record carries a `source` field with the
+checkout-relative definition and property draft files when this checkout
+owns the entity, and `null` otherwise, so the ownership boundary is always
+visible.
 
 Example:
 
@@ -196,9 +205,21 @@ scout workflow task workflow.rb entity_property \
 ## entity_list_property
 Evaluate one property for each entity in a list, preserving per-entity results
 
-Per-entity fan-out. The property is called once per entity using the
-single-entity dispatch idiom described under `entity_property`, and the
-result associates every input entity with its own outcome.
+Per-entity fan-out over one property. Two dispatch modes, chosen per
+property from its declared type:
+
+- **List mode** (default when the property registered a special accessor —
+  `:single`, `:array`, `:multiple`): the property is called ONCE on the
+  whole annotated entity list and Scout's framework fans out per element;
+  per-entity records are aligned from that one result. This is the
+  batch-friendly path — `:multiple` properties receive the whole list in
+  their block, and `:single`/`:array` properties are collected
+  element-wise without N separate dispatches.
+- **Per-entity fallback** (for typeless `:both` properties, or when the
+  list result cannot be aligned per entity, or an element failed inside
+  the framework fan-out): each entity is dispatched individually using
+  the single-entity idiom described under `entity_property`. The reported
+  `dispatch_mode` says which path ran.
 
 Inputs:
 
@@ -212,12 +233,15 @@ Inputs:
 
 Every entity produces exactly one record, with `status` `done` or
 `failed`; failures carry the exception class and message. A summary
-(`total`, `done`, `failed`) and the same provenance receipt as
-`entity_property` are included. One entity's failure never blocks the
-rest of the list.
+(`count`, `done`, `failed`), the dispatch mode, and the same provenance
+receipt as `entity_property` are included. One entity's failure never
+blocks the rest of the list.
 
-A modest politeness delay is applied between dispatches, since some
-properties call rate-limited public services.
+Properties that declare an `:output_dir` kwarg get the same task-output
+routing as `entity_property` (`<job>.files/property_output`), reported as
+`payload_dir` in the result. Per-entity fallback dispatches apply a
+modest politeness delay between calls, since some properties call
+rate-limited public services.
 
 Example:
 
@@ -256,11 +280,12 @@ ruby -Itest -Ilib test/Semantics/tasks/test_entity_property.rb
 ruby -Itest -Ilib test/Semantics/tasks/test_entity_list_property.rb
 ```
 
-The task tests are structure-based: they do not assert specific
-domain values, so they pass regardless of which entity drafts the
-checkout carries and under both live-network and offline regimes. Property
-tasks write their jobs under the standard Scout jobs tree; clean a job
-when freshness matters.
+The task tests are structure-based: they register their own probe entity
+modules in-process (the same registration a loaded draft performs) and run
+the real task jobs, so they pass regardless of which entity drafts the
+checkout carries, involve no network, and pin both the success and failure
+contracts. Property tasks write their jobs under the standard Scout jobs
+tree; the tests clean each job before running it.
 
 ## Scope and non-goals
 
