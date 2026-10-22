@@ -136,7 +136,10 @@ module Workspace
   end
 
   desc <<-EOF
-Write a file.
+Write a file. For Scout workflow source drafts (task/entity/property/test
+files) prefer the ScoutCoder path tools (`path_write`), which validate the
+registered root and reload-register the draft; use this task for ordinary
+files (results, notes, data).
   EOF
   input :path, :path, 'File to write', nil, required: true
   input :content, :text, 'Content to write into the file', nil, required: true

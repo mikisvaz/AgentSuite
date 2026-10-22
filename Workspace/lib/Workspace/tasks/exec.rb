@@ -765,6 +765,9 @@ and STDERR outputs as strings, and exit_status, the exit status of the process
   desc <<-EOF
 Run a file or code using python.
 
+For edits to existing files prefer `patch`/`precise_edit`; use this task for
+computation.
+
 If `file` is provided it will be executed. Otherwise `code` will be written to a temporary
 file under the task `root` and executed. Returns a JSON object with keys stdout,
 stderr and exit_status.
@@ -809,6 +812,9 @@ stderr and exit_status.
 
   desc <<-EOF
 Run a file or code using ruby.
+
+For edits to existing files prefer `patch`/`precise_edit`; use this task for
+computation.
 
 If `file` is provided it will be executed. Otherwise `code` will be written to a temporary
 file under the task `root` and executed.

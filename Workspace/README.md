@@ -31,24 +31,24 @@ check that the input paths are under the current process working directory
 (PWD). You will also be granted access to workflow jobs generated during your
 work.
 
-Execution of arbitrary code with `bash`, `ruby`, `python`, `r`, or `patch` is
-ran using the bwrap tool to create a secure sandbox that only provides write
-access to the current process working directory, and a few other locations like
-'/tmp', '~/.rbbt/tmp', '~/.rbbt/var', '~/.scout/tmp', and '~/.scout/var', and
-read access to other locations that may contain libraries and code, such as the
-users home directory, '/usr/lib', and '/usr/local/lib'. Some tools you execute
-this way may intend to create cache or temporary files outside the allowed
-directories, consider if these tools can be pointed to do that inside the
-current directory, perhaps using environment variables. Tools can also be
-executed without a sandbox if bwrap tool is not available in the system or if
-explicitly deactivated by setting the environment variable 'BWRAP_PATH' to
-'false'. Each invocation runs in a fresh Bash, Python, Ruby or R process;
-variables from previous calls are not available.
-The two permission layers summarized above (Ruby allowlist vs bwrap mounts)
-are one half of a shared model; which tools are sandboxed, the differences
-between the layers, and the recovery procedure for a path that exists but a
-tool cannot see are documented authoritatively in the scout-ai developer
-document `doc/developer/Sandbox.md`.
+Code execution with `bash`, `ruby`, `python`, `r`, or `patch` runs inside a
+bwrap sandbox (write access: the current process working directory plus the
+usual tmp/var locations; read access: the places where libraries and code
+live). Tools that intend to create cache or temporary files elsewhere must be
+pointed inside the current directory, typically through environment variables.
+Execution is unsandboxed when bwrap is not available in the system or when the
+environment variable 'BWRAP_PATH' is set to 'false'. Each invocation runs in a
+fresh Bash, Python, Ruby or R process; variables from previous calls are not
+available. Which paths each kind of action can reach is documented in the
+scout-ai developer document `doc/developer/Sandbox.md` (§2 "Which paths can
+this action reach?").
+
+The two permission layers (Ruby allowlist for the filesystem tasks vs bwrap
+mounts for the exec tasks), which tools are sandboxed, and the recovery
+procedure for a path that exists but a tool cannot see are documented
+authoritatively in the scout-ai developer document
+`doc/developer/Sandbox.md`; the `sandbox_paths` task entry below reports the
+live inventory of both layers.
 
 A note on etiquette for AI agents: If you are going to be generating files with
 data and scripts to perform tasks or test developments, please consider writing
@@ -72,6 +72,39 @@ Workspace's TSV tasks are documented in detail in
 [Working with TSV files in Workspace](doc/user/TSV.md); the task reference
 below summarizes them.
 
+## See also (verified pointers)
+
+- scout-ai `doc/developer/Sandbox.md` — sandbox model, which tools are
+  confined, recovery for a path a tool cannot see.
+- scout-gear `doc/user/ProcessingTabularData.md` — TSV value types
+  (`single`/`list`/`flat`/`double`), opening options, `sep2`.
+- scout-essentials `doc/user/WorkingWithFiles.md`,
+  `doc/user/RunningCommands.md`, `doc/user/HandlingStreams.md` — the `Open`
+  and `CMD` layers beneath code run through `bash`/`python`/`ruby`/`r`.
+- scout-ai `doc/user/ToolCalling.md` (§ "Exposing an entire workflow") —
+  why every exported task here appears as a callable tool to an agent.
+
+Where job outputs land: every task runs as a Scout job under the workflow
+checkout's `var/jobs/Workspace/…`; each job carries a `.files` sidecar
+directory for auxiliary outputs; the harness `return_path` option returns the
+persisted result file inside the job directory; and TSV `persist` uses the
+task's own `.files` area. A result that "vanished" is a job-directory
+question, not a reason to re-read stderr or write a locator script.
+
+Choosing the write/edit tool:
+
+- A Scout workflow source draft (task/entity/property/test file) → ScoutCoder
+  `path_write` (e.g. `kind=task path=greet_user`): validated root, no
+  extension to remember, and a workflow reload registers the draft.
+- An ordinary file (results, notes, data) → Workspace `write`; the path tools
+  reject non-registered paths by design.
+- One exact replacement (you know the text and its occurrence count) →
+  `precise_edit`.
+- Localized diff to an existing file → `patch`.
+- Whole-file rewrite or a new file → `write`.
+- A python/ruby script is never the right edit tool: it skips count/hash
+  verification and leaves no diff diagnostics.
+
 Examples:
 
 ```bash
@@ -81,8 +114,15 @@ scout workflow task Workspace tsv_info --file data.tsv
 ```
 
 ```ruby
+# Worked example 1 — normalize a CSV (choose the task, not the filesystem):
 prepared = Workspace.job(:tsv_read, nil,
   file: 'genes.csv', sep: ',', header_hash: '', type: 'double').run
+
+# Worked example 2 — one exact text replacement (choose precise_edit, not
+# sed-in-bash or a python script, which would bypass verification):
+Workspace.job(:precise_edit, nil,
+  path: 'config/settings.rb', operation: 'replace',
+  selector: 'OLD_VALUE', replacement: 'NEW_VALUE', expect_matches: 1).run
 ```
 
 Workspace must be installed or otherwise available to Scout's workflow lookup
@@ -110,6 +150,9 @@ do not test or modify ComputerUse or Research.
 Write a file
 
 Write content to a file under the workflow root. Paths are validated so targets must be under Workspace.root.
+
+If the target is a Scout workflow draft (task/entity/property/test file),
+prefer the ScoutCoder path tools — see ScoutCoder README "Agent path kinds".
 
 There is no need to check for the presence of directories, if the directory
 structure that will hold the file does not exist it will be created.
@@ -275,7 +318,7 @@ Outputs
 - JSON with stdout, stderr, exit_status (stderr condensed on failure, full stream at stderr_full when truncated)
 
 ## python
-Run Python code or file
+Run Python code or file. For edits to existing files prefer `patch`/`precise_edit`; use this task for computation.
 
 Inputs
 - code: Python code to run (ignored if file provided)
@@ -286,7 +329,7 @@ Outputs
 - JSON with stdout, stderr, exit_status (stderr condensed on failure, full stream at stderr_full when truncated)
 
 ## ruby
-Run Ruby code or file
+Run Ruby code or file. For edits to existing files prefer `patch`/`precise_edit`; use this task for computation.
 
 Inputs
 - code: Ruby code to run (ignored if file provided)
@@ -309,6 +352,25 @@ Outputs
 
 ## patch
 Apply a patch to repository files with auto-detected strip, canonical ChatGPT conversion, and optional direct-apply fallback
+
+Minimal worked example — a ChatGPT-style block that applies:
+
+```text
+*** Begin Patch
+*** Update File: lib/example.rb
+@@
+-old line to replace
++new line
+*** End Patch
+```
+
+For one exact, count-checked replacement the cheaper call is `precise_edit`:
+
+```ruby
+Workspace.job(:precise_edit, nil, path: 'lib/example.rb',
+  operation: 'replace', selector: 'old line to replace',
+  replacement: 'new line', expect_matches: 1).run
+```
 
 This task accepts textual patch content and applies it using the system patch utility from the repository root. It is designed for AI agents that produce ChatGPT-style patch blocks and handles them robustly:
 - Converts ChatGPT markers (*** Begin/End Patch; *** Update/Add/Delete File: path) into a canonical unified diff with a/ and b/ headers
@@ -378,6 +440,14 @@ Notes
 ## precise_edit
 Apply one exact, count-checked mutation to a file under an allowed write path.
 
+Minimal worked example — replace one exact line, count-checked:
+
+```ruby
+Workspace.job(:precise_edit, nil, path: 'config/settings.rb',
+  operation: 'replace', selector: 'OLD_VALUE',
+  replacement: 'NEW_VALUE', expect_matches: 1).run
+```
+
 The operation is replace (selector occurrences substituted by replacement),
 insert (replacement appended after each occurrence), or delete (each occurrence
 removed). Required inputs: `path`, `operation`, `selector`, `replacement`, and
@@ -401,25 +471,23 @@ The TSV tasks use Scout's `TSV` abstraction. The recommended workflow for an arb
 
 The harness may be asked to return the persisted task-result path using its `return_path` feature. `return_path` is not an input declared by any TSV task. For text tasks, the normal result is the task's text; the harness option gives access to the persisted result file instead. `tsv_edit` and metadata-changing `tsv_info` are exceptions in that they also update the input file in place. The merge, attach, translate, sort, and read results do not modify their source files. There is no `tsv_write` task: TSVs are intended to be computational artifacts, with `tsv_edit` reserved for specific small edits.
 
-### `tsv_info`
+One line per task:
 
-Inspect a TSV and optionally update selected metadata or representation in the source file. Returns JSON containing `key_field`, `fields`, `type`, `cast`, `namespace`, `identifiers`, `source_rows`, `unique_keys`, `entity_field_candidates`, and `registered_entity_formats`.
+- `tsv_info` — inspect shape and metadata; optional metadata update rewrites the source. JSON.
+- `tsv_read` — normalize a source into canonical Scout TSV text. Text.
+- `tsv_query` — fetch exact key values in request order. JSON.
+- `tsv_edit` — replace one field or one whole row of an existing key, atomically, in place. Text.
+- `tsv_merge` — merge two compatible prepared tables (`replace` or `zip`). Text.
+- `tsv_attach` — attach right-side fields on an exact key/field match. Text.
+- `tsv_translate` — translate a key or value field through an identifier mapping. Text.
+- `tsv_sort` — sort by key or field and return one page. JSON.
 
-Required input: `file`.
-
-Optional opening inputs: `key_field`, `fields`, `type`, `sep` (default tab), `sep2` (default `|`), `header_hash` (default `#`), `merge` (`true`, `false`, or `concat`), and `one2one` (default false). These control source interpretation while inspecting. `type` is an opening override; allowed types are `single`, `list`, `flat`, and `double`.
-
-Optional metadata/update inputs: `new_key_field`, `rename_fields`, `cast` (`to_i` or `to_f`), `new_type` (`single`, `list`, `flat`, or `double`), `namespace`, and `identifiers` (path to identifier metadata). Supplying any of these requests an in-place rewrite of the source; without them `tsv_info` is read-only. `new_key_field` and `rename_fields` rename table metadata; `new_type` converts the representation. Empty or omitted metadata values do not clear existing metadata. Source updates require a writable regular non-symlink file and writable parent directory, and use an atomic same-directory replacement. Invalid options or an unsafe source raise `ParameterException` without replacing the source.
-
-`entity_field_candidates` lists fields whose names are registered in `Entity.formats`; it is a name-based candidate list, not proof that every cell contains valid entity identifiers. The reported row/key counts describe the table materialized by the chosen opening options, so duplicate-key merging affects the counts.
-
-### `tsv_read`
-
-Read a source table and return normalized Scout TSV text. Required input: `file`.
-
-Opening inputs include `keys` (exact keys to retain; empty means all), `key_field`, `fields`, `type` (default `double`), `sep` (default tab), `sep2` (default `|`), `header_hash` (default `#`; set to an empty string if no marker precedes the header), `cast`, `select`, `grep`, `merge` (default true; also accepts false or concat), `one2one`, `field`, `identifiers`, `namespace`, and `persist` (default false). These are applied while interpreting the source. A comma separator uses CSV loading; the output is still Scout TSV. `persist: true` uses HDB persistence under the task's own `.files` area rather than an arbitrary caller-supplied path.
-
-Output metadata can additionally be set with `new_key_field` and `rename_fields`. The result uses canonical tab-separated columns, pipe-separated multi-values, and `#`-marked headers/preamble, ready for downstream TSV tasks. Requested `keys` are retained only when found and emitted in deterministic sorted order. `select` and `grep` are Scout TSV filters. Cast values are restricted to `to_i` or `to_f`; consult `tsv_info` or read a small result when deciding whether a cast is appropriate.
+Per-input detail (opening options, edit forms, validation rules) lives in
+[Working with TSV files in Workspace](doc/user/TSV.md). TSV value-type
+semantics (`single`/`list`/`flat`/`double`, `sep2`) are Scout `TSV`
+semantics, documented in scout-gear
+`doc/user/ProcessingTabularData.md` (§ "Core concepts" and the opening-options
+table).
 
 Example: normalize a CSV with a plain header, then query the normalized result:
 
@@ -430,43 +498,6 @@ File.write("prepared.tsv", normalized)
 answer = Workspace.job(:tsv_query, nil,
   file: "prepared.tsv", keys: ["A123"]).run
 ```
-
-### `tsv_query`
-
-Fetch exact key values from a prepared Scout TSV. Required inputs: `file` and `keys` (array of key strings). Returns a JSON object with table `key_field`, `fields`, `type`, selected `column`, `queries` in request order, and `missing_keys`. Each query entry has `key`, `found`, and `value`; missing keys retain their request position and have a null value.
-
-Optional inputs are `key_field`, `fields`, `type`, `cast` (`to_i` or `to_f`), `column`, `merge`, `one2one`, and Scout's convenience `field`. `column: "key"` selects the queried key itself; otherwise `column` must name a value field. `field` and `column` cannot be used together. Cast applies recursively to returned values, whether or not a column is selected. Named-column queries on flat TSVs are rejected because flat rows do not provide named field boundaries. Unknown fields and invalid casts raise `ParameterException`.
-
-### `tsv_edit`
-
-Edit one existing key in place and return the updated Scout TSV text. Required inputs: `file` and `key`. Specify exactly one edit form:
-
-- Field edit: `field` plus `value`. Named-field edits are supported for `single`, `list`, and `double` tables; `flat` does not support named-field editing. For a double-valued field, the replacement string is split on `|` into its values.
-- Whole-row edit: `row` is a JSON string whose shape must match the TSV type. A `single` row is a scalar; a `list` row is an array with one scalar per field; a `double` row is an array of value-arrays, one per field; a `flat` row is an array of scalars. JSON row values must be scalars (or arrays in the double shape), and row lengths are checked against the table metadata.
-
-Optional `type` overrides the declared type for parsing. The key and named field must exist. The source must be a writable regular non-symlink file. Changes are validated before an atomic same-directory rewrite; invalid edits leave the source unchanged. The task does not create an alternate edited source: use the harness result path only to inspect or retain the task's returned output.
-
-### `tsv_merge`
-
-Merge two prepared TSV files and return the new Scout TSV text; inputs are not modified. Required inputs: `left` and `right`. Optional `strategy` is `replace` (default) or `zip`.
-
-Both tables must have identical `key_field`, `fields`, `type`, and compatible annotation metadata (`namespace`, `identifiers`, `serializer`, and `entity_options`). With `replace`, right-side rows replace the entire row for any key present on the right, while left-only keys remain. With `zip`, values are combined using Scout's `zip_new` behavior; this is supported only for `double` tables. Incompatible tables and unknown strategies raise `ParameterException`.
-
-### `tsv_attach`
-
-Attach selected fields from a right-hand prepared TSV to a source table on an exact key/field match, returning new Scout TSV text without modifying either input. Required inputs: `source`, `other`, `match_key` (source key or field), and `other_key` (right key or field). Optional `fields` selects right-side fields; by default, all right value fields except the matching field are attached. `one2one` defaults to true.
-
-Flat TSVs are unsupported. A right-side value-field match requires a list or double right table. Requested fields must be existing right value fields and must not collide with source fields. Repeated right-side match values are rejected. The attach is incomplete (`complete: false`): source rows without a match remain, with empty attached values. Scout `TSV.attach` is applied to a copy because it mutates its source table.
-
-### `tsv_translate`
-
-Translate a key or value field using a prepared TSV and an explicit identifier mapping; return a new Scout TSV text without modifying the source. Required inputs: `file`, `field`, `target_format`, and `identifiers` (mapping TSV path). Optional inputs: `type`, `key_field`, `fields`, and `one2one` (default false). Uses Scout `TSV.translate`; the requested field and target format must be interpretable by the mapping. Mapping and source files are expected to be in canonical Scout TSV form.
-
-### `tsv_sort`
-
-Sort a prepared Scout TSV with Scout's `TSV#page` implementation. Required input: `file`. Optional inputs are `column` (value field or `key`, default `key`), `direction` (`ascending` or `descending`), `page` (1-based, default 1), `page_size` (positive row count; omitted means all keys), `cast` (`to_i` or `to_f` for numeric value-field sorting), and `just_keys` (default false).
-
-When `just_keys` is false, the JSON result includes the selected page as canonical Scout TSV text in `tsv`, together with the selected column, direction, page number, effective page size and total key count. When true, `keys` contains the page's ordered keys instead. The full TSV preserves this sorted key order (rather than the receiver's original order). Sorting by a value field uses its first value for list/double rows, following Scout's `TSV#page`/`sort_by` behavior; `cast` changes that comparison value to integer or float, with Ruby's `to_i`/`to_f` conversion semantics. Sorting by `key` orders on the key and ignores `cast`. Unknown fields, invalid casts/directions and non-positive page numbers or sizes are rejected; a page beyond the available rows returns an empty page. Value-field sorting on flat TSVs is unsupported.
 
 ### Shared TSV behavior and safety
 

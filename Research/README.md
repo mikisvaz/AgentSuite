@@ -9,11 +9,11 @@ The generic retrieval path is `excerpts` → `rag` → `query`: provide Markdown
 Examples:
 
 ```bash
+scout workflow task Research pdf_query --pdf ./report.pdf --prompt 'What are the key findings?'
 scout workflow task Research searxng --query 'Scout workflow documentation' --count 5
 scout workflow task Research docx2md --docx ./report.docx
 scout workflow task Research pdf2md --pdf ./report.pdf
 scout workflow task Research html2md --html '<h1>Report</h1><p>Text</p>'
-scout workflow task Research pdf_query --pdf ./report.pdf --prompt 'What are the key findings?'
 ```
 
 To query supplied Markdown directly, pass it as `text` with a `prompt` to `query`; the task builds its excerpt and RAG dependencies.
@@ -29,6 +29,16 @@ matches = Research.job(:query, nil,
   num: 3
 ).run
 ```
+
+For a document plus questions, prefer the composite tasks — `pdf_query` / `html_query` — over manually chaining `pdf2md` → `query` (see "Using Research in a bout" below).
+
+## Using Research in a bout
+
+- **Bout sizing.** Plan one conversion plus N targeted queries, not interactive loops. `searxng` `count` defaults to 10 and follows pages (each page is a request); `query`/`pdf_query`/`html_query` `num` defaults to 3; every `rag`/`query` run embeds text (provider cost). Reuse identical `text`/`strategy`/`chunk_words`/`overlap` inputs so Scout replays the cached excerpt and index steps instead of re-embedding.
+- **Report placement.** Query results are JSON in the job, not a durable report. A bout that used Research must persist its conclusions in a durable artifact (Cortex artifact or a `./research` note) and cite the producing job paths / receipts rather than transcribing excerpt text into chat.
+- **Where outputs land.** Excerpts are stored as task files under the job's `files/` sidecar (the result is their digest list); the `rag` index is a binary job result; jobs live under the Research checkout's `var/jobs/…` and replay from cache when inputs are unchanged.
+- **Prefer the composite tasks.** For a document plus questions, call `pdf_query`/`html_query` rather than manually chaining `pdf2md` → `query`; the composite task wires the dependency and inherits caching. The risk to avoid is the reverse one: `searxng` + manual reading instead of the retrieval path.
+- **Availability probe first.** Pandoc, docling, html2markdown, and the embedding provider are external: one bounded availability check early in the bout beats discovering a missing converter mid-investigation.
 
 ## Testing
 
@@ -51,13 +61,8 @@ Convert a PDF to Markdown using docling, retaining the converter's image markers
 
 Required input: `pdf`, the path to an existing PDF file. Docling must be installed and available to the workflow.
 
-## pdf2md_no_images
-Convert a PDF to Markdown and remove image-placeholder lines.
-
-This task depends on `pdf2md_full` and removes lines beginning with `![Image]` from its output. It takes the `pdf` input through that dependency. Use `pdf2md` as the public alias for this image-stripped conversion.
-
 ## pdf2md
-Alias for `pdf2md_no_images`, the image-stripped PDF conversion. It takes the `pdf` input through its dependency on `pdf2md_full`; see `pdf2md_full` and `pdf2md_no_images` for details.
+Alias of `pdf2md_no_images`; depends on `pdf2md_full`. It converts a PDF to Markdown through `pdf2md_full` (docling conversion, image markers retained) and removes lines beginning with `![Image]`, so `pdf2md` and `pdf2md_no_images` are both the image-stripped conversion. The `pdf` input is taken through the `pdf2md_full` dependency; see `pdf2md_full` for the input and docling requirements.
 
 ## html2md
 Convert HTML text or a remote URL to Markdown using html2markdown.

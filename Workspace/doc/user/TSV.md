@@ -1,8 +1,12 @@
 # Working with TSV files in Workspace
 
 Workspace provides a small suite for inspecting, reading, querying, editing,
-merging, attaching, and translating Scout TSV data. The implementation uses
-Scout TSV parsing and serialization rather than defining an independent format.
+merging, attaching, translating, and sorting Scout TSV data. The implementation
+uses Scout TSV parsing and serialization rather than defining an independent
+format. This document carries the per-input detail for the eight TSV tasks;
+the README summarizes them. TSV value-type semantics (`single`/`list`/`flat`/
+`double`, `sep2`) are Scout `TSV` semantics, documented in scout-gear
+`doc/user/ProcessingTabularData.md`.
 
 ## Recommended ingest flow
 
@@ -14,10 +18,10 @@ Scout TSV parsing and serialization rather than defining an independent format.
    Scout TSV (tab-delimited columns, pipe-delimited multi-values, `#` headers).
    Its text result can be passed to downstream TSV tasks. Callers needing a
    persisted path can request it through the harness option `return_path: true`.
-3. Use `tsv_query`, `tsv_edit`, `tsv_merge`, `tsv_attach`, or `tsv_translate` on
-   prepared/canonical TSV inputs. These tasks intentionally do not accept
-   parser-only delimiter and header options. If a source needs reinterpretation,
-   normalize it again with `tsv_read` first.
+3. Use `tsv_query`, `tsv_edit`, `tsv_merge`, `tsv_attach`, `tsv_translate`, or
+   `tsv_sort` on prepared/canonical TSV inputs. These tasks intentionally do
+   not accept parser-only delimiter and header options. If a source needs
+   reinterpretation, normalize it again with `tsv_read` first.
 
 ## Tasks at a glance
 
@@ -30,6 +34,7 @@ Scout TSV parsing and serialization rather than defining an independent format.
 | Merge tables | `tsv_merge` | TSV text; harness can return persisted result path |
 | Attach fields | `tsv_attach` | TSV text; harness can return persisted result path |
 | Translate identifiers | `tsv_translate` | TSV text; harness can return persisted result path |
+| Sort and page | `tsv_sort` | JSON: page as TSV text or ordered keys |
 
 ## Scout TSV data shape
 
@@ -115,6 +120,16 @@ and an identifier mapping file. It returns a new table and does not mutate the
 source. Setting `identifiers` in `tsv_info` or `tsv_read` is metadata assignment,
 not value translation.
 
+`tsv_sort` sorts a prepared table by `key` (default) or a value `column` and
+returns one `page` (`page_size` rows, 1-based; omitted page size means all
+keys) as canonical Scout TSV text in `tsv`, or just the ordered `keys` with
+`just_keys`. `direction` is `ascending` (default) or `descending`. Value-field
+sorting compares the field's first value for `list`/`double` rows; `cast`
+(`to_i`/`to_f`) makes that comparison numeric and is ignored when sorting by
+`key`. Unknown fields, invalid casts/directions, and non-positive page numbers
+or sizes are rejected; a page beyond the available rows is empty. Value-field
+sorting on `flat` TSVs is unsupported.
+
 ## Mutation safety and outputs
 
 `tsv_edit` always mutates its source on success. `tsv_info` mutates only when a
@@ -126,5 +141,5 @@ caller can set the harness-level `return_path: true` option to retrieve the
 persisted job result path; this is not an input declared by TSV tasks.
 `tsv_info` and `tsv_query` return JSON.
 
-There is no `tsv_write` task. Consult WorkflowCoder `task_inputs` for the exact
+There is no `tsv_write` task. Consult ScoutCoder `task_inputs` for the exact
 live task input schema before calling a task.
