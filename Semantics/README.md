@@ -15,6 +15,11 @@ discovery, dispatch and provenance plumbing that lets an agent ask "what
 entities exist", "what can I ask of this entity" and "give me this
 property for these entities" as ordinary workflow tasks.
 
+When loading the Semantics workflow it also automatically requires the project
+workflow by loading the './workflow.rb' in the current working directory, if
+present. This is to ensure that entities defined in the project are also
+prepared.
+
 ## Overview
 
 The core idea is to make it easy to:
@@ -67,6 +72,8 @@ this checkout (absolute path), which redirects the authoring writes into
 with a test under `share/test/` and run it with ScoutCoder's
 `run_task_test`.
 
+Note: Entity types are always Capitalized (or CamelCase).
+
 ## Example usage
 
 The examples below assume an example entity type `Gene` (identified by
@@ -78,14 +85,14 @@ entity types and properties your checkout actually carries.
 scout workflow task workflow.rb list_entities
 
 scout workflow task workflow.rb entity_property \
-    --entity_type gene --entity TP53 --property pubmed_articles
+    --entity_type Gene --entity TP53 --property pubmed_articles
 
 scout workflow task workflow.rb entity_property \
-    --entity_type gene --entity TP53 \
+    --entity_type Gene --entity TP53 \
     --property pubmed_article_details --arguments '{"max": 3}'
 
 scout workflow task workflow.rb entity_list_property \
-    --entity_type gene --property pubmed_articles \
+    --entity_type Gene --property pubmed_articles \
     --entities $'TP53\nKRAS\nZZZQQQNOTAGENE123'
 ```
 
@@ -94,7 +101,7 @@ From Ruby:
 ```ruby
 require File.expand_path('workflow.rb', <semantics checkout>)
 
-Semantics.job(:entity_property, entity_type: 'gene', entity: 'TP53',
+Semantics.job(:entity_property, entity_type: 'Gene', entity: 'TP53',
                                 property: 'pubmed_articles').run
 ```
 
@@ -199,7 +206,7 @@ Example:
 
 ```bash
 scout workflow task workflow.rb entity_property \
-    --entity_type gene --entity TP53 --property pubmed_articles
+    --entity_type Gene --entity TP53 --property pubmed_articles
 ```
 
 ## entity_list_property
@@ -247,7 +254,7 @@ Example:
 
 ```bash
 scout workflow task workflow.rb entity_list_property \
-    --entity_type gene --property pubmed_articles \
+    --entity_type Gene --property pubmed_articles \
     --entities $'TP53\nKRAS\nZZZQQQNOTAGENE123'
 ```
 

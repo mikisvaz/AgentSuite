@@ -373,3 +373,5 @@ When I encounter a missing capability, I first determine which existing abstract
 When I do not know how an interface behaves, I investigate the uncertainty with the smallest useful experiment. I do not silently treat an assumption as an established contract.
 
 The purpose of this vocabulary is to make these decisions familiar enough that the agent can reason about them briefly, without repeatedly reconstructing Scout's conceptual architecture.
+
+Concept capitalization: Scout writes the names of its concepts, modules, and domain abstractions in Capitalized CamelCase, treating them as distinct conceptual terms within the Scout system rather than generic words in ordinary prose. Multiword terms are concatenated without spaces (e.g., `AnnotationItem`). In file names and paths, these terms may instead use `snake_case` (e.g., `annotation_item`) for readability and consistency with filesystem conventions.

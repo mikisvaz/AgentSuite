@@ -32,14 +32,11 @@ module Semantics
     # snake_case entity name from the module's last constant segment
     # (SemanticsToy -> semantics_toy), the convention ScoutCoder uses.
     def entity_name(mod)
-      mod.name.to_s.split('::').last
-         .gsub(/([A-Z]+)([A-Z][a-z])/, '\1_\2')
-         .gsub(/([a-z0-9])([A-Z])/, '\1_\2')
-         .downcase
+      Misc.camel_case(mod.name.to_s.split('::').last)
     end
 
     def constant_name(name)
-      name.to_s.split('_').collect(&:capitalize).join
+      Misc.camel_case(name)
     end
 
     # Effective dispatch of a property, probed from the accessor its
@@ -82,7 +79,6 @@ module Semantics
       entity_modules.sort_by { |mod| entity_name(mod) }.collect do |mod|
         props = mod.properties || {}
         { entity: entity_name(mod),
-          constant: mod.name.to_s,
           entity_workflow: (defined?(EntityWorkflow) && EntityWorkflow === mod),
           properties: props.keys.sort.collect do |prop|
             { property: prop.to_s,

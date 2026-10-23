@@ -1,6 +1,5 @@
 AgentSuite=/$PWD filter="*" {
- LICENSE
- scout
+
  doctrine
  doctrines=doctrines{
   investigation
@@ -13,8 +12,8 @@ AgentSuite=/$PWD filter="*" {
   advice
  }
  society
- intro
- catalogue
+ scout
+
  doc=doc{
   guidelines=guidelines{
    README.md
@@ -29,6 +28,7 @@ AgentSuite=/$PWD filter="*" {
   first_version
   coding_1.analyze
   improve_patch
+
   doctrine_v3
   lessons
   society
@@ -39,9 +39,67 @@ AgentSuite=/$PWD filter="*" {
 
   version_3.intro
   version_3.semantic
+
+  doctrine_3
+
+  entity_case
  }
- Branched=Branched {
+
+ Worker=Worker {
+  start_chat
+ }
+ ScoutCoder=ScoutCoder {
+  LICENSE
+  README.md
+  start_chat
   workflow.rb
+  doc=doc {
+   developer=developer {
+    Help.md
+   }
+  }
+  lib=lib {
+   ScoutCoder=ScoutCoder {
+    tasks=tasks {
+     documentation.rb
+    }
+   }
+  }
+  research=research {
+   workflow-doc-sources.md
+  }
+  share=share {
+   prompts=prompts {
+    developer
+    planer
+    supervisor
+    return=return {
+     markdown
+    }
+   }
+  }
+  test=test {
+   test_helper.rb
+  }
+ }
+ Semantics=Semantics{
+  workflow.rb
+  chats=chats filter="*"{
+   implementation
+
+   entity
+  }
+  lib=lib {
+   Semantics=Semantics{
+    tasks=tasks{
+     entity_list_property.rb
+     entity_property.rb
+     entity_query.rb
+    }
+   }
+  }
+  README.md
+  LICENSE
  }
  ChatAnalyst=ChatAnalyst {
   README.md
@@ -61,40 +119,37 @@ AgentSuite=/$PWD filter="*" {
    }
   }
  }
- ComputerUse=ComputerUse {
-  LICENSE
-  README.md
+ Manager=Manager {
   start_chat
-  workflow.rb
   lib=lib {
-   ComputerUse=ComputerUse {
+  }
+ }
+
+ Workspace=Workspace{
+  README.md
+  workflow.rb
+  lib=lib{
+   Workspace=Workspace{
     exceptions.rb
-    tasks=tasks {
-     documents.rb
+    tasks=tasks{
      exec.rb
      filesystem.rb
      patch.rb
-     playwright.rb
      precise_edit.rb
-     web.rb
+     tsv.rb
     }
    }
   }
-  research=research {
-   sandbox_evidence_counts.md
-   sandbox_paths_design.md
-  }
-  share=share {
-   scout_commands=scout_commands {
-    refactor
-   }
-  }
-  test=test {
-   test_helper.rb
-   ComputerUse=ComputerUse {
-    tasks=tasks {
-     test_exec_helpers.rb
-     test_patch.rb
+ }
+ Research=Research{
+  README.md
+  workflow.rb
+  start_chat
+  lib=lib{
+   Research=Research{
+    tasks=tasks{
+     documents.rb
+     web.rb
     }
    }
   }
@@ -197,99 +252,6 @@ AgentSuite=/$PWD filter="*" {
    }
   }
  }
- CortexCoder=CortexCoder{
-  start_chat
-  start_chat.v2
-  start_chat.old
-  workflow.rb
- }
- Critic=Critic {
-  start_chat
-  workflow.rb
-  lib=lib {
-  }
- }
- ContractWorker=ContractWorker{
-  workflow.rb
- }
- Manager=Manager {
-  start_chat
-  lib=lib {
-  }
- }
- Planned=Planned {
-  README.md
-  workflow.rb
- }
- ScoutCoder=ScoutCoder {
-  LICENSE
-  README.md
-  start_chat
-  workflow.rb
-  doc=doc {
-   developer=developer {
-    Help.md
-   }
-  }
-  lib=lib {
-   ScoutCoder=ScoutCoder {
-    tasks=tasks {
-     documentation.rb
-    }
-   }
-  }
-  research=research {
-   workflow-doc-sources.md
-  }
-  share=share {
-   prompts=prompts {
-    developer
-    planer
-    supervisor
-    return=return {
-     markdown
-    }
-   }
-  }
-  test=test {
-   test_helper.rb
-  }
- }
- Consultant=Consultant {
-  start_chat
-  }
- Searcher=Searcher {
-  start_chat
- }
- User=User {
-  start_chat
- }
- Visualizer=Visualizer{
-  start_chat
- }
- Worker=Worker {
-  start_chat
- }
- WorkflowCoder=WorkflowCoder {
-  LICENSE
-  README.md
-  start_chat
-  workflow.rb
-  lib=lib {
-   WorkflowCoder=WorkflowCoder {
-    tasks=tasks {
-     workflow_tools.rb
-    }
-   }
-  }
-  research=research {
-   design_decisions.md
-   search_report.md
-  }
-  test=test {
-   test_helper.rb
-  }
- }
  FitAgent=FitAgent{
   LICENSE
   README.md
@@ -304,6 +266,37 @@ AgentSuite=/$PWD filter="*" {
   }
  }
 
+ Critic=Critic {
+  start_chat
+  workflow.rb
+  lib=lib {
+  }
+ }
+ Searcher=Searcher {
+  start_chat
+ }
+ User=User {
+  start_chat
+ }
+
+ Planned=Planned {
+  README.md
+  workflow.rb
+ }
+ Branched=Branched {
+  workflow.rb
+ }
+
+ Consultant=Consultant {
+  start_chat
+ }
+ Visualizer=Visualizer{
+  start_chat
+ }
+ Claude=Claude{
+  workflow.rb
+ }
+
  Clean=Clean{
   start_chat
  }
@@ -313,47 +306,8 @@ AgentSuite=/$PWD filter="*" {
  Direct=Direct{
   workflow.rb
  }
-
- Debug=Debug{
-  start_chat
-  workflow.rb
- }
  Decider=Decider{
   README.md
-  workflow.rb
- }
-
- Workspace=Workspace{
-  README.md
-  workflow.rb
-  lib=lib{
-   Workspace=Workspace{
-    exceptions.rb
-    tasks=tasks{
-     exec.rb
-     filesystem.rb
-     patch.rb
-     precise_edit.rb
-     tsv.rb
-    }
-   }
-  }
- }
- Research=Research{
-  README.md
-  workflow.rb
-  start_chat
-  lib=lib{
-   Research=Research{
-    tasks=tasks{
-     documents.rb
-     web.rb
-    }
-   }
-  }
- }
-
- Filesystem=Filesystem{
   workflow.rb
  }
 
@@ -362,4 +316,6 @@ AgentSuite=/$PWD filter="*" {
    process.rb
   }
  }
+
+ LICENSE
 }
