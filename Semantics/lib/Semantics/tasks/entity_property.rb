@@ -48,5 +48,5 @@ module Semantics
     end
   end
 
-  export_exec :entity_property
+  export :entity_property
 end

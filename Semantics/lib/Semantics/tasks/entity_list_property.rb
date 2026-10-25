@@ -60,5 +60,5 @@ module Semantics
       records: records }
   end
 
-  export_exec :entity_list_property
+  export :entity_list_property
 end

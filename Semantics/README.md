@@ -112,13 +112,21 @@ workflow by path (`workflow.rb`).
 
 - All tasks return **JSON** (Scout return type `:json`), so results can be
   directly consumed by other agent tools.
+- Export mode: `entity_property` and `entity_list_property` are exported as
+  ordinary (non-exec) tasks, so one dispatched call runs as a persisted job
+  and returns value and durable job path together. Through the agent tool
+  layer, `return_path: true` answers with the persisted job path (durable,
+  readable by ordinary tools after the producing process ends) rather than a
+  temporary file; `list_entities` stays exec-exported (pure discovery, no
+  result to cite).
 - Property tasks write their jobs under the standard Scout jobs tree
   (`var/jobs` / `~/.scout/var/jobs`); clean a job when freshness matters.
 - When a dispatched property declares an `:output_dir` kwarg and the
   caller did not choose a location, `entity_property` routes it into the
   task's own job files dir (`<job>.files/property_output`), so bulk
   payloads (abstracts and similar) land on disk as one file per record
-  while the in-memory result carries only compact pointers.
+  while the returned JSON record carries only compact pointers (the record
+  itself is persisted as the job result).
 
 ## Failure policy
 
