@@ -40,9 +40,37 @@ For a document plus questions, prefer the composite tasks — `pdf_query` / `htm
 - **Prefer the composite tasks.** For a document plus questions, call `pdf_query`/`html_query` rather than manually chaining `pdf2md` → `query`; the composite task wires the dependency and inherits caching. The risk to avoid is the reverse one: `searxng` + manual reading instead of the retrieval path.
 - **Availability probe first.** Pandoc, docling, html2markdown, and the embedding provider are external: one bounded availability check early in the bout beats discovering a missing converter mid-investigation.
 
+## Scientific record Path kinds
+
+Research declares three agent Path kinds — **observation**, **claim**, **hypothesis** — for the durable scientific record. They register when the whole Research workflow is incorporated as a tool (`tool: Research`); a task-level tool line registers nothing.
+
+- **observation** (`OBS-###`) — a recorded result or measurement tied to at least one source. Use it when the point is *what was observed and from what provenance*. Registering an observation without any source is rejected.
+- **claim** (`C-###`) — an assertion the record store tracks through an evidential lifecycle (`proposed` → `supported`/`qualified`/`contradicted` → `superseded`). Use it when the point is *what is being asserted*, with links to the observations and other claims that support, contradict or qualify it.
+- **hypothesis** (`H-###`) — a candidate explanation with predictions (`proposed` → `under_test` → `consistent_with_evidence`/`weakened`/`rejected`/`unresolved` → `superseded`). Use it when the point is *what would explain the observations and how it could fail*.
+
+**The only way to create a record is the shared `register` operation** (one tool across all three kinds): it allocates the ID from an atomic per-kind counter inside a lock, validates the complete record, writes the body and its `.info` sidecar atomically, and returns the ID and path. Agents never allocate IDs. `statement` is required; `sources` is required in effect for observations; `title`, `scope`, `links`, `limitations` and the per-kind fields (`value` for observations; `predictions`, `test_ideas`, `assessment` for hypotheses; `assessment` for claims) are optional. `status` and `version` are system-managed and rejected as inputs.
+
+**Records mutate only through `path_edit`.** An edit must carry the version line of the record it was read from; if the record has moved on, the edit fails as stale with a re-read instruction, and the prior body is snapshotted under `history/<ID>.v<N>.yaml` before the version is bumped. Never renumber or delete history. `write`, `move`, `rename` and `delete` are disabled for all three kinds — records are born through `register` and change through versioned edits.
+
+**Validation separates record integrity from scientific assessment.** Hard errors (missing/ill-typed fields, unknown top-level keys, invalid status or transition, malformed links, relationship not allowed between the source and target kinds, broken local references, duplicate IDs) reject the operation. Warnings — a hypothesis with no predictions yet, a proposed claim not yet challenged, an unreachable external source, a mutable source with no digest, a claim that has not considered counterevidence, a non-re-executable derivation, a link whose target is invalidated or superseded — never block, they are reported for the author to consider. Backlinks and reference resolution are derived at validate/list time by scanning the records; they are never stored or maintained by hand.
+
+**Link vocabulary** (direction: from the linking record to `target`):
+
+| from \ relationship | `supported_by` | `contradicted_by` | `qualified_by` | `motivated_by` | `explains` | `supersedes` | `related_to` |
+|---|---|---|---|---|---|---|---|
+| observation | → observation | → observation | → observation | | | → observation | → any |
+| claim | → observation, claim | → observation, claim | → observation, claim | | | → claim | → any |
+| hypothesis | | → observation, claim | | → observation, claim | → observation, claim | → hypothesis | → any |
+
+The observation row is the chosen symmetric closure reported in step 3 (the spec tabulates claim and hypothesis only); it is pending user adjudication.
+
+**Sources reference provenance without copying it.** A source entry is `{type, ref}` plus optional `locator` and `digest`, with `type` one of `file`, `entity_property`, `task`, `workflow`, `external`. Local `file`/receipt refs must resolve at registration time (a broken local path is a hard error); `external` URLs are never fetched by the validator (reachability is a warning only); unknown-but-well-formed types are accepted as opaque with a warning.
+
+The authoritative contract for schemas, lifecycle and validation is [research/path-kinds-spec.md](research/path-kinds-spec.md); the implementation lives in `lib/Research/path_kinds/`.
+
 ## Testing
 
-From the repository root, run `ruby -IResearch/test Research/test/Research/tasks/test_registration.rb`. These tests cover workflow loading, task registration and aliases, and deterministic local excerpting. They do not require network services, LLM credentials, or document-conversion programs.
+From the repository root, run `ruby -Itest test/Research/tasks/test_registration.rb` for workflow/task registration, and the record-kinds suites `ruby -Itest test/Research/path_kinds/test_records.rb`, `.../test_path_kinds_engine.rb`, `.../test_spec9_matrix.rb` (the last includes fork-based concurrency tests). Together they cover workflow loading, task registration and aliases, deterministic local excerpting, and the full scientific-record Path-kinds contract. They do not require network services, LLM credentials, or document-conversion programs.
 
 # Tasks
 

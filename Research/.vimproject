@@ -1,0 +1,20 @@
+Research=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *.txt *.conf *.slim *.haml" {
+ workflow.rb
+ start_chat
+ chats=chats filter="*"{
+  path_kinds
+ }
+ lib=lib{
+  Research=Research{
+  }
+ }
+ share=share filter="*"{
+ }
+ data=data filter="*"{
+ }
+ test=test {
+  test_helper.rb
+ }
+ README.md
+ LICENSE
+}
