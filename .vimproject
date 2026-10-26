@@ -144,15 +144,28 @@ AgentSuite=/$PWD filter="*" {
    }
   }
  }
- Research=Research{
+ Reader=Reader{
   README.md
-  workflow.rb
   start_chat
+  workflow.rb
   lib=lib{
-   Research=Research{
+   Reader=Reader{
     tasks=tasks{
      documents.rb
      web.rb
+    }
+   }
+  }
+ }
+ Research=Research{
+  README.md
+  start_chat
+  workflow.rb
+  lib=lib{
+   Research=Research{
+    path_kinds.rb
+    path_kinds=path_kinds{
+     records.rb
     }
    }
   }

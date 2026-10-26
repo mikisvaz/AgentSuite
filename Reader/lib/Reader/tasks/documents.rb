@@ -5,7 +5,7 @@ module Reader
     raise ParameterException, "DOCX file not found: #{docx}" unless Open.exists?(docx)
 
     # Run docling to convert pdf -> markdown into the step files dir
-    res = cmd_json :pandoc, "'#{docx}' -o '#{self.tmp_path}'"
+    res = cmd_json :pandoc, [docx, '-o', self.tmp_path]
 
     if res.is_a?(Hash) && res[:exit_status].to_i != 0
       raise ScoutException, "pandoc failed (exit=#{res[:exit_status]}): #{res[:stderr].to_s.strip}"
@@ -19,7 +19,7 @@ module Reader
     raise ParameterException, "Pdf not found: #{pdf}" unless Open.exists?(pdf)
 
     # Run docling to convert pdf -> markdown into the step files dir
-    res = cmd_json :docling, "'#{pdf}' --output '#{self.files_dir}'"
+    res = cmd_json :docling, [pdf, '--output', self.files_dir]
 
     if res.is_a?(Hash) && res[:exit_status].to_i != 0
       raise ScoutException, "docling failed (exit=#{res[:exit_status]}): #{res[:stderr].to_s.strip}"
