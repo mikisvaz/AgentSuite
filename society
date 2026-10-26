@@ -19,7 +19,9 @@ Routing in one line:
 - Reasonably sized request: Planned, the staged pipeline.
 - Single bounded task: go straight to the specialist who owns it.
 - Scout-stack code or tooling to build or extend: ScoutCoder.
-- Research execution on that tooling: Worker.
+- Concrete task execution on that tooling: Worker.
+- Source documents to read, convert, or extract: Reader.
+- Scientific investigation and evidence-grounded interpretation: Research.
 - Verification of a consequential result: Critic.
 - Introspection over recorded sessions: ChatAnalyst.
 
@@ -33,12 +35,13 @@ Use for: intake normalization and final synthesis.
 Not for: executing tools, searching, or solving the task.
 
 ## Searcher
-Targeted-search agent producing a short search brief, or NO_SEARCH_NEEDED
-when no search is required; prefers local documentation and repository
-files over the web. In Planned the brief is one of the three reports that
-feed the work stage.
-Use for: bounded evidence gathering.
-Not for: design decisions or implementation suggestions.
+Targeted discovery agent producing a concise search brief with candidate
+sources and relevant local documentation; prefers local files over the web;
+hands off documents requiring substantial extraction or close reading to
+Reader; returns NO_SEARCH_NEEDED when no search is required.
+Use for: source discovery and bounded search.
+Not for: exhaustive document extraction, scientific interpretation, or
+implementation decisions.
 
 ## Planner
 Plan producer for Planned's plan stage: turns the restated request, plus
@@ -52,9 +55,9 @@ Not for: executing the plan, which belongs to the work stage.
 Controller of a budgeted loop: decides what happens next, who does it, with
 what context, and when to stop; does not implement. Inside Planned its
 context is exactly the three upstream reports. Schedules ScoutCoder when
-supporting code infrastructure must be extended, and Worker when that
-infrastructure is used for scientific research; recruits Critic for
-verification gates.
+supporting code infrastructure must be extended, and Worker or Research
+for execution — Research when the work is scientific investigation;
+recruits Critic for verification gates.
 Use for: routing ambiguous or multi-step work across specialists.
 Not for: direct implementation.
 
@@ -76,8 +79,30 @@ Not for: redoing the investigation or fixing defects.
 
 # Conversational agents with an associated tool or workflow
 
+## Reader
+Source acquisition and reading specialist. Uses the Reader workflow's
+document, PDF, and web tools to retrieve sources, inspect contents,
+extract relevant passages and tables, and produce source-grounded,
+citable artifacts — preserving source identity, page/section locators,
+retrieval context, and extraction limitations.
+Use for: reading supplied or discovered papers, reports, PDFs, web pages;
+preparing source dossiers.
+Not for: deciding what the evidence warrants scientifically, maintaining
+the Research epistemic record, or writing the final interpretive report.
+
+## Research
+Scientific epistemology agent. Conducts research leveraging the scientific
+Path kinds, the Semantics interface, and domain-specific tooling, with
+Workspace tooling when necessary; registers observations, assesses claims,
+challenges hypotheses, and produces traceable syntheses citing result
+addresses. Delegates source discovery to Searcher and document reading to
+Reader while retaining epistemic responsibility.
+Use for: scientific investigations and evidence-grounded interpretation.
+Not for: general-purpose source retrieval and document extraction, or
+building Scout framework tooling.
+
 ## Worker
-Research executor: runs concrete tasks on the infrastructure ScoutCoder
+Execution agent: runs concrete tasks on the infrastructure ScoutCoder
 builds, carrying Workspace and Cortex tooling plus any domain-specific
 tooling, and produces evidence that cites result addresses rather than
 transcribed numbers. Default for concrete tasks that are not explicitly

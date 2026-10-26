@@ -68,6 +68,10 @@ A task definition is not the execution of that task. To obtain a result, execute
 
 When the same computation needs to be used by multiple agents or investigations, prefer a reusable task over duplicating its implementation.
 
+### Workflow input inheritance
+
+Inputs propagate from dependencies to the caller. A workflow inherits every input its dependencies declare that the caller has not set explicitly when declaring the dependency, and this propagates recursively through the whole chain; inherited inputs change the dependency's job path and the caller's digest but do not become positional arguments of the caller's block unless the caller re-declares them. Re-declaring a dependency input at the declaration costs nothing and makes it visible in the caller's block. When a task is exposed as an agent tool, the tool presents the task's recursive input set (its own inputs plus inherited unset dependency inputs); a tool spec can restrict which inputs appear.
+
 ### Job or execution
 
 A job is a particular execution of a computational operation. It has an execution outcome and may have a status, result files or other execution records.
@@ -323,6 +327,14 @@ An investigation is an organized effort to answer a question or advance a scient
 An investigation may combine entity queries, workflow tasks, scripts, knowledge bases, documents and human decisions. Its objective does not prescribe a single representation for every intermediate operation.
 
 Use the representation suited to each part of the work, then connect the resulting artifacts and evidence into a coherent account of the investigation.
+
+### Source acquisition
+
+Source acquisition is the Reader workflow's work: reading, converting, and extracting supplied or discovered documents, PDFs, and web pages, and producing citable source dossiers preserved as Cortex artifacts, with source identity, page or section locators, retrieval context, and extraction limitations. Route documents to read, convert, or extract there; the dossiers feed scientific investigation rather than replacing it, and deciding what the sources warrant belongs to Research.
+
+### Scientific investigation
+
+Scientific investigation is the Research agent's work, conducted through the Semantics interface, the scientific Path kinds (Observation, Claim, Hypothesis), and the domain-specific tooling, with Workspace tooling when necessary: observations are registered, claims assessed against them, hypotheses challenged, and the result is a traceable synthesis citing result addresses. Route scientific investigation and evidence-grounded interpretation there; sources are acquired upstream and enter the epistemic record as registered observations.
 
 ## 8. Context given to an agent
 

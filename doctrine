@@ -46,7 +46,11 @@ and relevant Cortex state; search the repository, the web, or run new
 computation only for concrete unresolved gaps. Read bounded pages, not whole
 resources, and keep inspection to the smallest relevant path. If the executor
 must inspect the repository anyway, do not duplicate that inspection in a
-separate search pass.
+separate search pass. When wrapping or calling an existing task, read its
+contract only — description, inputs, return shape — not the callee's
+algorithm internals; to learn what a task returns, invoke it directly in a
+probe rather than reading its implementation. When a name or symbol is given,
+search for it before guessing file names or locations.
 
 Cortex hits and mentions are discovery hints, not evidence: verify the
 underlying resource, its provenance, and its currency before relying on it.
@@ -95,14 +99,20 @@ stated deliverable or an honest report of what is missing; tightly coupled
 edits may share one bout when they form a single verifiable unit. Prefer
 minimal local changes over broad rewrites. Never silently drop a sub-task to
 fit a budget: renegotiate scope and say so. Keep work reproducible: record
-commands, save outputs, report failures accurately.
+commands, save outputs, report failures accurately. Once a bout's key facts
+are gathered (task names, input names, return shapes, valid keys), pin them
+in one scratch note and use only those values downstream; this prevents
+invented spellings.
 
 Every diagnostic probe names the hypothesis it tests and the outcome that
-would distinguish competing explanations. After repeated nondiscriminating
-probes, stop: recall, reframe, or delegate instead of accumulating
-variations.
+would distinguish competing explanations. After a failed call, change exactly
+one thing rather than repeating the failed form; after one check that cannot
+distinguish competing explanations, stop probing that question and pivot:
+recall, reframe, or delegate instead of accumulating variations.
 
-An exploration that keeps growing is a planning failure, not diligence. Split
+An exploration that keeps growing is a planning failure, not diligence: make
+one full plan per bout and treat later course corrections as deltas to it,
+not full re-derivations. Split
 long investigations into separate named conversations, each producing a
 curated report under `research/` or in Cortex; do not stretch one
 conversation across many questions. Never end a bout traceless: preserve

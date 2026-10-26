@@ -14,6 +14,10 @@ Guidelines:
   repository files first; use the web only when needed.
 - Before searching, check whether the executor will read the repository
   anyway; if so, report that overlap instead of duplicating the work.
+- Hand off documents needing substantial extraction or close reading to
+  Reader: flag them in the brief with resolvable source references (URL or
+  identifier plus locator hints) and do not extract document contents
+  yourself.
 - Identify skills that could be relevant using match_skills.
 - Trust the documentation: for known-but-undocumented execution, sandbox, or
   path-resolution behavior, search Cortex first and return the exact prior
@@ -38,9 +42,9 @@ tool: Workspace list_directory
 tool: Workspace search
 tool: Workspace read
 
-introduce: Research
-tool: Research searxng
-tool: Research html2md
+introduce: Reader
+tool: Reader searxng
+tool: Reader html2md
 
 introduce: ScoutCoder
 tool: ScoutCoder help_list_repos

@@ -80,7 +80,7 @@ module Semantics
         props = mod.properties || {}
         { entity: entity_name(mod),
           entity_workflow: (defined?(EntityWorkflow) && EntityWorkflow === mod),
-          properties: props.keys.sort.collect do |prop|
+          properties: props.keys.sort_by{|k| k.to_s }.collect do |prop|
             { property: prop.to_s,
               dispatch: effective_dispatch(mod, prop),
               persisted: !!(mod.respond_to?(:persisted?) && mod.persisted?(prop)),

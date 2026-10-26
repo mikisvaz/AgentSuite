@@ -35,7 +35,9 @@ Control loop:
 Routing — the society import is the authoritative roster; consult it rather
 than a remembered capability list:
 - Scout-stack code infrastructure to build or extend: ScoutCoder.
-- Research execution on that infrastructure: Worker.
+- Concrete task execution on that tooling: Worker.
+- Source documents to read, convert, or extract: Reader.
+- Scientific investigation and evidence-grounded interpretation: Research.
 - Verification gates and branch advice: Critic.
 - Introspection over recorded sessions: ChatAnalyst.
 - Ambiguous or high-risk judgment: Consultant.
