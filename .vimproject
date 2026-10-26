@@ -24,25 +24,9 @@ AgentSuite=/$PWD filter="*" {
   }
  }
  chats=~/chats/AgentSuite{
-  new_doctrine
-  first_version
-  coding_1.analyze
-  improve_patch
-
-  doctrine_v3
-  lessons
-  society
-
-  fit_agent
-
-  Cortex_property
-
-  version_3.intro
-  version_3.semantic
-
   doctrine_3
 
-  entity_case
+  doctrine_4
  }
 
  Worker=Worker {
@@ -60,8 +44,27 @@ AgentSuite=/$PWD filter="*" {
   }
   lib=lib {
    ScoutCoder=ScoutCoder {
+    path_kinds.rb
+    path_kinds=path_kinds{
+     entity.rb
+     entity_property.rb
+     probe.rb
+     python_task.rb
+     support.rb
+     task.rb
+     test_file.rb
+    }
+    probe_support.rb
+    python_task_support.rb
+    test_file_support.rb
     tasks=tasks {
+     document_task.rb
      documentation.rb
+     entity_tools.rb
+     list_entities.rb
+     probe_tools.rb
+     test_runner_tools.rb
+     workflow_tools.rb
     }
    }
   }
