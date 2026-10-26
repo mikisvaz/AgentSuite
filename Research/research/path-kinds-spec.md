@@ -259,6 +259,27 @@ Implement:
 1. **Write:** create a record and validate its schema.
 2. **Read:** retrieve the exact record with its current content, status, and links.
 3. **Edit:** update a record, validating the complete resulting record rather than only the changed fields.
+   Two edit entry modes share one commit path (H-011 fix):
+   - `path_edit` text mode (`selector`+`replacement`): the generic engine
+     splice rewrites the physical lines, then the record layer re-parses,
+     validates and commits.  Two text-structural guards reject the
+     corruption-shaped caller mistakes reconstructed from record H-011
+     before anything is written: a `lines` replacement that re-pastes
+     physical lines remaining untouched immediately before or after the
+     span (boundary duplication), and a replacement whose last physical
+     line is not newline-terminated unless the span reaches EOF of a
+     document that itself lacks a final newline (unterminated fragment).
+     Guards are byte comparisons of adjacent physical lines at the splice
+     site; no YAML semantics and no prose heuristics enter the record
+     layer, and the generic engine splice stays a faithful text operation.
+   - `edit_fields` field mode (custom operation): preferred for record
+     content.  The caller states the record version it read and a mapping
+     of parsed-record field assignments; unmentioned fields keep their
+     values exactly (keys outside the schema are carried into the
+     candidate and remain subject to validation), the result is validated
+     before any write, the body is serialized through the record
+     implementation, the previous body is snapshotted under history/ and
+     the version is bumped.  Physical-line coordinates are never involved.
 4. **List:** enumerate records of the kind, returning stable identifiers and useful summaries.
 5. **Reference resolution:** resolve linked record identifiers and report missing or invalid targets.
 6. **Lifecycle handling:** enforce the relevant status vocabulary and preserve history.
@@ -462,3 +483,33 @@ documentation verdicts (a)-(c) are taken on the documentation's word until
 the step-3 unit tests exercise them; the three kind declarations of the
 shared `register` operation must carry identical parameter schemas and the
 same description text (verdict c caveat).
+
+# Appendix: return_path citation contract
+
+The authoritative citation semantics for record sources live in
+`research/return-path-citation-contract.md` (fact base:
+`research/return-path-probes.md`); its rules C1-C5 and R6-R14 govern what a
+source `ref` promises, and `lib/Research/path_kinds/records.rb` implements
+them (tests: `test/Research/path_kinds/test_return_path_citation.rb`,
+`test_return_path_lifecycle.rb`).
+
+Source-type grammar (R6-R8): `tool_result` is the new general type citing
+the persisted result of any tool invocation — an absolute path or a
+Research-root-relative path resolving to an existing FILE inside a persisted
+job tree (`var/jobs/<Workflow>/<task>/...` with result + `.info`), a named
+durable store (`var/records-attachments/`), or an explicitly designated
+durable store. `locator` is optional, one minimal form `kind:value`, kind in
+{row, range, line, section}. Legacy AGS `var/entity_property/...` receipts
+migrate as ABSOLUTE paths under the unchanged `entity_property` type; the
+original relative key lives in the migration note, not the record schema
+(R13; no AGS-specific rule in Research).
+
+Three-state validation (R10-R12, R14): **broken reference** — ref does not
+resolve → hard error, unchanged shape. **Ephemeral reference** — resolves now
+but is temporary (TmpFile/exec scratch, temp roots, unpromoted files_dir) →
+promote-or-reject: copy into `var/records-attachments/` (the
+`promote_tool_result` operation) and cite that, or re-run non-exec and cite
+`receipt.job.path`; never silently accepted. **Unverifiable-but-durable** —
+resolves durably but lacks a digest → warning, never error; a RECORDED
+digest mismatch at edit/validate is the one new hard error (R12). Existing
+types and existing records keep validating unchanged (R14).

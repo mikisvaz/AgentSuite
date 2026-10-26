@@ -15,6 +15,9 @@ class TestSpec9Matrix < Test::Unit::TestCase
   CHILD_TIMEOUT = 30
 
   def setup
+    require 'digest'
+    wf = File.expand_path('../../../workflow.rb', __dir__)
+    @wf_digest = Digest::SHA256.file(wf).hexdigest
     @tmpdir = File.join(Scout.tmp.test_spec9_matrix.find.to_s, "m-#{Process.pid}")
     FileUtils.mkdir_p(@tmpdir)
     @roots = Research::PathKinds.kind_roots(@tmpdir)
@@ -186,7 +189,7 @@ class TestSpec9Matrix < Test::Unit::TestCase
   def test_source_variants_external_sources_warn_but_never_fail
     result = register('observation', 'statement' => 'external evidence',
       'sources' => [{ 'type' => 'external', 'ref' => 'https://example.org/does-not-resolve',
-                      'digest' => 'd' }])
+                      'digest' => @wf_digest }])
     assert_equal 'OBS-001', result['id']
     assert result['warnings'].any? { |w| w.include?('reachability not verified') }
 
@@ -234,7 +237,7 @@ class TestSpec9Matrix < Test::Unit::TestCase
 
   def test_invalidated_observation_remains_readable_listed_and_snapshotted
     obs = register('observation', 'statement' => 'will be invalidated',
-                                  'sources' => [{ 'type' => 'file', 'ref' => 'workflow.rb', 'digest' => 'd' }])
+                                  'sources' => [{ 'type' => 'file', 'ref' => 'workflow.rb', 'digest' => @wf_digest }])
     agent = stub_agent
 
     candidate = Research::PathKinds.parse_record(File.read(obs['file']))
@@ -302,7 +305,7 @@ class TestSpec9Matrix < Test::Unit::TestCase
 
   def test_claim_depending_on_stale_evidence_is_detected_not_rewritten
     obs = register('observation', 'statement' => 'gene X effect',
-                                  'sources' => [{ 'type' => 'file', 'ref' => 'workflow.rb', 'digest' => 'd' }])
+                                  'sources' => [{ 'type' => 'file', 'ref' => 'workflow.rb', 'digest' => @wf_digest }])
     claim = register('claim', 'statement' => 'gene X is a marker',
                              'links' => [{ 'type' => 'supported_by', 'target' => obs['id'] }])
     agent = stub_agent

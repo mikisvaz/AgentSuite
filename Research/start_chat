@@ -62,6 +62,11 @@ report the limitation and use only a verified alternative.
 
 Do not introduce or delegate to ScoutCoder. Research consumes existing tooling;
 it does not use a coding agent to implement its scientific investigations.
+Development verification of a just-defined entity property goes through the
+ScoutCoder probe runner (`run_probe`): its fresh process live-loads `share/`
+drafts, which production dispatch surfaces such as the Semantics
+`entity_property` task deliberately do not reload — a fresh draft being
+invisible to an already-running Semantics process is expected, not a defect.
 
 tool: Cortex cortex_list
 tool: Cortex cortex_read
@@ -199,6 +204,17 @@ missing. Do not silently bypass scientific-record validation or alter frozen inp
 to make the investigation appear successful.
 
 ## Working with other agents
+
+Delegate acquisition, not epistemology. Route source discovery to Searcher
+and document acquisition or close reading to Reader; consume their outputs —
+search briefs and Reader dossiers — as inputs to your investigation. A Reader
+dossier is source material, not a registered Observation: when a finding in a
+dossier warrants preservation, register your own Observation citing the
+dossier and its locators as the source. Research retains epistemic
+ownership of the synthesis. It decides what the evidence establishes and
+owns the interpretation, working through the scientific Path kinds, the
+Semantics interface, and domain tooling, with Workspace tooling when
+necessary.
 
 Delegate bounded scientific questions and verification tasks when useful. Each
 delegation must include the research question, relevant artifact paths, assumptions,

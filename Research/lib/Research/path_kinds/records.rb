@@ -31,6 +31,29 @@
 # version is carried by the `version:` line of the record body the caller
 # must have read: a whole-file edit whose body declares a version older
 # than the sidecar fails cleanly as stale.
+#
+# Editing (H-011 fix): two entry modes share one commit path.
+#   - path_edit text mode (selector+replacement): the generic engine splice
+#     rewrites the physical lines, then the override re-parses, validates and
+#     commits.  Two text-structural guards reject the corruption-shaped
+#     caller mistakes reconstructed from H-011 BEFORE anything is written:
+#       * boundary duplication: a `lines` replacement whose leading physical
+#         lines re-paste the head's trailing physical lines, or whose
+#         trailing physical lines re-paste the tail's leading physical lines
+#         (the v5-v12 folded-scalar duplication);
+#       * unterminated fragment: a `lines` replacement whose last physical
+#         line is not newline-terminated, unless the span reaches EOF of a
+#         document that itself lacks a final newline (the v12->v13 shape).
+#     Both guards are structural byte comparisons of adjacent physical lines
+#     at the splice site; no prose heuristics, no YAML semantics, and the
+#     generic engine splice stays a faithful, untouched text operation.
+#   - edit_fields field mode (custom operation): assigns PARSED record
+#     fields, so record-content edits never depend on physical-line
+#     coordinates.  It preserves every key it is not asked to change
+#     (including keys the schema does not model, which stay subject to
+#     validation), validates through validate_record BEFORE any write,
+#     serializes only through serialize, and reuses the same
+#     snapshot/version-bump/sidecar commit path as the text mode.
 
 require 'scout'
 require 'yaml'
@@ -135,7 +158,17 @@ module Research
                      'H' => 'hypothesis' }.freeze
     SOURCE_KEYS = %w[type ref locator digest].freeze
     LINK_KEYS = %w[type target note].freeze
-    LOCAL_SOURCE_TYPES = %w[entity_property task workflow file].freeze
+    LOCAL_SOURCE_TYPES = %w[entity_property task workflow file tool_result].freeze
+    DURABLE_NAMED_STORES = %w[records-attachments entity_property].freeze
+    LOCATOR_KINDS = %w[row range line section].freeze
+    EPHEMERAL_REJECTION =
+      'is a temporary artifact (class: temporary — resolves under a temp ' \
+      'root or is an exec-mode TmpFile result; it does not survive the ' \
+      'producing process). Remedy: promote the artifact into the durable ' \
+      'store and cite the promoted path (var/records-attachments/<…>), or ' \
+      're-run the tool in non-exec mode and cite the returned job path ' \
+      '(receipt.job.path). Ephemeral refs are never registered silently.'
+    RECORDS_ATTACHMENTS_DIR = File.join(PATH_KIND_ROOT, 'var', 'records-attachments')
     EVIDENCE_RELATIONSHIPS = %w[supported_by qualified_by motivated_by
                                 explains].freeze
     STALE_STATUSES = {
@@ -180,17 +213,25 @@ module Research
               'type' => {
                 'type' => 'string',
                 'description' => 'Source kind: entity_property, task, '\
-                                 'workflow, file, external (vocabulary is '\
-                                 'extensible).'
+                                 'workflow, file, tool_result, external '\
+                                 '(vocabulary is extensible). tool_result '\
+                                 'cites the durable result of a tool '\
+                                 'invocation (receipt job path or a file '\
+                                 'under it).'
               },
               'ref' => {
                 'type' => 'string',
                 'description' => 'Canonical reference to the evidence '\
-                                 'artifact or execution record.'
+                                 'artifact or execution record: an '\
+                                 'absolute path or a path anchored at the '\
+                                 'Research checkout.'
               },
               'locator' => {
                 'type' => 'string',
-                'description' => 'Optional: the relevant part of the artifact.'
+                'description' => 'Optional: the relevant part of the '\
+                                 'artifact, one form kind:value with kind '\
+                                 'one of row, range, line, section (e.g. '\
+                                 'row:TP53).'
               },
               'digest' => {
                 'type' => 'string',
@@ -274,6 +315,79 @@ module Research
       'records, and local artifact references must exist. Non-blocking '\
       'warnings are returned in the result.'
 
+    # Field-level edit contract (H-011 fix).  The caller states the record
+    # version it read - the same optimistic-concurrency guarantee the text
+    # mode obtains from re-sending the version line - and a mapping of
+    # parsed-record field assignments.  `version` is system-managed and
+    # rejected inside `fields`; `status` is assignable because status
+    # transitions are legitimate edits, validated by the shared commit path.
+    EDIT_FIELDS_PARAMETERS = {
+      'type' => 'object',
+      'properties' => {
+        'version' => {
+          'type' => 'integer',
+          'description' => 'The record version you read; the edit is ' \
+                           'rejected as stale when the record has moved on.'
+        },
+        'fields' => {
+          'type' => 'object',
+          'description' => 'Parsed-record field assignments: field name ' \
+                           'to new value. Assign null to remove an ' \
+                           'optional field. Fields you do not name keep ' \
+                           'their values exactly (including keys outside ' \
+                           'the schema, which remain subject to ' \
+                           'validation). version is system-managed: state ' \
+                           'the version you read in the version argument.',
+          'additionalProperties' => true
+        }
+      },
+      'required' => %w[version fields],
+      'additionalProperties' => false
+    }.freeze
+
+    EDIT_FIELDS_DESCRIPTION =
+      'Edit the parsed fields of an existing record without physical-line ' \
+      'coordinates; preferred for record-content changes. State the ' \
+      'version you read (stale edits are rejected) and a mapping of field ' \
+      'assignments; unmentioned fields keep their values exactly, the ' \
+      'result is schema-validated before anything is written, the body is ' \
+      'serialized through the record implementation, the previous body is ' \
+      'snapshotted under history/ and the version is bumped. Assign null ' \
+      'to remove an optional field. For whole-body rewrites the path_edit ' \
+      'text mode (selector+replacement) remains available and rejects ' \
+      'boundary-duplication and unterminated-fragment mistakes.'
+
+    PROMOTE_TOOL_RESULT_PARAMETERS = {
+      'type' => 'object',
+      'properties' => {
+        'ref' => {
+          'type' => 'string',
+          'description' => 'The temporary artifact path to promote: a ' \
+                           'TmpFile/exec-mode result path, or any readable ' \
+                           'file that must become durable before citation.'
+        },
+        'destination' => {
+          'type' => 'string',
+          'description' => 'Required relative directory under ' \
+                           'var/records-attachments/ that groups this ' \
+                           'promotion (e.g. the producing job or record ' \
+                           'context). No absolute paths, no "..".'
+        }
+      },
+      'required' => %w[ref destination],
+      'additionalProperties' => false
+    }.freeze
+
+    PROMOTE_TOOL_RESULT_DESCRIPTION =
+      'Promote a temporary tool artifact into the Research durable store ' \
+      'so a record can cite it (contract rule R11). Copies the artifact ' \
+      'bytes into <Research>/var/records-attachments/<destination>/ and ' \
+      'returns the promoted absolute path plus its content digest; ' \
+      'register the citing record with that path as the tool_result ref ' \
+      '(and ideally the returned digest). Use it when registering a ' \
+      'tool_result source fails as ephemeral, or preemptively for any ' \
+      'exec-mode/TmpFile result worth keeping.'
+
     class << self
       # --------------------------------------------------------------
       # Definition assembly
@@ -303,7 +417,10 @@ module Research
             "#{spec['prefix']}-NNN allocated by the register operation. " \
             'Records are created only through register and modified only ' \
             'through edit (a whole-record rewrite whose body carries the ' \
-            'current version line); prior versions are snapshotted under ' \
+            'current version line; boundary-duplication and unterminated ' \
+            'fragment mistakes are rejected) or edit_fields (parsed field ' \
+            'assignments, preferred for record content); prior versions ' \
+            'are snapshotted under ' \
             'history/. read/list/validate are always available; manual ' \
             'write/move/rename/delete are disabled so the record identity ' \
             'and history stay reliable.',
@@ -336,6 +453,25 @@ module Research
               'parameters' => REGISTER_PARAMETERS,
               'implementation' => lambda do |agent, _target, args|
                 Research::PathKinds.register_record(kind, roots, args)
+              end,
+              'authorization' => :write,
+              'type' => :full
+            },
+            'edit_fields' => {
+              'description' => EDIT_FIELDS_DESCRIPTION,
+              'parameters' => EDIT_FIELDS_PARAMETERS,
+              'implementation' => lambda do |agent, target, args|
+                Research::PathKinds.edit_record_fields(kind, roots, target,
+                                                       args)
+              end,
+              'authorization' => :write,
+              'type' => :full
+            },
+            'promote_tool_result' => {
+              'description' => PROMOTE_TOOL_RESULT_DESCRIPTION,
+              'parameters' => PROMOTE_TOOL_RESULT_PARAMETERS,
+              'implementation' => lambda do |agent, _target, args|
+                Research::PathKinds.promote_record_artifact(kind, roots, args)
               end,
               'authorization' => :write,
               'type' => :full
@@ -460,6 +596,12 @@ module Research
                   'repair it with a whole-file edit'
           end
 
+          problems = guard_text_edit(id, current_text, args['selector'],
+                                     args['replacement'])
+          unless problems.empty?
+            raise ParameterException, problems.join('; ')
+          end
+
           candidate_text = agent.path_apply_selector(current_text,
                                                      args['selector'],
                                                      args['replacement'])
@@ -479,46 +621,236 @@ module Research
                   'your changes against it'
           end
 
-          from_status = current['status']
-          to_status = candidate['status']
-          if to_status != from_status
-            allowed = spec['transitions'].fetch(from_status, [])
-            unless allowed.include?(to_status)
-              raise ParameterException,
-                    "invalid status transition for #{kind} #{id}: " \
-                    "#{from_status.inspect} -> #{to_status.inspect} " \
-                    "(allowed from #{from_status.inspect}: " \
-                    "#{allowed.join(', ')}; same-status edits are always allowed)"
+          validate_and_commit_edit(kind, roots, id, file, current_text,
+                                   current, sidecar, candidate,
+                                   candidate_text: candidate_text)
+        end
+      end
+
+      # --------------------------------------------------------------
+      # Text-edit guards (H-011)
+      # --------------------------------------------------------------
+
+      # Structural rejection of the corruption-shaped caller mistakes
+      # reconstructed from H-011, applied to the text edit mode BEFORE the
+      # selector runs, so a rejection precedes every parse and every write.
+      # The rules are pure text structure at the splice boundary; no YAML
+      # semantics and no prose heuristics live here, and the generic engine
+      # splice stays untouched and faithful.
+      #
+      # For a `lines` selector (0-based start, exclusive end, terminator
+      # inclusive) with head = lines[0...start] and tail = lines[finish..]:
+      #   G1 boundary duplication - the replacement's FIRST physical lines
+      #      equal the head's LAST physical lines, or its LAST physical
+      #      lines equal the tail's FIRST physical lines: the caller
+      #      re-pasted lines that remain untouched on one side of the span
+      #      (the v5-v12 folded-scalar duplication).
+      #   G2 unterminated fragment - a non-empty replacement whose last
+      #      physical line is not newline-terminated, unless the span
+      #      reaches EOF of a document that itself lacks a final newline
+      #      (the v12->v13 fragment shape).  An unterminated line is a
+      #      caller mistake in every line-oriented edit except reproducing
+      #      a document whose final line is deliberately unterminated.
+      # Lines compare rstripped: terminator state at the boundary is the
+      # engine's normalization, not content.
+      def guard_text_edit(id, current_text, selector, replacement)
+        return [] unless Hash === selector && selector['type'].to_s == 'lines'
+
+        start = selector['start']
+        finish = selector['end']
+        return [] unless Integer === start && Integer === finish &&
+                         start >= 0 && finish >= start
+
+        lines = current_text.lines
+        head = lines[0...start] || []
+        tail = finish >= lines.length ? [] : (lines[finish..] || [])
+        replaced = replacement.to_s.lines.map(&:rstrip)
+        problems = []
+
+        head_r = head.map(&:rstrip)
+        unless head_r.empty? || replaced.empty?
+          matched = 0
+          while matched < replaced.length && matched < head_r.length &&
+                replaced[matched] == head_r[head_r.length - matched - 1]
+            matched += 1
+          end
+          if matched >= 1
+            problems <<
+              "text edit rejected for #{id}: the replacement re-pastes " \
+              "#{matched} physical line(s) that remain untouched " \
+              'immediately BEFORE the span (boundary duplication); ' \
+              'replace one span covering every line you are re-stating, ' \
+              'or use the edit_fields operation for parsed field assignments'
+          end
+        end
+
+        tail_r = tail.map(&:rstrip)
+        unless tail_r.empty? || replaced.empty?
+          matched = 0
+          while matched < replaced.length && matched < tail_r.length &&
+                replaced[replaced.length - 1 - matched] == tail_r[matched]
+            matched += 1
+          end
+          if matched >= 1
+            problems <<
+              "text edit rejected for #{id}: the replacement re-pastes " \
+              "#{matched} physical line(s) that remain untouched " \
+              'immediately AFTER the span (boundary duplication); ' \
+              'replace one span covering every line you are re-stating, ' \
+              'or use the edit_fields operation for parsed field assignments'
+          end
+        end
+
+        at_eof = finish >= lines.length
+        final_newline = current_text.end_with?("\n")
+        body = replacement.to_s
+        if !body.empty? && !body.end_with?("\n") && !(at_eof && !final_newline)
+          problems <<
+            "text edit rejected for #{id}: the replacement's last physical " \
+            'line is not newline-terminated (unterminated fragment; it ' \
+            'would be committed as a line of its own or merged with the ' \
+            'next line); terminate the line, or use the edit_fields ' \
+            'operation for parsed field assignments'
+        end
+
+        problems
+      end
+
+      # --------------------------------------------------------------
+      # Shared edit commit tail (H-011 fix)
+      # --------------------------------------------------------------
+
+      # Both edit modes commit through this one method, so versioning, CAS,
+      # history and sidecar semantics are identical.  Validates the status
+      # transition and the candidate record BEFORE any write; a no-op
+      # candidate (exact text comparison for the text mode, parsed equality
+      # for the field mode) returns changed:false without touching storage.
+      # Every rejection raises ParameterException before the snapshot step,
+      # leaving the record file, sidecar and history byte-identical.
+      def validate_and_commit_edit(kind, roots, id, file, current_text,
+                                   current, sidecar, candidate,
+                                   candidate_text: nil)
+        spec = KIND_SPECS.fetch(kind)
+        root = roots.fetch(kind)
+        current_version = current['version']
+
+        from_status = current['status']
+        to_status = candidate['status']
+        if to_status != from_status
+          allowed = spec['transitions'].fetch(from_status, [])
+          unless allowed.include?(to_status)
+            raise ParameterException,
+                  "invalid status transition for #{kind} #{id}: " \
+                  "#{from_status.inspect} -> #{to_status.inspect} " \
+                  "(allowed from #{from_status.inspect}: " \
+                  "#{allowed.join(', ')}; same-status edits are always allowed)"
+          end
+        end
+
+        errors, warnings = validate_record(kind, candidate, roots: roots, check_digests: true)
+        unless errors.empty?
+          raise ParameterException,
+                "edit rejected for #{id}: #{errors.join('; ')}"
+        end
+
+        if candidate_text ? candidate_text == current_text : candidate == current
+          return { 'id' => id, 'version' => current_version,
+                   'status' => from_status, 'changed' => false,
+                   'warnings' => warnings }
+        end
+
+        snapshot = File.join(root, 'history',
+                             "#{id}.v#{current_version}.yaml")
+        FileUtils.mkdir_p(File.dirname(snapshot))
+        Open.sensible_write(snapshot, current_text)
+
+        candidate['version'] = current_version + 1
+        Open.sensible_write(file, serialize(kind, candidate), force: true)
+        write_sidecar(root, id, version: current_version + 1,
+                                   created_at: sidecar['created_at'],
+                                   job: ENV['SCOUT_JOB'])
+
+        { 'id' => id, 'previous_version' => current_version,
+          'version' => current_version + 1,
+          'status' => candidate['status'], 'snapshot' => snapshot,
+          'changed' => true, 'warnings' => warnings }
+      end
+
+      # --------------------------------------------------------------
+      # edit_fields (field-level edit custom operation, H-011 fix)
+      # --------------------------------------------------------------
+
+      def edit_record_fields(kind, roots, target, args, agent: nil)
+        spec = KIND_SPECS.fetch(kind)
+        root = roots.fetch(kind)
+        file = target.to_s
+        id = File.basename(file, '.yaml')
+
+        unless File.file?(file)
+          raise ParameterException, "record not found for edit: #{file}"
+        end
+
+        args = args['args'] if args.key?('args') && Hash === args['args']
+        fields = args['fields']
+        expected = args['version']
+        unless Hash === fields
+          raise ParameterException,
+                "edit_fields rejected for #{id}: 'fields' must be a " \
+                'mapping of field name to value'
+        end
+        unless Integer === expected
+          raise ParameterException,
+                "edit_fields rejected for #{id}: 'version' must be the " \
+                "Integer record version you read (got #{expected.inspect})"
+        end
+
+        supplied = fields.keys.map(&:to_s)
+        editable = spec['fields'] - %w[version]
+        reserved = supplied - editable
+        unless reserved.empty?
+          raise ParameterException,
+                "edit_fields rejected for #{kind}: unknown or " \
+                "system-managed field(s) #{reserved.sort.join(', ')}; " \
+                "editable fields are #{editable.join(', ')}; 'version' is " \
+                'system-managed, state the version you read in the ' \
+                "'version' argument"
+        end
+
+        Open.lock(File.join(root, "edit-#{id}.lock")) do
+          current_text = File.read(file)
+          current = parse_record(current_text)
+          sidecar = load_sidecar(root, id) || {}
+          current_version = current['version']
+          sidecar_version = sidecar['version']
+
+          unless Integer === current_version &&
+                  current_version == sidecar_version
+            raise ParameterException,
+                  "record #{id} is inconsistent: body version " \
+                  "#{current_version.inspect} vs sidecar version " \
+                  "#{sidecar_version.inspect}; re-read the record and " \
+                  'repair it with a whole-file edit'
+          end
+          unless expected == current_version
+            raise ParameterException,
+                  "stale edit of #{id}: the record is at version " \
+                  "#{current_version} but the edit declares version " \
+                  "#{expected}; re-read the current record and re-apply " \
+                  'your changes against it'
+          end
+
+          candidate = current.dup
+          supplied.each do |field|
+            value = fields.key?(field) ? fields[field] : fields[field.to_sym]
+            if value.nil?
+              candidate.delete(field)
+            else
+              candidate[field] = value
             end
           end
 
-          errors, warnings = validate_record(kind, candidate, roots: roots)
-          unless errors.empty?
-            raise ParameterException,
-                  "edit rejected for #{id}: #{errors.join('; ')}"
-          end
-
-          if candidate_text == current_text
-            return { 'id' => id, 'version' => current_version,
-                     'status' => from_status, 'changed' => false,
-                     'warnings' => warnings }
-          end
-
-          snapshot = File.join(root, 'history',
-                               "#{id}.v#{current_version}.yaml")
-          FileUtils.mkdir_p(File.dirname(snapshot))
-          Open.sensible_write(snapshot, current_text)
-
-          candidate['version'] = current_version + 1
-          Open.sensible_write(file, serialize(kind, candidate), force: true)
-          write_sidecar(root, id, version: current_version + 1,
-                                     created_at: sidecar['created_at'],
-                                     job: ENV['SCOUT_JOB'])
-
-          { 'id' => id, 'previous_version' => current_version,
-            'version' => current_version + 1,
-            'status' => candidate['status'], 'snapshot' => snapshot,
-            'changed' => true, 'warnings' => warnings }
+          validate_and_commit_edit(kind, roots, id, file, current_text,
+                                   current, sidecar, candidate)
         end
       end
 
@@ -555,7 +887,7 @@ module Research
           return result.merge('ok' => false, 'reasons' => [e.message])
         end
 
-        errors, warnings = validate_record(kind, record, roots: roots)
+        errors, warnings = validate_record(kind, record, roots: roots, check_digests: true)
         sidecar = load_sidecar(root, id) || {}
         if Integer === record['version'] && record['version'] != sidecar['version']
           errors << "body version #{record['version'].inspect} does not " \
@@ -604,7 +936,12 @@ module Research
       # Record validation (spec section 7)
       # --------------------------------------------------------------
 
-      def validate_record(kind, record, roots:)
+      # check_digests (R12): registration RECORDS a digest without
+      # recomputing it (the moment of pinning; the caller asserts the
+      # bytes it just read).  Edit and validate recompute and compare:
+      # a recorded digest that no longer matches the cited file is a
+      # hard error - the record cites content that changed.
+      def validate_record(kind, record, roots:, check_digests: false)
         spec = KIND_SPECS.fetch(kind)
         errors = []
         warnings = []
@@ -654,7 +991,8 @@ module Research
                     "(allowed: #{spec['statuses'].join(', ')})"
         end
 
-        validate_sources(kind, record, errors, warnings)
+        validate_sources(kind, record, errors, warnings,
+                         check_digests: check_digests)
         validate_links(kind, record, roots, errors, warnings)
 
         %w[limitations predictions test_ideas].each do |field|
@@ -701,7 +1039,7 @@ module Research
         [errors, warnings]
       end
 
-      def validate_sources(kind, record, errors, warnings)
+      def validate_sources(kind, record, errors, warnings, check_digests: false)
         return unless record.key?('sources')
         sources = record['sources']
         return errors << "field 'sources' must be a list of source entries" unless Array === sources
@@ -737,6 +1075,9 @@ module Research
           when 'external'
             warnings << "#{label}: external source reachability not verified " \
                         '(no network check performed)'
+          when 'tool_result'
+            validate_tool_result_source(label, source, errors, warnings,
+                                        check_digests: check_digests)
           when *LOCAL_SOURCE_TYPES
             resolved = resolve_local_ref(source['ref'])
             if resolved.nil?
@@ -748,11 +1089,14 @@ module Research
                 warnings << "#{label}: mutable source has no recorded digest; " \
                             'content identity not pinned'
               end
-              if %w[task workflow entity_property].include?(source['type']) &&
+              if %w[task workflow entity_property tool_result].include?(source['type']) &&
                  source['digest'].nil? && source['locator'].nil?
                 warnings << "#{label}: #{source['type']} source has no locator " \
                             'or digest; the derivation may not be ' \
                             're-executable from this reference'
+              end
+              if check_digests && source['digest']
+                validate_recorded_digest(label, resolved, source['digest'], errors)
               end
             end
           else
@@ -929,6 +1273,215 @@ module Research
         [parse_record(File.read(file)), nil]
       rescue ParameterException => e
         [nil, e.message]
+      end
+
+      # ----------------------------------------------------------------
+      # return_path citation contract (R6-R12, R14)
+      # ----------------------------------------------------------------
+
+      # R8: locator grammar for tool_result sources — one string
+      # 'kind:value', kind in {row, range, line, section}. Scoped to
+      # tool_result deliberately (contract section 2): legacy types keep
+      # their free-text locators, so no existing record can regress
+      # (R14); the grammar is enforced only where the contract
+      # introduces it.
+      def validate_locator!(label, source, errors)
+        locator = source['locator']
+        return unless locator
+        kind = locator.to_s.split(':', 2).first.to_s
+        return if LOCATOR_KINDS.include?(kind) && locator.to_s.include?(':')
+        errors << "#{label}: locator must be one form 'kind:value' with " \
+                  "kind in {#{LOCATOR_KINDS.join(', ')}} (got " \
+                  "#{locator.inspect})"
+      end
+
+      # R10: durability classification of a resolved local path.
+      #   'durable'   — inside a persisted Scout job tree or a durable
+      #                 named store (R10 rows 1-2)
+      #   'ephemeral' — under a Scout temp root or a TmpFile scratch
+      #                 pattern (R10 row 3)
+      #   nil         — resolvable but neither shape (contract gap: the
+      #                 closest enforceable rule treats unknown-but-file
+      #                 shapes as durable, reported in the report section)
+      # Precedence is deliberate: the on-disk job-tree evidence (a
+      # var/jobs/<Workflow>/<task>/<name>.json + .info pair) outranks the
+      # temp-root path heuristic, because R10 defines durability by the
+      # persisted-tree shape, not by which root the tree happens to sit
+      # under. A TmpFile scratch name never matches the job-tree shape, so
+      # reordering cannot misclassify exec-mode scratch as durable.
+      def classify_durability(resolved)
+        return 'durable' if durable_job_tree?(resolved)
+        return 'durable' if durable_named_store?(resolved)
+        return 'ephemeral' if ephemeral_path?(resolved)
+        nil
+      end
+
+      def ephemeral_path?(path)
+        return false unless path
+        segments = path.to_s.split(File::SEPARATOR)
+        return true if path.to_s.start_with?('/tmp/', '/var/tmp/',
+                                             '/dev/shm/')
+        return true if segments.include?('tmp') &&
+                       segments.any? { |s| s.start_with?('tmp-') }
+        # Scout TmpFile root (~/tmp/scout, ~/.scout/tmp by override): any
+        # file directly under it or under tmp-* subdirectories.
+        scout_tmp = File.join(ENV['HOME'].to_s, 'tmp', 'scout')
+        return true if path.to_s.start_with?(scout_tmp + File::SEPARATOR)
+        TmpFile.tmpdir == File.dirname(path.to_s) rescue false
+      end
+
+      # R10 row 1: a persisted Scout job tree. The rule is SHAPE-based, not
+      # root-list-based: the cited path must sit under a
+      # var/jobs/<Workflow>/<task>/... subtree and the job's result or
+      # .info sidecar must exist on disk beside it. The evidence pair
+      # (result + .info) is what distinguishes a persisted job from a bare
+      # scratch file: an exec-mode TmpFile result never carries a .info
+      # sibling, so the temp-root heuristic in classify_durability keeps
+      # catching exactly those. Shape-based also covers both deployment
+      # roots the probes documented (user-global ~/.scout/var/jobs and the
+      # checkout's var/jobs) without hardcoding either.
+      def durable_job_tree?(path)
+        return false unless path
+        p = path.to_s
+        segments = p.split(File::SEPARATOR).reject(&:empty?)
+        ji = segments.rindex('jobs')
+        return false unless ji && ji > 0 && segments[ji - 1] == 'var'
+        parts = segments[(ji + 1)..] || []
+        # var/jobs/<Workflow>/<task>/<file> needs at least 3 segments.
+        return false if parts.length < 3
+
+        base = File.basename(p)
+        base = $`.to_s.split(File::SEPARATOR).last.to_s if base =~ /\.files/
+        job_names = [base.sub(/\.files\z/, '')]
+        job_names << base.sub(/\.[^.]+\z/, '')
+        dir = File.dirname(p)
+        dir = File.dirname(dir) if File.basename(dir) == 'files' ||
+                                    p.include?('.files/')
+        job_names.uniq.each do |name|
+          return true if File.exist?(File.join(dir, name)) ||
+                         File.exist?(File.join(dir, "#{name}.info"))
+        end
+        false
+      end
+
+      def durable_named_store?(path)
+        return false unless path
+        p = path.to_s
+        DURABLE_NAMED_STORES.each do |store|
+          marker = File.join('var', store) + File::SEPARATOR
+          return true if p.include?(marker)
+        end
+        false
+      end
+
+      # R6/R7/R10/R11/R12: the tool_result validation arm.
+      def validate_tool_result_source(label, source, errors, warnings,
+                                     check_digests: false)
+        ref = source['ref']
+        resolved = resolve_local_ref(ref)
+        if resolved.nil?
+          errors << "#{label}: broken reference: #{ref.inspect} does not " \
+                    'exist (tool_result refs are absolute paths or anchored ' \
+                    "at the Research checkout #{PATH_KIND_ROOT})"
+          validate_locator!(label, source, errors)
+          return
+        end
+        unless File.file?(resolved)
+          errors << "#{label}: tool_result ref must name a FILE " \
+                    "(#{resolved.inspect} is a directory or special file)"
+          return
+        end
+        validate_locator!(label, source, errors)
+
+        klass = classify_durability(resolved)
+        if klass == 'ephemeral'
+          errors << "#{label}: ephemeral reference: #{ref.inspect} " \
+                    "#{EPHEMERAL_REJECTION}"
+        elsif klass.nil?
+          warnings << "#{label}: tool_result reference #{ref.inspect} " \
+                      'resolves but is not recognized as a persisted job ' \
+                      'tree or a durable named store; accepted as durable ' \
+                      '(unverified durability)'
+        else
+          if source['digest'].nil? || source['digest'].to_s.strip.empty?
+            warnings << "#{label}: mutable source has no recorded digest; " \
+                        'content identity not pinned'
+          end
+          if source['digest'].nil? && source['locator'].nil?
+            warnings << "#{label}: tool_result source has no locator or " \
+                        'digest; the derivation may not be re-executable ' \
+                        'from this reference'
+          end
+          if check_digests && source['digest']
+            validate_recorded_digest(label, resolved, source['digest'], errors)
+          end
+        end
+      end
+
+      # R12: a recorded digest pins the cited file's bytes; a mismatch is a
+      # hard error (the record cites content that no longer exists as
+      # cited). Digest comparison is by exact string equality against a
+      # recomputed hex digest of the file.
+      def validate_recorded_digest(label, resolved, digest, errors)
+        actual = content_digest(resolved)
+        return if actual.nil? || digest.to_s.strip == actual
+        errors << "#{label}: recorded digest #{digest.inspect} does not " \
+                  "match the current content of #{resolved.inspect} " \
+                  "(recomputed #{actual.inspect}); the cited content has " \
+                  'changed since registration'
+      end
+
+      def content_digest(path)
+        return nil unless File.file?(path)
+        require 'digest'
+        Digest::SHA256.file(path).hexdigest
+      end
+
+      # R11 promote remedy: copy the bytes of a temporary artifact into the
+      # Research-side durable store <root>/var/records-attachments/<dest>/
+      # and return the promoted absolute path to cite.
+      def promote_tool_result_artifact(ref, destination)
+        resolved = resolve_local_ref(ref)
+        raise ParameterException,
+              "promote rejected: #{ref.inspect} does not resolve" if resolved.nil?
+        raise ParameterException,
+              "promote rejected: #{resolved.inspect} is not a file" unless File.file?(resolved)
+        dest = destination.to_s.strip
+        if dest.empty? || dest.split('/').any? { |s| s.empty? || s == '.' || s == '..' }
+          raise ParameterException,
+                "promote rejected: destination must be a relative directory " \
+                "name under var/records-attachments/ (got #{destination.inspect})"
+        end
+        target_dir = File.join(RECORDS_ATTACHMENTS_DIR, dest)
+        FileUtils.mkdir_p(target_dir)
+        target = File.join(target_dir, File.basename(resolved))
+        FileUtils.cp(resolved, target)
+        target
+      end
+
+      # R11 custom operation wrapper: promote one artifact into the
+      # durable store and return the citable absolute path + digest.
+      def promote_record_artifact(kind, roots, args)
+        args = args['args'] if args.key?('args') && Hash === args['args']
+        ref = args['ref']
+        destination = args['destination']
+        unless String === ref && !ref.strip.empty?
+          raise ParameterException,
+                "promote_tool_result rejected: 'ref' must be a non-empty " \
+                "String (got #{ref.inspect})"
+        end
+        unless String === destination && !destination.strip.empty?
+          raise ParameterException,
+                "promote_tool_result rejected: 'destination' must be a " \
+                'non-empty relative directory under ' \
+                "var/records-attachments/ (got #{destination.inspect})"
+        end
+        target = promote_tool_result_artifact(ref, destination)
+        { 'kind' => kind, 'promoted' => target,
+          'digest' => content_digest(target),
+          'source' => resolve_local_ref(ref),
+          'citation' =>
+            "cite as {\"type\":\"tool_result\",\"ref\":#{target.inspect}}" }
       end
 
       def resolve_local_ref(ref)

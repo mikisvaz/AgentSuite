@@ -3,6 +3,7 @@ require File.expand_path(__FILE__).sub(%r(/test/.*), '/lib/Research/path_kinds/r
 
 require 'fileutils'
 require 'tmpdir'
+require 'digest'
 require 'scout'
 
 class TestRecordsSpec < Test::Unit::TestCase
@@ -250,10 +251,15 @@ class TestRecordsSpec < Test::Unit::TestCase
   end
 
   def base_observation_args
+    # The digest is the REAL sha256 of workflow.rb at the time the record is
+    # built: R12 makes edit/validate recompute recorded digests and a hard
+    # error on mismatch, so a fake fixture digest would break every edit
+    # test below (the file exists and its bytes are pinned at registration).
+    digest = Digest::SHA256.file('workflow.rb').hexdigest
     { 'statement' => 'log2 fold-change of gene X in condition A vs control',
       'title' => 'Gene X differential expression',
       'scope' => { 'condition' => ['condition A', 'control'] },
       'sources' => [{ 'type' => 'file', 'ref' => 'workflow.rb',
-                      'digest' => 'workflow.rb sha256' }] }
+                      'digest' => digest }] }
   end
 end

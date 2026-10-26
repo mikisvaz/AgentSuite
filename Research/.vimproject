@@ -6,15 +6,13 @@ Research=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
  }
  lib=lib{
   Research=Research{
+   path_kinds.rb
+   path_kinds=path_kinds{
+    records.rb
+   }
   }
- }
- share=share filter="*"{
- }
- data=data filter="*"{
  }
  test=test {
   test_helper.rb
  }
- README.md
- LICENSE
 }

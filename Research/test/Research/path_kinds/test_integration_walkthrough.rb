@@ -37,6 +37,10 @@ class TestIntegrationWalkthrough < Test::Unit::TestCase
     FileUtils.mkdir_p(@receipt)
     File.write(File.join(@receipt, 'job.info'), "task: mean_level\n")
 
+    require 'digest'
+    @data_digest = Digest::SHA256.file(@data_file).hexdigest
+    @receipt_digest = Digest::SHA256.file(File.join(@receipt, 'job.info')).hexdigest
+
     @roots = Research::PathKinds.kind_roots(@base)
     @definitions = Research::PathKinds.definitions(base_dir: @base)
     @agent = LLM.agent
@@ -66,9 +70,9 @@ class TestIntegrationWalkthrough < Test::Unit::TestCase
       'scope' => { 'unit' => ['a'], 'readings' => 3 },
       'sources' => [
         { 'type' => 'file', 'ref' => @data_file,
-          'digest' => 'digest-of-ambient-levels' },
-        { 'type' => 'task', 'ref' => @receipt,
-          'locator' => 'mean step', 'digest' => 'digest-of-mean-step' }
+          'digest' => @data_digest },
+        { 'type' => 'task', 'ref' => File.join(@receipt, 'job.info'),
+          'locator' => 'mean step', 'digest' => @receipt_digest }
       ])
 
     assert_equal 'OBS-001', observation['id']
