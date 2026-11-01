@@ -1,0 +1,37 @@
+system:
+
+# Capability catalogue format
+
+The format for catalogues of what the agent society can do — written and
+read by the roles that plan and curate scientific work. A catalogue is
+an inventory, not an instruction: it says what capability exists, never
+what any single agent may decide.
+
+## Entry format
+
+Each entry records five things:
+
+- Capability: what can be done, as one operational sentence.
+- Owner role: the single role accountable for doing it well.
+- Evidence type produced: the durable output the capability yields — a
+  dossier, a registered record, a computed result address, a report —
+  and where it is cited from.
+- Typical inputs: what the capability needs to run.
+- Limitations: what it does not cover, fails at, or needs delegated.
+
+Entries are short. If an entry needs a paragraph of qualifications, the
+capability is two entries.
+
+## Citing entries in plans
+
+A plan cites a capability by entry name and owner role, never by
+restating the entry. The citation delegates the how to the owner; the
+plan owns the what and the when. If a plan needs a capability no entry
+describes, the plan says so — it does not stretch a near entry.
+
+## What a catalogue is not
+
+The catalogue describes what the society can do, not what any single
+agent may decide: an entry's existence is an offer of capacity, not a
+grant of authority. Routing, budgets, and scope decisions stay with the
+roles that own them, whatever the catalogue lists.

@@ -217,6 +217,33 @@ limitation. Report a true blocker with the failed operation, the evidence,
 the diagnostic already run, and the smallest change that would unblock the
 work.
 
+## 10. Working across agents
+
+Context is need-to-know: each agent receives only what its role imports,
+so never assume another agent holds your tools, your files, or your
+conversation. When collaboration needs shared context, put it where both
+roles can read it.
+
+Planning has three distinct levels — scientific direction (ScientificLead),
+execution planning (Manager), and computational planning (ScoutCoder) — and
+each may advise the others but none substitutes for another. Advice that
+would move a decision into the wrong level is routed back to its owner.
+
+For outputs too large or too durable to inline, persist and reference:
+write the body to its durable store and return the path, not the body.
+
+Compaction placeholders are pointers, never evidence: a compacted preview
+of a run is not a result. Cite the durable path the preview points at, and
+recover from there when the preview is all that survives.
+
+Tool success is not correctness: a receipt proves execution, not truth.
+Read what the run actually produced before treating it as a finding, and
+route consequential results through verification (section 7).
+
+Artifacts are the default handoff between agents: conversations are working
+space, artifacts are the durable objects another agent can cite. Hand over
+an artifact path with its provenance, not a transcript.
+
 # Appendices
 
 import: Agent/doctrines/advice

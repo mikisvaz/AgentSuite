@@ -18,10 +18,16 @@ Routing in one line:
 
 - Reasonably sized request: Planned, the staged pipeline.
 - Single bounded task: go straight to the specialist who owns it.
+- Scientific direction: ScientificLead owns question decomposition,
+  hypothesis framing, evidence-review standards, and branch go/no-go.
+- Question-owning execution of an assigned scientific question:
+  Investigator, one question → evidence chain → bounded conclusion.
+- Scientific-record curation: Research.
+- Execution planning and routing of everything else: Manager.
 - Scout-stack code or tooling to build or extend: ScoutCoder.
 - Concrete task execution on that tooling: Worker.
 - Source documents to read, convert, or extract: Reader.
-- Scientific investigation and evidence-grounded interpretation: Research.
+- Narrow targeted search returning a brief: Searcher.
 - Verification of a consequential result: Critic.
 - Introspection over recorded sessions: ChatAnalyst.
 
@@ -35,10 +41,12 @@ Use for: intake normalization and final synthesis.
 Not for: executing tools, searching, or solving the task.
 
 ## Searcher
-Targeted discovery agent producing a concise search brief with candidate
+Targeted-discovery agent producing a concise search brief with candidate
 sources and relevant local documentation; prefers local files over the web;
 hands off documents requiring substantial extraction or close reading to
-Reader; returns NO_SEARCH_NEEDED when no search is required.
+Reader; returns NO_SEARCH_NEEDED when no search is required. Any caller may
+use it — Planned's search stage is one named consumer, not the defining
+frame.
 Use for: source discovery and bounded search.
 Not for: exhaustive document extraction, scientific interpretation, or
 implementation decisions.
@@ -54,28 +62,34 @@ Not for: executing the plan, which belongs to the work stage.
 ## Manager
 Controller of a budgeted loop: decides what happens next, who does it, with
 what context, and when to stop; does not implement. Inside Planned its
-context is exactly the three upstream reports. Schedules ScoutCoder when
-supporting code infrastructure must be extended, and Worker or Research
-for execution — Research when the work is scientific investigation;
-recruits Critic for verification gates.
+context is exactly the three upstream reports. In scientific loops it
+translates a ScientificLead outline into work orders and Investigator
+packets and routes the Lead's review cycles, without ever substituting
+scientific judgment — it may stop or re-scope on budget or authority
+grounds, recorded as such, but never reverses a scientific no-go.
+Schedules ScoutCoder when supporting code infrastructure must be extended,
+and Worker or Investigator for execution; recruits Critic for verification
+gates.
 Use for: routing ambiguous or multi-step work across specialists.
-Not for: direct implementation.
+Not for: direct implementation, or scientific judgment of the Lead's kind.
 
 ## Consultant
 Strategic inference point of the suite: expensive and valued for judgment,
 not labor.
 Use for: ambiguous or high-risk decisions, architecture and design
-strategy, scientific methodology, rethinking after surprising evidence.
+strategy, rethinking after surprising evidence, classifying work that
+others keep misclassifying.
 Not for: repository exploration, repetitive tools, ordinary coding, routine
-coordination, generic best-practice essays.
+coordination, generic best-practice essays, scientific methodology.
 
 ## Critic
 Verifier of other agents' work products, not a second executor: scores
 results against the request, plan, repository, and evidence, and returns
-PASS, NEEDS_WORK, or BLOCKED with the smallest next action. Contrasts with
-ChatAnalyst, which examines sessions rather than work products.
+PASS, NEEDS_WORK, or BLOCKED with the smallest next action and branch
+advice. Contrasts with ChatAnalyst, which examines sessions rather than
+work products.
 Use for: verification gates on consequential results, branch advice.
-Not for: redoing the investigation or fixing defects.
+Not for: redoing the investigation, fixing defects, or writing files.
 
 # Conversational agents with an associated tool or workflow
 
@@ -88,18 +102,40 @@ retrieval context, and extraction limitations.
 Use for: reading supplied or discovered papers, reports, PDFs, web pages;
 preparing source dossiers.
 Not for: deciding what the evidence warrants scientifically, maintaining
-the Research epistemic record, or writing the final interpretive report.
+the scientific record, or writing the final interpretive report.
+
+## ScientificLead
+Scientific-direction owner, tool-less by design: decomposes questions,
+frames hypotheses, sets evidence-review standards, gives go/no-go on
+investigative branches, and declares sufficiency close. Consumes evidence
+summaries from artifacts and packets — durable paths — rather than running
+domain tools. May advise Manager on scoping; Manager cannot substitute for
+it in reverse.
+Use for: scientific direction, question decomposition, evidence standards,
+branch go/no-go.
+Not for: executing work, acquiring documents, record curation, or
+computational planning.
 
 ## Research
-Scientific epistemology agent. Conducts research leveraging the scientific
-Path kinds, the Semantics interface, and domain-specific tooling, with
-Workspace tooling when necessary; registers observations, assesses claims,
-challenges hypotheses, and produces traceable syntheses citing result
-addresses. Delegates source discovery to Searcher and document reading to
-Reader while retaining epistemic responsibility.
-Use for: scientific investigations and evidence-grounded interpretation.
-Not for: general-purpose source retrieval and document extraction, or
-building Scout framework tooling.
+Evidence curator: owns the scientific record — registration of
+observations, claims, and hypotheses, their lifecycle and status
+consistency, and their traceability to result addresses and definition
+versions. Takes direction from the ScientificLead and serves Investigator
+requests; delegates source discovery to Searcher and document acquisition
+to Reader.
+Use for: record registration, lifecycle operations, traceability queries.
+Not for: owning scientific questions, framing hypotheses, adjudicating
+what evidence means, or acquiring documents itself.
+
+## Investigator
+Question-owning executor for scientific investigation, derived from Worker:
+takes one assigned question through its evidence chain to a bounded
+conclusion, carrying the full Worker execution surface with an explicit,
+narrow Cortex task list — a packet executor that does not delegate onward.
+Use for: one assigned scientific question → evidence chain → bounded
+conclusion.
+Not for: question decomposition, go/no-go decisions, record curation, or
+steps outside the assigned question.
 
 ## Worker
 Execution agent: runs concrete tasks on the infrastructure ScoutCoder
@@ -122,14 +158,15 @@ behaved.
 Not for: implementing changes to harness or instructions, only reporting.
 
 ## ScoutCoder
-Ruby and Scout framework development specialist with documentation lookup
-over the scout-gear, scout-essentials, scout-camp, scout-ai, and scout-rig
-repos plus installed workflows; its help tools are also introduced into
-other agents' chats.
+Computational-planning authority and Ruby/Scout framework development
+specialist who owns workflows, tasks, and code infrastructure on the Scout
+stack, with documentation lookup over the scout-gear, scout-essentials,
+scout-camp, scout-ai, and scout-rig repos plus installed workflows; its
+help tools are also introduced into other agents' chats.
 Use for: coding in the Scout stack, framework questions, project
-understanding, workflow development, extending shared tooling, semantic
-entity definitions.
-Not for: general web research or non-Scout coding conventions.
+understanding, workflow development, extending shared tooling.
+Not for: scientific direction, execution routing, general web research, or
+non-Scout coding conventions.
 
 # Inference workflows
 

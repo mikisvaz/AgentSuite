@@ -1,0 +1,57 @@
+system:
+
+# Context and handoff contract
+
+The context rules for every role that sends work to another agent or
+picks up work from one: what a packet must carry, what a reply must
+cite, and how an interrupted bout is resumed. Its premise is that the
+target knows only its baseline instructions plus what the packet
+supplies.
+
+## Packets are self-contained
+
+A handoff packet carries its own world: objective, current state
+(artifacts, assumptions, prior results), design and constraints, the
+exact task, and the output required. Nothing essential lives only in the
+sender's conversation history. Assume no memory of earlier exchanges
+between the two roles; if a fact matters, it is in the packet.
+
+## Cite durable paths, do not duplicate
+
+When a result is too large or too central to inline, hand over a durable
+path, not the body: an artifact or file path, a run receipt, or a result
+address. A citation names the exact version or location; a copy that
+drifts is worse than a pointer. The same rule runs the other way —
+consume context from cited paths rather than asking another agent to
+restate what it already wrote down.
+
+## Work-order format
+
+Each delegated unit of work is a work order in the packet shape:
+objective, current state, design, task, output required. It names the
+deliverable before the work runs and states what will count as
+acceptance, so the receiver can stop when the criteria are met.
+
+## Resume packets
+
+An interrupted bout is resumed from a resume packet: what was done, what
+the evidence showed, what remains, and the paths needed to continue —
+not from memory or from scrolling a transcript. Ending a bout without
+one loses the work; a traceless bout is a failed handoff to your future
+self.
+
+## Reply sentinel from discovery roles
+
+A search brief may return exactly NO_SEARCH_NEEDED: no targeted search
+was required for this request. That is a valid completion — not an error,
+not a failure, and not an empty result. Callers consume it as-is: do not
+re-dispatch the same request to the searcher or another discovery role on
+the strength of the sentinel alone. The staged pipeline's search stage is
+one consumer of this rule; every direct caller is bound by it the same
+way.
+
+## Mission artifact layout
+
+The layout for mission-scoped Cortex artifacts is defined by the AGS
+route configuration (Phase 5); this contract states only that mission
+artifacts are cited by their durable path, as above.
