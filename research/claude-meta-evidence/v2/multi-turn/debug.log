@@ -1,0 +1,220 @@
+2026-10-30T11:33:50.395Z [DEBUG] MDM settings load completed in 0ms
+2026-10-30T11:33:50.399Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /home/mvazque2/.claude/settings.json
+2026-10-30T11:33:50.400Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /etc/claude-code/managed-settings.json
+2026-10-30T11:33:50.401Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /bulk/mvazque2/git/AgentSuite/tmp/claude-meta-probe/.claude/settings.json
+2026-10-30T11:33:50.402Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /bulk/mvazque2/git/AgentSuite/.claude/settings.local.json
+2026-10-30T11:33:50.403Z [DEBUG] Broken symlink or missing file encountered for settings.json at path: /bulk/mvazque2/git/AgentSuite/tmp/claude-meta-probe/.claude/settings.local.json
+2026-10-30T11:33:50.403Z [DEBUG] CA certs: Config fallback - globalEnv keys: , settingsEnv keys: none
+2026-10-30T11:33:50.407Z [DEBUG] [init] configureGlobalMTLS starting
+2026-10-30T11:33:50.407Z [DEBUG] [init] configureGlobalMTLS complete
+2026-10-30T11:33:50.407Z [DEBUG] [init] configureGlobalAgents starting
+2026-10-30T11:33:50.407Z [DEBUG] CA certs: stores=bundled,system, extraCertsPath=undefined
+2026-10-30T11:33:50.407Z [DEBUG] CA certs: Loaded 117 bundled root certificates
+2026-10-30T11:33:50.416Z [DEBUG] CA certs: Dropped 1 expired certificate(s) from system store
+2026-10-30T11:33:50.416Z [DEBUG] CA certs: Loaded 139 system CA certificates
+2026-10-30T11:33:50.430Z [DEBUG] CA certs: Dropped blocked certificate d7a7a0fb5d7e2731d771e9484ebcdef71d5f0c3e0a2948782bc83ee0ea699ef4 from system
+2026-10-30T11:33:50.435Z [DEBUG] CA certs: Dropped blocked certificate bc4d809b15189d78db3e1d8cf4f9726a795da1643ca5f1358e1ddb0edc0d7eb3 from system
+2026-10-30T11:33:50.435Z [DEBUG] CA certs: Dropped blocked certificate 86a1ecba089c4a8d3bbe2734c612ba341d813e043cf9e8a862cd5c57a36bbe6b from system
+2026-10-30T11:33:50.436Z [DEBUG] CA certs: Dropped blocked certificate 125609aa301da0a249b97a8239cb6a34216f44dcac9f3954b14292f2e8c8608f from system
+2026-10-30T11:33:50.436Z [DEBUG] CA certs: Dropped blocked certificate 40f6af0346a99aa1cd1d555a4e9cce62c7f9634603ee406615833dc8c8d00367 from system
+2026-10-30T11:33:50.451Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-30T11:33:50.451Z [DEBUG] [init] configureGlobalAgents complete
+2026-10-30T11:33:50.454Z [DEBUG] Git remote URL: null
+2026-10-30T11:33:50.454Z [DEBUG] No git remote URL found
+2026-10-30T11:33:50.456Z [DEBUG] Error log sink initialized
+2026-10-30T11:33:50.464Z [ERROR] Failed to save config with lock: Error: ENOENT: no such file or directory, lstat '/home/mvazque2/.claude.json'
+2026-10-30T11:33:50.467Z [DEBUG] Setting permissions for new file: 600
+2026-10-30T11:33:50.467Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.869f34de34c1
+2026-10-30T11:33:50.468Z [DEBUG] Temp file written successfully, size: 84 bytes
+2026-10-30T11:33:50.468Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.869f34de34c1 to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.469Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.471Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.471Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.a6b0d72b194f
+2026-10-30T11:33:50.472Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.472Z [DEBUG] Temp file written successfully, size: 167 bytes
+2026-10-30T11:33:50.472Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.a6b0d72b194f to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.472Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.473Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.473Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.95e012e21e0f
+2026-10-30T11:33:50.473Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.473Z [DEBUG] Temp file written successfully, size: 203 bytes
+2026-10-30T11:33:50.473Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.95e012e21e0f to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.473Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.474Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.474Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.9d06a5602328
+2026-10-30T11:33:50.474Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.474Z [DEBUG] Temp file written successfully, size: 242 bytes
+2026-10-30T11:33:50.474Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.9d06a5602328 to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.474Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.475Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.475Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.2f4d38a0943f
+2026-10-30T11:33:50.476Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.476Z [DEBUG] Temp file written successfully, size: 269 bytes
+2026-10-30T11:33:50.476Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.2f4d38a0943f to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.476Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.477Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.477Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.610f9ff28c92
+2026-10-30T11:33:50.477Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.477Z [DEBUG] Temp file written successfully, size: 317 bytes
+2026-10-30T11:33:50.477Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.610f9ff28c92 to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.477Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.478Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.478Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.c479db2c5832
+2026-10-30T11:33:50.478Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.478Z [DEBUG] Temp file written successfully, size: 343 bytes
+2026-10-30T11:33:50.478Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.c479db2c5832 to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.478Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.494Z [DEBUG] [Claude in Chrome] Disabled: OAuth token has no scope accepted by /api/oauth/validate (needs user:profile, user:office, or user:ccr_inference; env-var and setup-token sessions default to user:inference only)
+2026-10-30T11:33:50.510Z [DEBUG] [ToolSearch:optimistic] mode=tst, ENABLE_TOOL_SEARCH=undefined, result=true
+2026-10-30T11:33:50.512Z [DEBUG] [STARTUP] Loading MCP configs...
+2026-10-30T11:33:50.521Z [DEBUG] [STARTUP] Running setup()...
+2026-10-30T11:33:50.528Z [DEBUG] Error log sink initialized
+2026-10-30T11:33:50.532Z [DEBUG] Git remote URL: git@github.com:mikisvaz/AgentSuite.git
+2026-10-30T11:33:50.532Z [DEBUG] Parsed repository: github.com/mikisvaz/AgentSuite from URL: git@github.com:mikisvaz/AgentSuite.git
+2026-10-30T11:33:50.532Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/home/mvazque2/.claude/skills, project=[]
+2026-10-30T11:33:50.533Z [DEBUG] [reduced mode] Skipping skill dir discovery
+2026-10-30T11:33:50.533Z [DEBUG] [STARTUP] setup() completed in 12ms
+2026-10-30T11:33:50.533Z [DEBUG] Cleared mTLS configuration cache
+2026-10-30T11:33:50.533Z [DEBUG] Cleared proxy agent cache
+2026-10-30T11:33:50.534Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-30T11:33:50.555Z [DEBUG] [STARTUP] Loading commands and agents...
+2026-10-30T11:33:50.558Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 38 bundled skills, 1 builtin plugin skills
+2026-10-30T11:33:50.559Z [DEBUG] installed_plugins.json doesn't exist, returning empty V2 object
+2026-10-30T11:33:50.560Z [DEBUG] Found 3 plugins (3 enabled, 0 disabled)
+2026-10-30T11:33:50.562Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-30T11:33:50.564Z [DEBUG] cc-plugin-sec-default@builtin not seated: no managed settings and not a Team or Enterprise organization (none)
+2026-10-30T11:33:50.577Z [DEBUG] [STARTUP] Commands and agents loaded in 22ms
+2026-10-30T11:33:50.584Z [WARN] [autocompact] "glm-5.2" isn't described by this version's model catalog; update Claude Code, or map it with behavesAs on a modelPicker row (or modelOverrides, if it is a provider id of a model this version knows). Until then auto-compact keeps this session within 200k tokens (the context window it assumes); if the model accepts more, append [1m] to the model name for 1M, or set CLAUDE_CODE_MAX_CONTEXT_TOKENS to its real window; CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1 restores the previous wait-for-the-API behavior.
+2026-10-30T11:33:50.585Z [WARN] Claude Code doesn't recognize the model "glm-5.2", so it assumes a context window of 200k tokens. Update Claude Code, or see https://code.claude.com/docs/en/model-config#correct-the-window-for-a-gateway-or-custom-model-id to set the window.
+2026-10-30T11:33:50.585Z [DEBUG] Skipping startup prefetches, last ran 1793360031s ago
+2026-10-30T11:33:50.586Z [DEBUG] [STARTUP] MCP configs resolved in 1ms (awaited at +74ms)
+2026-10-30T11:33:50.589Z [DEBUG] Cleared mTLS configuration cache
+2026-10-30T11:33:50.589Z [DEBUG] Cleared proxy agent cache
+2026-10-30T11:33:50.589Z [DEBUG] mTLS: Creating HTTPS agent with custom certificates
+2026-10-30T11:33:50.594Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:50.595Z [DEBUG] [MCP] --mcp-config servers running fully async (nonblocking)
+2026-10-30T11:33:50.595Z [DEBUG] [MCP] claude.ai connectors running fully async (nonblocking)
+2026-10-30T11:33:50.596Z [DEBUG] [auto-mode] verifyAutoModeGateAccess: enabledState=enabled disabledBySettings=false model=glm-5.2 modelSupported=true disableFastModeBreakerFires=false carouselAvailable=true canEnterAuto=true
+2026-10-30T11:33:50.596Z [DEBUG] [Perfetto] initializePerfettoTracing called, env value: undefined
+2026-10-30T11:33:50.596Z [DEBUG] [3P telemetry] isTelemetryEnabled=false (CLAUDE_CODE_ENABLE_TELEMETRY=undefined)
+2026-10-30T11:33:50.616Z [DEBUG] [3P telemetry] Event dropped (no event logger initialized): plugin_loaded
+2026-10-30T11:33:50.633Z [DEBUG] [ScheduledTasks] scheduler start() — enabled=false, hasTasks=false
+2026-10-30T11:33:50.638Z [DEBUG] plugin cc-plugin-agents-md: no pluginConfigs["agents-md@builtin" or "cc-plugin-agents-md@builtin"].options in user, --settings or managed settings (project settings are not read); every option is its default
+2026-10-30T11:33:50.639Z [DEBUG] cc-plugin-telemetry: hooks telemetry for: anthropic, collector
+2026-10-30T11:33:50.641Z [DEBUG] hooks module cc-plugin-agents-md@builtin loaded (native, environment 1, tier builtin); events: session.start,prompt.context,command.run,session.compact,prompt.submit,turn.start,turn.complete,agent.spawn,tool.call,prompt.mention
+2026-10-30T11:33:50.642Z [DEBUG] hooks module cc-plugin-telemetry@builtin loaded (native, environment 2, tier builtin); events: telemetry.*,telemetry.log,telemetry.mark,session.start,session.end,engine.create
+2026-10-30T11:33:50.643Z [DEBUG] hooks module cc-plugin-plugin-authoring@builtin loaded (native, environment 3, tier builtin); events: skill.prompt,tool.check,tool.call
+2026-10-30T11:33:50.646Z [DEBUG] hooks module cc-plugin-telemetry@builtin engine.create settled in 1.4ms (native hop, next() included)
+2026-10-30T11:33:50.646Z [DEBUG] engine.create: no plugin-provided interfaces; $ built for cc-plugin-agents-md,cc-plugin-telemetry,cc-plugin-plugin-authoring
+2026-10-30T11:33:50.647Z [DEBUG] plugin.register: cc-plugin-agents-md (builtin, cc-plugin-agents-md@builtin), judged by core alone: admitted
+2026-10-30T11:33:50.647Z [DEBUG] plugin.register: cc-plugin-telemetry (builtin, cc-plugin-telemetry@builtin), judged by core alone: admitted
+2026-10-30T11:33:50.647Z [DEBUG] plugin.register: cc-plugin-plugin-authoring (builtin, cc-plugin-plugin-authoring@builtin), judged by core alone: admitted
+2026-10-30T11:33:50.653Z [DEBUG] Total plugin workflows loaded: 0
+2026-10-30T11:33:50.654Z [DEBUG] Registered 0 hooks from 3 plugins
+2026-10-30T11:33:50.655Z [DEBUG] session.start: raised (surface none, not interactive)
+2026-10-30T11:33:50.657Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.log nested in cc-plugin-agents-md#0
+2026-10-30T11:33:50.659Z [DEBUG] settings.read: the engine's merge was raised (the loaded plugins changed) in 4.4 ms; 0 keys answered otherwise than the files.
+2026-10-30T11:33:50.659Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 2.1ms (native link, next() included)
+2026-10-30T11:33:50.659Z [DEBUG] hooks module cc-plugin-telemetry@builtin session.start settled in 3.8ms (native link, next() included)
+2026-10-30T11:33:50.659Z [DEBUG] settings.read: the engine's merge is not raised again (the loaded plugins changed): neither the loaded plugins nor the settings changed.
+2026-10-30T11:33:50.659Z [DEBUG] cc-plugin-telemetry (builtin) answered telemetry.log without next() in 2.6ms; nothing beneath it ran for this dispatch
+2026-10-30T11:33:50.660Z [DEBUG] hooks module cc-plugin-agents-md@builtin session.start settled in 4.5ms (native link, next() included)
+2026-10-30T11:33:50.670Z [DEBUG] $.fs.ancestors (cc-plugin-agents-md): project memory is off
+2026-10-30T11:33:50.670Z [DEBUG] $.fs.ancestors (cc-plugin-agents-md): project memory is off
+2026-10-30T11:33:50.671Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.log nested in cc-plugin-agents-md#1
+2026-10-30T11:33:50.671Z [DEBUG] hooks module cc-plugin-telemetry@builtin (native): telemetry.mark nested in cc-plugin-agents-md#1
+2026-10-30T11:33:50.672Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.8ms (native link, next() included)
+2026-10-30T11:33:50.672Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.mark settled in 0.3ms (native link, next() included)
+2026-10-30T11:33:50.672Z [DEBUG] cc-plugin-telemetry (builtin) answered telemetry.mark without next() in 0.6ms; nothing beneath it ran for this dispatch
+2026-10-30T11:33:50.672Z [DEBUG] hooks module cc-plugin-agents-md@builtin prompt.context settled in 3.4ms (native link, next() included)
+2026-10-30T11:33:50.682Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 4.2ms (native link, next() included)
+2026-10-30T11:33:50.691Z [DEBUG] Loading skills from: managed=/etc/claude-code/.claude/skills, user=/home/mvazque2/.claude/skills, project=[]
+2026-10-30T11:33:50.691Z [DEBUG] [reduced mode] Skipping skill dir discovery
+2026-10-30T11:33:50.692Z [DEBUG] getSkills returning: 0 skill dir commands, 0 plugin skills, 38 bundled skills, 1 builtin plugin skills
+2026-10-30T11:33:50.703Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:50.703Z [DEBUG] [session-notices] advertise=false mode=bypassPermissions flag=false(fallback) pollChannel=false ownEventsOnly=false remote=false remoteEnv=false nonInteractive=true
+2026-10-30T11:33:50.708Z [DEBUG] [engine] turn 1 start
+2026-10-30T11:33:50.714Z [DEBUG] hooks module cc-plugin-agents-md@builtin turn.start settled in 6.0ms (native link, next() included)
+2026-10-30T11:33:50.714Z [DEBUG] hooks module cc-plugin-agents-md@builtin prompt.submit settled in 32.8ms (native link, next() included)
+2026-10-30T11:33:50.718Z [DEBUG] autocompact: tokens=[REDACTED] level=ok effectiveWindow=180000
+2026-10-30T11:33:50.721Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.721Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.ee93b2af4b5b
+2026-10-30T11:33:50.723Z [DEBUG] [sessionRegistry] sweep declined by isRegistrySweepPermitted() — dead records are left in place (neither counted nor deleted)
+2026-10-30T11:33:50.740Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-10-30T11:33:50.750Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.306.fec; cc_entrypoint=sdk-cli;
+2026-10-30T11:33:50.750Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:50.752Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:50.758Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:50.760Z [DEBUG] [API:timing] dispatching to firstParty model=glm-5.2
+2026-10-30T11:33:50.762Z [DEBUG] [API REQUEST] /api/anthropic/v1/messages source=sdk
+2026-10-30T11:33:50.762Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.767Z [DEBUG] $.process.run (cc-plugin-telemetry): sh with 2 args in /bulk/mvazque2/git/AgentSuite/tmp/claude-meta-probe (pid 50)
+2026-10-30T11:33:50.767Z [DEBUG] Temp file written successfully, size: 423 bytes
+2026-10-30T11:33:50.768Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.ee93b2af4b5b to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.768Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.772Z [DEBUG] Preserving file permissions: 100600
+2026-10-30T11:33:50.772Z [DEBUG] Writing to temp file: /home/mvazque2/.claude.json.tmp.17.dbb2c78080fb
+2026-10-30T11:33:50.773Z [DEBUG] Applied original permissions to temp file
+2026-10-30T11:33:50.773Z [DEBUG] Temp file written successfully, size: 852 bytes
+2026-10-30T11:33:50.773Z [DEBUG] Renaming /home/mvazque2/.claude.json.tmp.17.dbb2c78080fb to /home/mvazque2/.claude.json
+2026-10-30T11:33:50.773Z [DEBUG] File /home/mvazque2/.claude.json written atomically
+2026-10-30T11:33:50.776Z [DEBUG] $.process.run (cc-plugin-telemetry): sh exited 0 in 12ms, 42 + 0 chars
+2026-10-30T11:33:50.777Z [DEBUG] $.fs.read (cc-plugin-telemetry): /sys/hypervisor/uuid failed: ENOENT: no such file or directory, open '/sys/hypervisor/uuid'
+2026-10-30T11:33:51.928Z [DEBUG] Stream started - received first chunk
+2026-10-30T11:33:51.928Z [DEBUG] [API:timing] first byte after 1170ms
+2026-10-30T11:33:54.235Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=call_cc6d03ae798c4e0d99ce33e9 permissionDecisionMs=20
+2026-10-30T11:33:54.246Z [DEBUG] Creating shell snapshot for bash (/bin/bash)
+2026-10-30T11:33:54.246Z [DEBUG] Looking for shell config file: /home/mvazque2/.bashrc
+2026-10-30T11:33:54.250Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 5.8ms (native link, next() included)
+2026-10-30T11:33:54.263Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-30T11:33:54.264Z [DEBUG] Shell config file not found: /home/mvazque2/.bashrc, creating snapshot with Claude Code defaults only
+2026-10-30T11:33:54.264Z [DEBUG] Snapshots directory: /home/mvazque2/.claude/shell-snapshots
+2026-10-30T11:33:54.265Z [DEBUG] Spawn-env probe captured 122 keys
+2026-10-30T11:33:54.268Z [DEBUG] Creating snapshot at: /home/mvazque2/.claude/shell-snapshots/snapshot-bash-1793360034264-o84dl6.sh
+2026-10-30T11:33:54.268Z [DEBUG] Execution timeout: 10000ms
+2026-10-30T11:33:54.316Z [DEBUG] Shell snapshot created successfully (7034 bytes)
+2026-10-30T11:33:54.318Z [DEBUG] No session environment scripts found
+2026-10-30T11:33:54.319Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-30T11:33:54.340Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=call_cc6d03ae798c4e0d99ce33e9 outcome=ok durationMs=106
+2026-10-30T11:33:54.346Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.7ms (native link, next() included)
+2026-10-30T11:33:54.355Z [DEBUG] autocompact: tokens=[REDACTED] level=ok effectiveWindow=180000
+2026-10-30T11:33:54.360Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-10-30T11:33:54.363Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.306.fec; cc_entrypoint=sdk-cli;
+2026-10-30T11:33:54.364Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:54.365Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:54.368Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:54.369Z [DEBUG] [API:timing] dispatching to firstParty model=glm-5.2
+2026-10-30T11:33:54.371Z [DEBUG] [API REQUEST] /api/anthropic/v1/messages source=sdk
+2026-10-30T11:33:55.048Z [DEBUG] Stream started - received first chunk
+2026-10-30T11:33:55.048Z [DEBUG] [API:timing] first byte after 680ms
+2026-10-30T11:33:55.561Z [INFO] [Stall] tool_dispatch_start tool=Bash toolUseId=call_bbc3f1be9f464170a7ecf4b8 permissionDecisionMs=7
+2026-10-30T11:33:55.567Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 1.1ms (native link, next() included)
+2026-10-30T11:33:55.575Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.8ms (native link, next() included)
+2026-10-30T11:33:55.576Z [DEBUG] Spawning shell without login (-l flag skipped)
+2026-10-30T11:33:55.594Z [INFO] [Stall] tool_dispatch_end tool=Bash toolUseId=call_bbc3f1be9f464170a7ecf4b8 outcome=ok durationMs=33
+2026-10-30T11:33:55.608Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 10.0ms (native link, next() included)
+2026-10-30T11:33:55.623Z [DEBUG] autocompact: tokens=[REDACTED] level=ok effectiveWindow=180000
+2026-10-30T11:33:55.631Z [DEBUG] Tool search disabled: ToolSearchTool is not available (may have been disallowed via disallowedTools).
+2026-10-30T11:33:55.635Z [DEBUG] attribution header x-anthropic-billing-header: cc_version=2.1.306.fec; cc_entrypoint=sdk-cli;
+2026-10-30T11:33:55.636Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:55.637Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:55.641Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:55.643Z [DEBUG] [API:timing] dispatching to firstParty model=glm-5.2
+2026-10-30T11:33:55.644Z [DEBUG] [API REQUEST] /api/anthropic/v1/messages source=sdk
+2026-10-30T11:33:55.662Z [DEBUG] $.session.authorize (cc-plugin-telemetry): no first-party credential (No API key available)
+2026-10-30T11:33:55.663Z [DEBUG] [cc-plugin-telemetry] $.ui.log (to debug): telemetry: 3 row(s) not sent: this session has no first-party credential to authorize
+2026-10-30T11:33:56.378Z [DEBUG] Stream started - received first chunk
+2026-10-30T11:33:56.379Z [DEBUG] [API:timing] first byte after 738ms
+2026-10-30T11:33:56.680Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 0.9ms (native link, next() included)
+2026-10-30T11:33:56.689Z [DEBUG] hooks module cc-plugin-telemetry@builtin telemetry.log settled in 2.9ms (native link, next() included)
+2026-10-30T11:33:56.690Z [DEBUG] [engine] turn 1 end (turns=3 usage in=520 out=290 cost=$0.0115 api=5755ms stop=end_turn resultLen=94)
+2026-10-30T11:33:56.690Z [DEBUG] Fast mode unavailable: Fast mode is not available in the Agent SDK
+2026-10-30T11:33:56.699Z [DEBUG] hooks module cc-plugin-agents-md@builtin turn.complete settled in 0.6ms (native link, next() included)
+2026-10-30T11:33:56.721Z [ERROR] [Anthropic telemetry] Failed to check metrics opt-out status: Auth error: no credential usable for the metrics opt-out check
+2026-10-30T11:33:56.722Z [DEBUG] [Anthropic telemetry] BigQuery metrics export failed (metrics opt-out check failed; skipping export). This is Anthropic's own telemetry pipeline, not your OTel collector; further failures are counted and summarised at shutdown.
+2026-10-30T11:33:56.722Z [DEBUG] [Anthropic telemetry] BigQuery metrics export: 1 failure(s) this session (last: metrics opt-out check failed; skipping export)
+2026-10-30T11:33:56.722Z [DEBUG] [Anthropic telemetry] BigQuery metrics exporter flush complete
+2026-10-30T11:33:56.722Z [DEBUG] [Anthropic telemetry] BigQuery metrics exporter flush complete
+2026-10-30T11:33:56.723Z [DEBUG] [Anthropic telemetry] BigQuery metrics exporter shutdown complete
+2026-10-30T11:33:56.723Z [DEBUG] Cleaned up session snapshot: /home/mvazque2/.claude/shell-snapshots/snapshot-bash-1793360034264-o84dl6.sh
+2026-10-30T11:33:56.726Z [DEBUG] hooks module cc-plugin-telemetry@builtin session.end settled in 0.5ms (native link, next() included)

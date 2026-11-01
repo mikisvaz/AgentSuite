@@ -1,0 +1,6 @@
+user:
+
+Using the Bash tool, perform exactly two separate, sequential tool calls, one after the other (do not combine them into a single call):
+1. First call: print the number of lines of /bulk/mvazque2/git/AgentSuite/Claude/workflow.rb with `wc -l`.
+2. Second call: print the number of characters of the same file with `wc -c`.
+Then report both numbers in one short sentence. Do not run any other tool calls.
