@@ -1,4 +1,6 @@
 import: Agent/doctrine
+import: Agent/doctrines/collaboration
+import: Agent/doctrines/handoff
 import: Agent/society
 
 system:
