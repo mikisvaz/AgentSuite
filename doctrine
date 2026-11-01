@@ -231,4 +231,3 @@ introduce: Cortex
 tool: Cortex cortex_list
 tool: Cortex cortex_search
 tool: Cortex cortex_read
-tool: Cortex cortex_activity
