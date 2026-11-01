@@ -27,6 +27,8 @@ AgentSuite=/$PWD filter="*" {
   doctrine_3
 
   doctrine_4
+
+  claude_tokens
  }
 
  Worker=Worker {
@@ -144,28 +146,15 @@ AgentSuite=/$PWD filter="*" {
    }
   }
  }
- Reader=Reader{
+ Research=Research{
   README.md
-  start_chat
   workflow.rb
+  start_chat
   lib=lib{
-   Reader=Reader{
+   Research=Research{
     tasks=tasks{
      documents.rb
      web.rb
-    }
-   }
-  }
- }
- Research=Research{
-  README.md
-  start_chat
-  workflow.rb
-  lib=lib{
-   Research=Research{
-    path_kinds.rb
-    path_kinds=path_kinds{
-     records.rb
     }
    }
   }

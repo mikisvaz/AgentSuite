@@ -11,3 +11,4 @@ module FitAgent
 end
 
 require_relative 'lib/FitAgent/tasks/use_case.rb'
+require_relative 'lib/FitAgent/tasks/agent_ask.rb'

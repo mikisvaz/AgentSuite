@@ -18,6 +18,13 @@ FitAgent=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
 
  }
  lib=lib {
+  FitAgent=FitAgent{
+   tasks=tasks{
+    other.rb
+    agent_ask.rb
+    use_case.rb
+   }
+  }
  }
  README.md
  LICENSE

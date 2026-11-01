@@ -154,3 +154,39 @@ matched the stated profile assignments, line numbers, and effective counts;
 the only content visible on disk beyond the expected 13 start_chats is the
 pre-existing unrelated `FitAgent/` job sandbox area, which carries copies of
 other projects' agent files and is not part of this suite's agent set.
+
+## 7. Extension — 2026-11-01 redesign audit (Reader, FitAgent, ChatAnalyst)
+
+Added by the Phase 0 orchestration/context-delivery packet. Rows above are
+left untouched (historical record). New rows below were produced with a
+hermetic effective-tools probe (no model turns): script
+`tmp/redesign_audit_matrix_probe.rb`, output
+`tmp/redesign_audit_matrix_probe.out`, gem scout-ai 2.1.0, run from the repo
+root; imports resolved through a scratch `Agent/` mirror because the repo's
+`chats` symlink target is absent in that execution context.
+
+| Agent | start_chat lines | Own Cortex tool lines (current) | Effective Cortex tools (probe) | Profile vs current 10-task Cortex |
+|---|---|---|---|---|
+| Reader | 77; L1 `import: Agent/doctrine` | L76 `introduce: Cortex`; L77 bare `tool: Cortex` | 10 distinct = full task set | C-equivalent |
+| FitAgent | 17; L1 `import: Agent/doctrine` | none | 3: cortex_list, cortex_search, cortex_read | R |
+| ChatAnalyst | 91; L1 `import: Agent/doctrine` | L83 `tool: Cortex cortex_write`; L84 `tool: Cortex cortex_edit` | 5: cortex_edit, cortex_list, cortex_read, cortex_search, cortex_write | A |
+
+Exactly what was changed in this extension: this section only — three new
+rows plus the discrepancy notes below. No row above was edited.
+
+Discrepancies recorded (original table is stale in these points):
+
+- The doctrine footer no longer carries `cortex_activity`: superproject
+  commit a060da7 "Remove cortex_activity" (2026-11-01) left
+  `introduce: Cortex` + cortex_list/cortex_search/cortex_read, so profile R
+  is now 3 tools, not 4.
+- The Cortex checkout at the current submodule pointer d83a355 defines
+  exactly 10 cortex_* tasks (gem scan of lib/Cortex/tasks: artifact.rb 5,
+  conversation.rb 3, listing.rb 3). The property/list/entity tasks cited
+  for profiles E and P are not defined in this checkout; entity support
+  moved to the Semantics workflow (Cortex commit 4c33a6f "Reduce docs to
+  conversations/briefs/artifacts; point to Semantics and Research").
+- `WorkflowCoder/` has no directory in this repository root as of this
+  audit; its row above cites a start_chat not present on disk here.
+- Reader and FitAgent postdate the 2026-09-05 table; ChatAnalyst's line
+  numbers above have drifted (tool lines now L83-84, not L31-32).

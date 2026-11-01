@@ -1,10 +1,10 @@
 module FitAgent
   input :agents, :path, 'Path to agent definitions'
   input :use_case, :path, 'Path to use case dir', nil, required: true
-  input :endpoint, :select, 'Endpoint to use for both the run and the analyst'
+  input :endpoint, :select, 'Endpoint to use for both the run and the analyst', nil, hidden: true
   input :main_agent, :string, 'Main agent to run', 'MainAgent'
   input :repo, :path, 'Optional target repository to stage inside the sandbox (copied or linked per repo_mode)', nil
-  input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live, git = clone if repo or copy)', 'copy'
+  input :repo_mode, :select, 'How to stage :repo (copy = isolated snapshot, link = shared, live, git = clone if repo or copy)', 'copy', hidden: 'true'
   input :exclude, :array, 'Path patterns to exclude when staging :repo in copy mode', ['var', '.git', 'tmp']
   task :use_case => :text do |agents,use_case,endpoint,main_agent,repo,repo_mode,exclude|
 
@@ -170,7 +170,7 @@ default: :current
   dep :use_case
   input :instructions, :text, "Instructions for the ChatAnalyst, defaults to use case instructions or default instructions"
   input :experiment, :string, "Experiment tag recorded in the report header for cross-repo bookkeeping", "Default"
-  input :endpoint_analyst, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)'
+  input :endpoint_analyst, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)', nil, hidden: true
   extension :md
   # DEPRECATED (fit-era): superseded by the deterministic Scoring.score_scenario
   # rubric path (score task); kept for compatibility with existing job references.
@@ -217,4 +217,6 @@ The Use Case was ran here: #{use_case.file('sandbox')}, and chat file is here: #
     analyst.save('analysis.chat')
     response
   end
+
+  export :use_case, :analyze
 end
