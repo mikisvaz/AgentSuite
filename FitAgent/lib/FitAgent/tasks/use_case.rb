@@ -83,6 +83,14 @@ module FitAgent
       end
     end
 
+    # Write jobs, caches, etc under the current directory
+    path_maps = sandbox['etc/path_maps']
+    unless path_maps.exists?
+      Open.write path_maps, <<-EOF
+default: :current
+      EOF
+    end
+
     # Add agent directory
     log :copy_agents, 'Preparing agents'
     Open.cp agents, sandbox.Agent if agents
@@ -144,7 +152,8 @@ module FitAgent
       }) do
         begin
           logfile = file('log.txt')
-          io =CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log #{severity} -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs,path /usr/bin/bwrap bwrap,continue true error' > #{self.tmp_path} 2> #{logfile}", pipe: true)
+          #io =CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log #{severity} -ck 'directory #{Scout.var.jobs.find(:current)} workflow_jobs,path /usr/bin/bwrap bwrap,continue true error' > #{self.tmp_path} 2> #{logfile}", pipe: true)
+          io =CMD.cmd('scout-ai', "agent ask #{main_agent} -c main.chat -e #{endpoint} --log #{severity} -ck 'path /usr/bin/bwrap bwrap,continue true error' > #{self.tmp_path} 2> #{logfile}", pipe: true)
 
           tail = CMD.cmd("tail -f '#{logfile}'", pipe: true)
           Open.consume_stream(tail, true, STDERR, false)
@@ -154,6 +163,7 @@ module FitAgent
         nil
       end
     end
+    nil
   end
 
 
