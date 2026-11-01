@@ -32,4 +32,10 @@ Recorded by Research in `ags/foxo-pi3k/mission.md` (mode: sanctioned surrogate).
   `tmp/ags-pilot/lead_outline_reply.md`, `tmp/ags-pilot/lead_review_reply.md`,
   `tmp/ags-pilot/critic_reply.md`.
 - Launch helper (stale-claim clearing + env): `tmp/ags-pilot/launch_role_turn.sh`.
-- Drift baselines: `tmp/ags-pilot/DRIFT_START.txt`, `tmp/ags-pilot/DRIFT_END.txt`.
+- Drift baselines: `tmp/ags-pilot/DRIFT_START.txt`, `tmp/ags-pilot/DRIFT_END.txt`.- Drift baselines: `tmp/ags-pilot/DRIFT_START.txt`, `tmp/ags-pilot/DRIFT_END.txt`.
+
+Closure pointer (added in Phase 8): the redesign closure report is
+`new_doctrine/work/redesign-closure.md` — it addresses this packet's
+remaining-work items and the Critic carry list, and records the commit
+plan executed on `ags-redesign`.
+
