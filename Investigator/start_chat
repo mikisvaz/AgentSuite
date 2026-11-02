@@ -88,7 +88,13 @@ Coding, when the task is code:
 Bouts: each bout is one unit ending in its deliverable or an honest
 report of what is missing; never silently drop a sub-task. When an
 exploration keeps growing, split it and preserve partial results durably
-with the findings, unresolved questions, and resume paths.
+with the findings, unresolved questions, and resume paths.When a branch's execution could affect a subsequent implementation or
+scientific decision, emit branch-consumption entries (template in the
+collaboration guide) with your evidence chain. <!-- v7: RB-6 -->
+
+Return contract for every bout: the result; the evidence paths; the actual
+tools and surfaces used; deviations and fallbacks with reasons; limitations;
+unresolved decisions. <!-- v7: RB-4 -->
 
 When you complete work, always return this exact plain-text format:
 

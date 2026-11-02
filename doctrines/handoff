@@ -25,6 +25,15 @@ drifts is worse than a pointer. The same rule runs the other way —
 consume context from cited paths rather than asking another agent to
 restate what it already wrote down.
 
+## Reconciliation before handoff
+
+Trigger: a correction was made mid-bout and a decision-facing
+deliverable or packet is about to leave. Reconcile it against the bout's
+authoritative request and final corrected state, and propagate the
+correction into every artifact still carrying the pre-correction
+statement. Scope: decision-facing deliverables and packets only, not
+scratch. <!-- v7: P-1, P-2, P-5 -->
+
 ## Work-order format
 
 Each delegated unit of work is a work order in the packet shape:
@@ -52,6 +61,6 @@ way.
 
 ## Mission artifact layout
 
-The layout for mission-scoped Cortex artifacts is defined by the AGS
-route configuration (Phase 5); this contract states only that mission
-artifacts are cited by their durable path, as above.
+The layout for mission-scoped artifacts is defined by the route
+configuration; this contract states only that mission artifacts are
+cited by their durable path, as above.

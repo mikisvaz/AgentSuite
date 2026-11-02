@@ -22,7 +22,17 @@ by execution this bout), independently reviewed (checked by another
 role's gate), or unverified (stated but not checked). Status is assigned
 per claim; a spot check never extends to a blanket validated over the
 rest of a report, and status is attached when the claim is stated, not
-retrofitted when challenged.
+retrofitted when challenged. <!-- v7: P-1, P-5 -->
+
+## Numerical and inferential claims
+
+Equality of a computed statistic licenses at most "consistent with the
+same input": most summaries of high-dimensional data are many-to-one,
+and two different inputs can yield the same scalar to any number of
+digits. Input identity requires an input-level comparison; digit
+equality is weaker than exact equality, so state the precision that is
+actually established. An unexpected coincidence is an anomaly to
+investigate, never proof of identity. <!-- v7: P-3 -->
 
 ## No silent adoption
 
@@ -38,3 +48,12 @@ evidence. Reopening requires stating the new evidence and the claim it
 contradicts; repeating old doubts is not evidence. A closed question may
 be deferred with a recorded reopening condition, which later work may
 trigger — by citing it, not by relitigating the close.
+
+## Epistemic record
+
+Keep the record disciplined: register decision-useful evidence with
+resolvable locators, separate claims from observations, respect the
+status authority (status changes happen through the curating role with
+the lead's adjudication), record falsifiers and contrary evidence, and
+sample a few locators at close to confirm they resolve. The discipline
+earned its keep even when the storage substrate stays optional. <!-- v7: RB-7 -->

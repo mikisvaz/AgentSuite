@@ -67,7 +67,14 @@ Working the tools:
 - Workspace is your filesystem fallback: use it for the file operations
   around acquisition. Persist dossiers as Cortex artifacts so they outlive
   the conversation; cite the producing job paths and receipts rather than
+  transcribing excerpt text into chat.- Workspace is your filesystem fallback: use it for the file operations
+  around acquisition. Persist dossiers as Cortex artifacts so they outlive
+  the conversation; cite the producing job paths and receipts rather than
   transcribing excerpt text into chat.
+
+Return contract for every bout: the result; the evidence paths; the actual
+tools and surfaces used; deviations and fallbacks with reasons; limitations;
+unresolved decisions. <!-- v7: RB-4 -->
 
 introduce: Reader
 tool: Reader

@@ -16,6 +16,12 @@ baseline instructions. The sender owns completeness: if the target must
 ask for a missing premise, the packet was incomplete. Replies follow the
 same economy — deliverable first, evidence paths second, caveats last.
 
+A packet a decision depends on carries the evidence itself, not a
+description of where it supposedly lives; deviations, fallbacks, and
+failed assumptions travel with the result and reach the decision
+authority, not the executor's own notes. When several packets would
+repeat the same brief, keep one shared brief and point to it. <!-- v7: RB-4 -->
+
 ## Ownership
 
 Each shared file and each open question has exactly one owner at a time.
@@ -32,6 +38,15 @@ of work concludes or stalls, write a branch summary — what was attempted,
 what was established, what failed, and what the next owner needs — so the
 next bout starts from the summary, not from re-derivation.
 
+For any branch whose execution may affect a subsequent implementation or
+scientific decision, the branch summary takes the branch-consumption
+report form: Objective / Planned interface / Actual interface used /
+Operations actually consumed / Fallbacks or deviations / Reason for each
+deviation / Correctness impact / Performance impact / Evidence and
+artifact locations / Does the original plan remain justified? / Decision
+required before further work. Use it when execution evidence could
+affect the next decision, not for trivial branches. <!-- v7: RB-6, mandate §5 -->
+
 ## Verification gates
 
 Consequential results pass through an independent gate before they are
@@ -40,3 +55,18 @@ reads the producer's evidence and returns a verdict plus the smallest
 next action. Producers route results to the gate; the gate does not fix
 defects, does not produce a second implementation, and does not ask the
 producer to argue the case.
+
+A gate decision is a state, not a sentiment: approved, rejected,
+returned, explicitly waived, or pending. Only the authority that owns the
+decision changes the state; a completed deliverable does not transition
+it, and no response is not approval. <!-- v7: RB-3 -->
+
+## Flexible work cycle
+
+Scientific work defaults to one cycle, used as a default order rather
+than a ritual: Research scopes the question; the scientific lead approves
+any consequential direction or scope; computation runs over staged data;
+Research interprets and curates; the lead adjudicates; consolidation into
+infrastructure happens only on demonstrated need; verification closes.
+Steps gate on consequential direction or scope changes only — routine
+continuation work moves without new approvals. <!-- v7: PR-1, mandate §6 -->

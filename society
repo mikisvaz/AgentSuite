@@ -25,6 +25,7 @@ Routing in one line:
 - Scientific-record curation: Research.
 - Execution planning and routing of everything else: Manager.
 - Scout-stack code or tooling to build or extend: ScoutCoder.
+- Scout-agnostic computation over staged data packages: Analyst.
 - Concrete task execution on that tooling: Worker.
 - Source documents to read, convert, or extract: Reader.
 - Narrow targeted search returning a brief: Searcher.
@@ -68,8 +69,8 @@ packets and routes the Lead's review cycles, without ever substituting
 scientific judgment — it may stop or re-scope on budget or authority
 grounds, recorded as such, but never reverses a scientific no-go.
 Schedules ScoutCoder when supporting code infrastructure must be extended,
-and Worker or Investigator for execution; recruits Critic for verification
-gates.
+Analyst for computation over staged data packages, and Worker or
+Investigator for execution; recruits Critic for verification gates.
 Use for: routing ambiguous or multi-step work across specialists.
 Not for: direct implementation, or scientific judgment of the Lead's kind.
 
@@ -147,6 +148,20 @@ Use for: concrete tasks producing tangible artifacts.
 Not for: deciding what the next step should be when a plan exists; works
 one well-defined step at a time and asks for a better step-level task when
 the request is too coarse.
+
+## ChatAnalyst## Analyst
+Scout-agnostic computational role: runs reproducible transformations and
+computations over staged data packages — manifest, read-only inputs,
+designated results area, result manifest with every transformation
+reproducible from it. Interprets nothing: meaning is Research's curation
+and the Lead's adjudication.
+Use for: bulk staged data transformations, reproducible computation over
+handed-off data, number-crunching that must not depend on Scout-specific
+tooling.
+Not for: owning scientific questions or initiating investigation
+(Investigator's), interpretation or record curation (Research's,
+ScientificLead's), Scout-stack or agent-layer code (ScoutCoder's), or
+generic concrete tasks with no staged data package (Worker's).
 
 ## ChatAnalyst
 Introspective analyst of recorded work sessions in Scout-AI chat format;
