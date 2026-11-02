@@ -11,13 +11,13 @@ Date: 2026-11-02  Baseline: fa843de working tree (branch doctrine-v7)
 | Investigator/start_chat | 130 | 136 | +6 | branch-consumption emission line + compact return contract |
 | Worker/start_chat | 91 | 100 | +9 | compact return contract incl. branch-consumption emission |
 | Reader/start_chat | 79 | 86 | +7 | compact return contract |
-| ChatAnalyst/start_chat | 91 | 96 | +5 | compact return contract (file untracked in git; change = the inserted block below) |
+| ChatAnalyst/start_chat | 91 | 96 | +5 | compact return contract (tracked in its submodule; was uncommitted M at bout time — now submodule commit 25f423a) |
 | Analyst/start_chat | 0 | 75 | new | new Scout-agnostic computation role: manifest+read-only inputs+designated results area, reproducibility, missing-input reporting, never initiates investigation, interpretation deferred, no Scout/agent-layer construction; tool block = Workspace exec+file ops only |
 | society | 181 | 196 | +15 | Analyst roster entry (Use for/Not for); routing-one-liner; Manager paragraph names Analyst for staged computation |
 
 Deliberately untouched (no ledger row names them): Searcher, Planner, User, Consultant.
 ScoutCoder/ChatAnalyst absent at fa843de? ScoutCoder/start_chat was untracked-at-tip
-ScoutCoder/start_chat and ChatAnalyst/start_chat are UNTRACKED in git (new in the ags-redesign working state, never committed), so `git diff` produces nothing for them. Old counts are the pre-edit working files measured at bout start (145 / 91 lines); the change records below stand in for the missing diffs.
+Correction (Critic gate): ScoutCoder/start_chat and ChatAnalyst/start_chat ARE tracked inside their submodules ( ScoutCoder @ 496df9c, ChatAnalyst @ 85a9977); at bout time their v7 edits were uncommitted M in those submodules, which is why the parent-repo `git diff` showed nothing for them. Old counts are the committed pre-edit states (145 / 91 lines); the change records below stand in for the parent-visible diffs. The edits are now committed inside the submodules (667d1e2, 25f423a) with parent pointers updated in the v7 closure commit.
 
 ## diff Manager
 +++ b/Manager/start_chat

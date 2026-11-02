@@ -61,7 +61,7 @@ files.
 | No leakage into unedited roles | validated (4 control rows footer-only + unchanged surfaces) |
 | doctrine_bundle regenerated correctly for v7 files | validated (cmp identical ×10 role files + doctrine/doctrines/society) |
 | bundle script exit-clean | unverified — fails (pre-existing noise), out of scope |
-| Behavioral acceptance tests T-1..T-10 | not yet run (next bout, per plan) |
+| Behavioral acceptance tests T-1..T-10 | run — 10 PASS / 0 FAIL / 0 INCONCLUSIVE, evidence in v7-behavioral-results.md (quotes grep-verified against raw outputs) |
 | workflows/ symlink portability | not verified (carried over) |
 
 ## Commit
