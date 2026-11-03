@@ -5,6 +5,12 @@ $LOAD_PATH.unshift(File.expand_path('lib', __dir__)) unless $LOAD_PATH.include?(
 
 module Workspace
   extend Workflow
+
+  task current_time: :string do
+    Time.now.to_s
+  end
+
+  export_exec :current_time
 end
 
 require_relative 'lib/Workspace/exceptions'

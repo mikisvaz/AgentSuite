@@ -149,7 +149,7 @@ Not for: deciding what the next step should be when a plan exists; works
 one well-defined step at a time and asks for a better step-level task when
 the request is too coarse.
 
-## ChatAnalyst## Analyst
+## Analyst
 Scout-agnostic computational role: runs reproducible transformations and
 computations over staged data packages — manifest, read-only inputs,
 designated results area, result manifest with every transformation

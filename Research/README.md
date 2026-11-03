@@ -1,6 +1,6 @@
-Research
+Scientific interpretation for Scout workflows
 
-Scientific interpretation for Scout workflows: the durable scientific record — observations, claims and hypotheses as agent Path kinds — plus the record-store maintenance tasks around them. Source acquisition (web search, document conversion, retrieval-augmented querying) has moved to the Reader workflow ([Reader README](../Reader/README.md)); Research consumes Reader dossiers and owns the interpretation and the record.
+The durable scientific record — observations, claims and hypotheses as agent Path kinds — plus the record-store maintenance tasks around them. Source acquisition (web search, document conversion, retrieval-augmented querying) has moved to the Reader workflow ([Reader README](../Reader/README.md)); Research consumes Reader dossiers and owns the interpretation and the record.
 
 Reader requires Workspace and merges its helpers; so does Research — `workflow.rb` does `Workflow.require_workflow 'Workspace'` and `Research.helpers.merge!(Workspace.helpers)` — and the remaining tasks keep using those helpers. The record Path kinds are local to Research and need none of them.
 
@@ -11,7 +11,7 @@ Reader requires Workspace and merges its helpers; so does Research — `workflow
 
 ## Scientific record Path kinds
 
-Research declares three agent Path kinds — **observation**, **claim**, **hypothesis** — for the durable scientific record. They register when the whole Research workflow is incorporated as a tool (`tool: Research`); a task-level tool line registers nothing.
+Research declares three agent Path kinds — **observation**, **claim**, **hypothesis** — for the durable scientific record. They register through an explicit `path_kind: Research` chat line (optionally naming a subset of kinds); a task-level tool line registers nothing. Whole-workflow `tool: Research` incorporation still loads the kinds, but only for an agent without a start_chat file.
 
 - **observation** (`OBS-###`) — a recorded result or measurement tied to at least one source. Use it when the point is *what was observed and from what provenance*. Registering an observation without any source is rejected.
 - **claim** (`C-###`) — an assertion the record store tracks through an evidential lifecycle (`proposed` → `supported`/`qualified`/`contradicted` → `superseded`). Use it when the point is *what is being asserted*, with links to the observations and other claims that support, contradict or qualify it.

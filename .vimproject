@@ -2,14 +2,12 @@ AgentSuite=/$PWD filter="*" {
 
  doctrine
  doctrines=doctrines{
-  investigation
-  investigations=investigations{
-   code
-   biology
-   finances
-   math
-  }
   advice
+  catalogue
+  collaboration
+  discipline
+  handoff
+  investigation
  }
  society
  scout
@@ -24,11 +22,18 @@ AgentSuite=/$PWD filter="*" {
   }
  }
  chats=~/chats/AgentSuite{
+  test=test{
+   research
+  }
   doctrine_3
 
   doctrine_4
 
   claude_tokens
+
+  doctrine_6
+
+  doctrine_7
  }
 
  Worker=Worker {
@@ -152,13 +157,17 @@ AgentSuite=/$PWD filter="*" {
   start_chat
   lib=lib{
    Research=Research{
-    tasks=tasks{
-     documents.rb
-     web.rb
+    path_kinds.rb
+    path_kinds=path_kinds{
+     records.rb
     }
    }
   }
  }
+ Investigator=Investigator{
+  start_chat
+ }
+
  Cortex=Cortex {
   LICENSE
   README.md
@@ -298,6 +307,11 @@ AgentSuite=/$PWD filter="*" {
  Visualizer=Visualizer{
   start_chat
  }
+ Decider=Decider{
+  README.md
+  workflow.rb
+ }
+
  Claude=Claude{
   workflow.rb
  }
@@ -309,10 +323,6 @@ AgentSuite=/$PWD filter="*" {
   start_chat
  }
  Direct=Direct{
-  workflow.rb
- }
- Decider=Decider{
-  README.md
   workflow.rb
  }
 

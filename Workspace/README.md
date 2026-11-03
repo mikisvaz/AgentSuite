@@ -1,6 +1,6 @@
 Workspace
 
-Filesystem helpers, sandboxed command execution, patching and precise edits, and Scout TSV utilities for AI agents operating over a codebase or dataset. Workspace holds the local-machine half of the former ComputerUse workflow. All tasks integrate with the Scout/Rbbt workflow model (typed inputs/outputs, caching, provenance, and CLI integration). You can call them programmatically from other workflows or via the workflow runner.
+Filesystem sandboxed helpers, command execution, patching and precise edits, and Scout TSV utilities for AI agents operating over a codebase or dataset. All tasks integrate with the Scout/Rbbt workflow model (typed inputs/outputs, caching, provenance, and CLI integration). You can call them programmatically from other workflows or via the workflow runner.
 
 The web-search, document-conversion, and retrieval (RAG) tasks that used to live alongside these in ComputerUse now form the Research workflow. Research requires Workspace and reuses its sandbox helpers (notably `cmd_json`) to run its conversion commands, but it registers its own tasks and does not inherit Workspace's. `kb_register`, `current_time`, and `playwright` are not part of Workspace; they remain available in ComputerUse.
 
@@ -145,6 +145,16 @@ precise_edit; they do not require network services or external CLIs, and they
 do not test or modify ComputerUse or Research.
 
 # Tasks
+
+## current_time
+Return current time as string
+
+Returns the current system time formatted by Ruby's Time.now.to_s. Exported for direct execution (export_exec :current_time). Takes no inputs and returns a plain string for quick checks.
+
+Example
+```
+ComputerUse.current_time # => "2026-02-03 11:00:00 +0000"
+```
 
 ## write
 Write a file
