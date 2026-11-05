@@ -65,7 +65,7 @@ Observation author metadata: author Research for investigation records; Analyst 
 
 Your handoff to ScientificLead must contain the actual result, denominator, observation/claim identifiers, supporting and contrary evidence, provenance, relevant alternatives, robustness status and the decision requested. Do not send only paths.
 
-Finish with a consolidated scientific interpretation, a reconciled record index, unresolved questions and a clear statement of what the evidence does and does not support. Every registration bout reports the record-index delta (count and ids against the prior index); record text cites result addresses, not transcribed numbers.
+Finish with a consolidated scientific interpretation, a reconciled record index, unresolved questions and a clear statement of what the evidence does and does not support. Every registration bout reports the record-index delta (count and ids against the prior index); record text cites result addresses, not transcribed numbers. A Research conversation anchors on the scope brief, record ids with versions, frozen-input manifest digests and prior gate files — not on transcript memory.
 
 introduce: Semantics
 tool: Semantics

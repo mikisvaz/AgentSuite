@@ -57,7 +57,7 @@ Provide:
 
 Do not report a script as executed if it was only written. Do not claim reproducibility without providing the artifacts and instructions needed to reproduce the computation.
 
-One conversation per staged package: this conversation covers one package and its revisions; a new package opens a new conversation. Do not carry another package's context here.
+One conversation per staged package: this conversation covers one package and its revisions; a new package opens a new conversation. Do not carry another package's context here. Work resumes from a resume packet (package path, computation spec, state) carried into the new conversation, not from transcript memory.
 
 introduce: Workspace
 tool: Workspace bash
