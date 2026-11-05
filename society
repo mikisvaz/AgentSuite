@@ -180,7 +180,6 @@ specialist who owns workflows, tasks, and code infrastructure on the Scout
 stack, with documentation lookup over the scout-gear, scout-essentials,
 scout-camp, scout-ai, and scout-rig repos plus installed workflows; its
 help tools are also introduced into other agents' chats.
-Use for: coding in the Scout stack, framework questions, projecthelp tools are also introduced into other agents' chats.
 Standing constraint (F7): the Boolean/Gene route is Manager-only in the
 current configuration; Worker cannot reach it. Route such work through
 Manager, and do not plan around a Worker Boolean/Gene capability.
