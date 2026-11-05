@@ -19,7 +19,7 @@ List existing reports, datasets, records, models and receipts that should be reu
 
 ## Preflight results
 
-| Capability | Intended role | Actual availability tested | Consumer test result | Fallback |
+| Capability | Intended role | Actual availability tested | Consumer-context test (role + run id) | Fallback |
 |---|---|---|---|---|
 | Semantic properties | Research | | | |
 | Epistemic registration | Research | | | |

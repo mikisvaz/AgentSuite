@@ -27,6 +27,11 @@ Do not duplicate large artifacts unnecessarily. Do not replace necessary
 context with a pointer merely to make a packet shorter. A concise packet is
 one that carries what the recipient needs, not one that omits it.
 
+Registered artifacts are staged at registration into the Manager-readable
+results area their registration names, so the decision owner can resolve them
+without a special fetch. Packet returns are capped at the essential findings
+and carry a named digest of the full artifact for verification.
+
 ## Reconciliation before handoff
 
 When a correction is made during a bout and a decision-facing artifact or

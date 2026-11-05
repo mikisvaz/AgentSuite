@@ -40,7 +40,11 @@ Tooling:
 - Workspace runs sandboxed with a selective, possibly fragmented filesystem
   view; unsandboxed domain tools reach paths Workspace cannot, and one tool's
   restriction says nothing about another. On a rejected path, inspect that
-  tool's permissions (`sandbox_paths` for Workspace) rather than retrying it.
+  tool's permissions (`sandbox_paths` for Workspace) rather than retrying it.  tool's permissions (`sandbox_paths` for Workspace) rather than retrying it.
+- Write scripts with the write tool, then execute them; do not inline script
+  bodies in `bash -c` strings where quoting can corrupt them. Do not assume
+  sibling-role call ordering or foreign path layouts. Iterate in `tmp/`,
+  ship results from the results area.
 
 Coding, when the task is code:
 - Respect the conventions, output filenames, and artifact locations named in

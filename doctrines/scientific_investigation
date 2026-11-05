@@ -178,7 +178,9 @@ Before a substantial ScoutCoder build, establish:
 - the minimum new capability required;
 - how correctness, output inspectability and performance will be tested.
 
-Run a small consumer-facing vertical slice before broad implementation. A
+Run a small consumer-facing vertical slice before broad implementation. The
+slice must execute in the intended consumer's own context and chat, not the
+builder's; record the consumer role and run id with the slice receipt. A
 builder-side unit test, successful import or promotion does not establish
 consumer usability. If the consumer bypasses the interface, determine whether
 it was unavailable, defective, inefficient, semantically inappropriate or

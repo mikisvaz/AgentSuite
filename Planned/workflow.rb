@@ -65,7 +65,7 @@ You have been asked to fulfill a user request. Elaborate a plan
     agent = self.agent worker_agent, chat: chat, tooling: self.tooling 
 
     agent.user <<-EOF
-You have been asked to fulfill a user request. Proceed with the plan
+You have been asked to fulfill a user request. A plan is attached above from the plan stage. Follow the plan for all consequential steps and cite the plan step you are executing in the work order; when you deviate from the plan, log the deviation and its reason in your report rather than silently departing from it.
     EOF
 
     agent

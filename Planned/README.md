@@ -33,7 +33,7 @@ Stage by stage:
   report when available) to elaborate a plan. It only receives the workflow
   introductions as tooling, not the full tool set, so the plan stays at the
   design level.
-- `work` runs a worker agent that executes the plan. By default this is the
+- `work` runs a worker agent that executes the plan, citing the plan step it is executing and logging deviations from it. By default this is the
   `Manager` agent; it can be changed with the chat options `worker_agent` or
   `Planned_worker_agent` (the latter takes precedence). This is the stage
   that receives the full tooling declared in the chat.
