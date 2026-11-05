@@ -78,3 +78,32 @@ Post-fix invariants: branch linear (no merges introduced; verified after
 fixes), 21 commits from rollback 46433830, bundle exit 0 with society copy
 byte-identical, no edits outside `society`, `new_doctrine/work/` and the two
 files named by N-3/N-4.
+
+## (d) Critic re-test — PASS (verbatim transcription)
+
+Attribution: transcribed from the step-7 work order (Manager → Worker,
+2026-11-05), quoting the Critic's re-test verdict in full. Re-test examined
+the same branch range plus commits a8d2f52 and 28463e5.
+
+---BEGIN CRITIC RE-TEST---
+VERDICT: PASS on the doctrine-v9 change package, combining this re-test with the prior review (criteria 3–5 and all other items unchanged; no edits outside fix files). N-1 PASS (a8d2f52 deletes exactly the garbled line; live read: one clean Use-for line, F7 note intact; bundle re-run exit 0, byte-identical). N-2 PASS (no v9 file states 81 as register count; independently recounted: RB 7 + RM 18 + P 8 + FR 14 + F 4 + C 22 + BF 6 = 79). N-3/N-4 confirmed live. Gate discipline held. Advisories carried into final report: (1) single-sample behavioral caveat — PASS shows the rule fires, not a rate; old-context sensitivity not probed; (2) not-testable-hermetically list — mission-template instantiation, Planned runtime, society consumption at launch; (3) receipts caveat — 5b durable receipts are saved answers + runner scripts, not job paths (LLM.ask cache ephemeral under bwrap); (4) unowned untracked Priest/ dir still present, no v9 row owns it — repo hygiene item; (5) ChatAnalyst gitlink ahead of pin (parent 25f423a, submodule HEAD 2bbc1e9 clean descendant) — trivial future bump, outside v9 ownership.
+---END CRITIC RE-TEST---
+
+Carried advisories (summary; full text above):
+1. Single-sample behavioral caveat — the 3/3 PASS shows each rule fires, not
+   a firing rate; no pre-v9 sensitivity comparison was run.
+2. Not-testable-hermetically list stands: mission-template instantiation,
+   Planned runtime, society consumption at launch.
+3. Receipts caveat: 5b durable receipts are saved answers + runner scripts,
+   not job paths (LLM.ask cache ephemeral under bwrap).
+4. `Priest/` untracked dir is unowned — repo hygiene item (also in
+   environment packet and final report open items).
+5. ChatAnalyst gitlink ahead of pin (parent 25f423a, submodule HEAD 2bbc1e9
+   clean descendant) — trivial future bump, outside v9 ownership.
+
+## (e) Gate state: **PASS**
+
+Date: 2026-11-05. Set by transcription of the Critic re-test verdict above
+(this session, step 7 of 7). The PASS is the Critic's act — recorded here per
+gate discipline; the Worker does not self-certify. Package: doctrine-v9 @ 21
+commits from rollback 46433830 (a8d2f52, 28463e5 included), linear, 0 merges.
