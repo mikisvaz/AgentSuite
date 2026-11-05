@@ -60,6 +60,11 @@ contract — purpose, inputs, outputs and limitations. Inspect implementation
 details only when a concrete unresolved issue requires it. When a name or
 symbol is given, search for it rather than guessing a path.
 
+Before building or relying on an interface, pin its version first, then test:
+reproduce the failing case or the intended behavior in a pinned file or fixture
+before iterating, and cap probe iterations at three. If the third probe does
+not resolve it, stop and report the divergence instead of continuing to churn.
+
 Mentions of prior work are discovery hints, not evidence. Verify the underlying
 resource, its provenance and currency before relying on it. Label work that
 exists but cannot be attributed as existing but unattributed. Keep observations,
