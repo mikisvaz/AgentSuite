@@ -219,7 +219,8 @@ For important results:
 
 Use the designated project record protocol. If the supported Research
 registration API is the configured authoritative route and passes preflight,
-use it for registration and lifecycle operations. If the project deliberately
+use it for registration and lifecycle operations. The record's author field
+carries the acting role, not a default value. If the project deliberately
 specifies a file-based protocol, or the API is unavailable or defective, use
 the documented fallback and identify it accurately. Do not describe manually
 created files as API-registered records. Do not silently substitute Cortex for
