@@ -49,6 +49,17 @@ A delegated work order states:
 It names the deliverable before work begins and states what counts as
 completion.
 
+When several packets would repeat the same substantial brief, keep one shared
+brief and point to it, but only after verifying that every recipient can read
+it; otherwise carry the necessary context in each packet. Decision-critical
+facts are always inlined in every packet regardless — a readable pointer
+never replaces the facts the recipient needs to decide.
+
+A work order opens with a standing environment-facts header: the execution
+surfaces, mounts, tool availability and known environment constraints that
+the recipient would otherwise have to rediscover. Keep it short and update it
+when the environment changes.
+
 ## Resume packets
 
 Resume an interrupted bout from a compact packet stating what was done, what

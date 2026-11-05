@@ -80,3 +80,9 @@ API is unavailable, follow that protocol and label the records accurately.
 A manually authored Markdown file is not evidence that an API registration
 operation occurred. Sample important locators at close to confirm that they
 resolve for the intended consumers.
+
+Observation metadata uses the author enum: Research for investigation
+records; Analyst for computation records whose content Analyst produced;
+ScientificLead for adjudications; Manager for coordination records. The
+default Investigator is legacy; do not apply it to new records that belong
+to another author.

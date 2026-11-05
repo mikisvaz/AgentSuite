@@ -132,10 +132,16 @@ not require repeated approval.
 
 ### 4.4 Select the appropriate computational route
 
-Choose the route that best fits the scientific operation, considering semantic
-meaning, availability to the consumer, correctness, performance, provenance,
-reproducibility and effort. Do not apply a rigid preference for native tools or
-for generic computation.
+Computation authority defaults to the Analyst staged-file route: a simple
+filesystem package (manifest, read-only inputs, work and results areas)
+transformed with ordinary tools is the default for numerical computation.
+Native routes (entities, properties, workflows, ScoutCoder-built tasks) earn
+their place by demonstrated consumption — an intended consumer actually
+completes a representative operation through them — not by availability,
+elegance or prior investment. Choose the route that best fits the scientific
+operation, considering semantic meaning, availability to the consumer,
+correctness, performance, provenance, reproducibility and effort. Do not apply
+a rigid preference for native tools or for generic computation.
 
 Common routes include:
 
@@ -178,6 +184,15 @@ consumer usability. If the consumer bypasses the interface, determine whether
 it was unavailable, defective, inefficient, semantically inappropriate or
 simply unnecessary for the task.
 
+Native routes keep or lose their place on evidence. Before broad
+implementation of a native route, record the largest item to compute, the
+largest item already validated end-to-end, and their ratio. A workload ratio
+of 10x or more requires, before any batch dispatch, either a capped
+single-item probe at target scale on a frozen input (wrapper-free, timeout at
+or under 20 minutes, output sha cited) or an explicit waiver with a
+pre-registered decision rule. When a full-scale item would take more than
+20 minutes, route it to staged-file analysis before any batch dispatch.
+
 Promote reusable infrastructure only when recurring need or another concrete
 benefit is demonstrated. A one-off calculation does not automatically warrant
 a permanent task, entity or property.
@@ -216,6 +231,10 @@ expecting native API registration.
 
 ScientificLead adjudicates claims and hypotheses using decision packets that
 contain the essential evidence, not only paths that may be inaccessible.
+Before any gate ruling, the Lead's adjudication vocabulary (decision states,
+status words and their meanings) is supplied to Research as a contract input
+for the epistemic store, so the record can carry the Lead's exact decision
+words.
 
 Critic checks the actual claim being made. Verification should identify the
 role and environment tested, what was executed versus inspected, numerical and

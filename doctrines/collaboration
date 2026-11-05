@@ -75,6 +75,13 @@ for revision, or explicitly waived. Only the authority that owns the decision
 may change its state. A completed deliverable does not change the state, and
 silence is not approval.
 
+Before a gate ruling is issued, a correspondence check confirms the
+adjudication vocabulary actually present in the evidence record against the
+decision being ruled on: each decision word the ruling uses must be one the
+record can express, and each status the record carries for the affected items
+must be accounted for by the ruling. A vocabulary mismatch does not block the
+ruling; it is reported to Research for correction of the record.
+
 Distinguish a verification gate from an authorization gate. A verifier assesses
 whether evidence supports the claim or acceptance criteria. A decision owner
 authorizes scope, direction or promotion. Passing one gate does not implicitly

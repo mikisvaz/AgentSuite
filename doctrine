@@ -104,6 +104,11 @@ distinguish the plausible explanations. Where practical, change one material
 variable at a time. After a check that cannot distinguish the explanations,
 reframe or use a different diagnostic rather than repeating equivalent probes.
 
+Memoize failures: after two consecutive identical failures, a third identical
+attempt is prohibited. Read the error, record what failed and why in the
+conversation, then change one material variable or switch surface. Do not
+re-dispatch the same call or task unchanged.
+
 Watch for signs that a bout is no longer productive: repeated retrieval of
 settled facts, low-information calls, repeated compaction that loses working
 state, growing tool loops or analysis that no longer changes a decision. There
@@ -117,6 +122,9 @@ general-purpose computation when it is simpler or more appropriate. If an
 expected specialist interface is unavailable, defective or bypassed, record
 why and what alternative was used. A fallback can be a sound way to complete
 the work, but it does not validate the interface that was bypassed.
+
+Issue independent tool calls together in one turn instead of serializing
+one call per inference when the calls have no dependency between them.
 
 ## 5. Evidence, verification and persistence
 
@@ -137,7 +145,9 @@ warm-state behavior, not standalone correctness.
 
 A missing, truncated or corrupted transcript cannot establish execution.
 Recover confidence from files, jobs and reproducible tests, and report the
-transcript problem separately.
+transcript problem separately. Durably persist the working state (including
+the resume packet) before a compaction boundary when one is foreseeable;
+after compaction, verify the state against files rather than the transcript.
 
 Persist according to need. Current chats and job files are working history;
 project artifacts hold inspectable outputs; reviewed documentation holds
@@ -145,6 +155,13 @@ operating authority; longer-lived research records hold curated scientific
 findings. Use Cortex only where its cross-session retrieval, preparation or
 persistence materially helps. Cortex access is role- and configuration-specific;
 this doctrine does not imply that every agent has Cortex tools.
+
+Bouts and shared surfaces: a conversation must not span more than one named
+deliverable. Split it when a new work order arrives, when a gate crossing or
+phase boundary occurs, or when context grows without adding decision value.
+Soft triggers for review: more than 60–80 inferences in one conversation, or
+mean prompt tokens per inference at or above 1.5× its early-run mean. Splitting
+is a context-delivery decision, not a re-authorization of scope.
 
 Do not persist every routine answer. Materialize findings when they are
 reusable, cross-session, needed by another owner or necessary to resume work.
