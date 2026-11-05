@@ -40,15 +40,18 @@ above as 651e9b8).
 
 ## ChatAnalyst submodule (D2 companion instruction)
 
-Verified: ChatAnalyst HEAD 25f423a ("v7: ChatAnalyst start_chat
-return-contract line"), parent pins 25f423a — **equal**. The working-tree
-` M ChatAnalyst` is modified *content inside* the submodule (` M start_chat`
-uncommitted there) plus `.vimproject`; the gitlink itself is unchanged, so
-there is no pointer bump to make. No equivalent committed v8-era edit exists
-in ChatAnalyst history (only the v7 25f423a edit, already pinned). Left
-untouched per the work order's "if not, leave it and record why". The
-uncommitted in-submodule start_chat edit predates this bout (recorded in the
-v8 change ledger) and is not owned by any v9 ledger row.
+Originally verified (step 4): ChatAnalyst HEAD 25f423a ("v7: ChatAnalyst
+start_chat return-contract line"), parent pins 25f423a — **equal**, with an
+uncommitted in-submodule start_chat edit plus `.vimproject` dirt. No pointer
+bump was made; no equivalent committed v8-era edit existed in ChatAnalyst
+history at that time.
+
+**Gate-refreshed (N-3, step 6b):** the submodule is now **CLEAN at 2bbc1e9**
+("Improved ChatAnalyst start_chat", authored after the last v9 commit; it
+absorbs the previously-uncommitted start_chat edit and adds an
+`import: Agent/doctrines/scientific_investigation` line). Parent gitlink
+remains unchanged at 25f423a (25f423a is an ancestor of 2bbc1e9). No v9 row
+owns ChatAnalyst; no v9 action required — recorded for accuracy only.
 
 ## Text moved between files
 
@@ -110,7 +113,12 @@ the submodules, outside this bout's scope.
 3. `society` lists `Boolean`/`Gene` under Manager "Use for" while the roster's
    standing-constraint note (CL-19) documents the asymmetry; the constraint
    note's exact placement (after the ScoutCoder paragraph) may read oddly for
-   consumers expecting it adjacent to the Manager entry.
+   consumers expecting it adjacent to the Manager entry. **Gate follow-up
+   (N-1, a8d2f52): CL-19's edit also produced a garbled duplicate ScoutCoder
+   "Use for" line (commit 6c54a97) — "…framework questions, project"
+   collided with the preceding sentence's tail "help tools are also
+   introduced into other agents' chats." — corrupting the Use-for line.
+   Now removed (a8d2f52); the clean line and the F7 note are intact.**
 4. `Planned/README.md` §"Testing" still describes only the four Workspace test
    files; no v9 row covers Planned test coverage — gap, not fixed.
 5. The `workflows/` symlink friction (machine-absolute targets, baseline

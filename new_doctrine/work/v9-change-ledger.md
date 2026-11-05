@@ -65,5 +65,6 @@ script output remains diff-clean vs source.
 ## C. Explicit deferrals (no ledger row, with reason)
 
 - **Delegate rows** (owner outside this repo): P0-2, P1-4, RM-03, RM-14, RM-15, FR-03, FR-06, FR-07, C01, C02, C09, C13, C17, C18, C19, BF-1 — scout-ai / epistemic-API / domain-tooling / environment owners; routed, not edited here.
-- **Accept-with-reason rows** (no change warranted by evidence): RM-09, FR-01, FR-02, FR-09, FR-13, FR-14, C06–C12, C14, C15, C20, BF-4 (staged Agent/ namespace works and is documented; root fix delegate).
+- **Accept-with-reason rows** (no change warranted by evidence): RM-09, FR-01, FR-02, FR-09, FR-13, FR-14, C06, C08, C10, C11, C12, C14, C15, C20, BF-4 (staged Agent/ namespace works and is documented; root fix delegate).
+  [N-4 gate correction: C07 and C09 are not accept rows — C07 = environment, C09 = delegate (scout-ai); ids now named explicitly instead of the sweeping "C06–C12" range.]
 - **P1-3 schema enum work** (supported_qualified, evidence_tier vocabulary, retire, title lifecycle) remains delegated to the epistemic-API owner; CL-08 carries only the contract-input half.
