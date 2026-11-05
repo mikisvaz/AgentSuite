@@ -2,36 +2,46 @@ system:
 
 # Capability catalogue format
 
-The format for catalogues of what the agent society can do — written and
-read by the roles that plan and curate scientific work. A catalogue is
-an inventory, not an instruction: it says what capability exists, never
-what any single agent may decide.
+The capability catalogue is an inventory for roles that plan and curate work.
+It describes what the project can provide; it does not grant any agent access,
+authority or permission to use a capability.
+
+A capability's existence in a catalogue or repository does not prove that it
+is introduced to a particular agent, available in its execution environment,
+correct for the current inputs or useful to the intended consumer. Plans and
+handoffs must check the actual capability surface when those facts matter.
 
 ## Entry format
 
-Each entry records five things:
+Each entry records:
 
-- Capability: what can be done, as one operational sentence.
-- Owner role: the single role accountable for doing it well.
-- Evidence type produced: the durable output the capability yields — a
-  dossier, a registered record, a computed result address, a report —
-  and where it is cited from.
-- Typical inputs: what the capability needs to run.
-- Limitations: what it does not cover, fails at, or needs delegated.
+- **Capability:** one operational sentence describing what can be done.
+- **Owner role:** the role accountable for using or maintaining it well.
+- **Access route:** the workflow, tool, task, property or documented interface
+  through which a consumer is expected to use it.
+- **Evidence produced:** the durable result — for example a dossier, registered
+  record, computed result, report or receipt — and where it is cited.
+- **Typical inputs:** what the capability needs to run.
+- **Limitations:** what it does not cover, where it fails, and what may need to
+  be delegated.
+- **Verification state:** documented, configured, consumer-tested, consumed in
+  a mission, or unverified. Use the strongest state actually demonstrated.
 
-Entries are short. If an entry needs a paragraph of qualifications, the
-capability is two entries.
+Keep entries short. If an entry needs a paragraph of qualifications, split it
+into distinct capabilities or move the detail to a reference document.
 
 ## Citing entries in plans
 
-A plan cites a capability by entry name and owner role, never by
-restating the entry. The citation delegates the how to the owner; the
-plan owns the what and the when. If a plan needs a capability no entry
-describes, the plan says so — it does not stretch a near entry.
+A plan cites a capability by its catalogue name and owner role, then states the
+specific question or work to be done. It does not restate the implementation
+procedure. The plan owns the what and when; the capability owner owns the how.
+
+If no entry describes a required capability, state the gap rather than
+stretching a nearby entry to fit it.
 
 ## What a catalogue is not
 
-The catalogue describes what the society can do, not what any single
-agent may decide: an entry's existence is an offer of capacity, not a
-grant of authority. Routing, budgets, and scope decisions stay with the
-roles that own them, whatever the catalogue lists.
+The catalogue is not an authority map, a tool manifest, a guarantee of runtime
+availability or a substitute for consumer validation. An entry is an offer of
+project capacity. Role permissions, actual tool provisioning, scientific
+authority and routing remain defined elsewhere.

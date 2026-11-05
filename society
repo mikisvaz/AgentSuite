@@ -20,15 +20,14 @@ Routing in one line:
 - Single bounded task: go straight to the specialist who owns it.
 - Scientific direction: ScientificLead owns question decomposition,
   hypothesis framing, evidence-review standards, and branch go/no-go.
-- Question-owning execution of an assigned scientific question:
-  Investigator, one question → evidence chain → bounded conclusion.
-- Scientific-record curation: Research.
+- Scientific investigation and evidence curation: Research, the scientific
+  centre — it investigates and owns the observation/claim/hypothesis record.
 - Execution planning and routing of everything else: Manager.
 - Scout-stack code or tooling to build or extend: ScoutCoder.
 - Scout-agnostic computation over staged data packages: Analyst.
 - Concrete task execution on that tooling: Worker.
 - Source documents to read, convert, or extract: Reader.
-- Narrow targeted search returning a brief: Searcher.
+- Narrow targeted search returning a brief: Searcher (pipeline-internal).
 - Verification of a consequential result: Critic.
 - Introspection over recorded sessions: ChatAnalyst.
 
@@ -42,35 +41,36 @@ Use for: intake normalization and final synthesis.
 Not for: executing tools, searching, or solving the task.
 
 ## Searcher
-Targeted-discovery agent producing a concise search brief with candidate
-sources and relevant local documentation; prefers local files over the web;
-hands off documents requiring substantial extraction or close reading to
-Reader; returns NO_SEARCH_NEEDED when no search is required. Any caller may
-use it — Planned's search stage is one named consumer, not the defining
-frame.
-Use for: source discovery and bounded search.
+Pipeline-internal, not part of the scientific route (v8): targeted-discovery
+agent producing a concise search brief with candidate sources and relevant
+local documentation; prefers local files over the web; hands off documents
+requiring substantial extraction or close reading to Reader; returns
+NO_SEARCH_NEEDED when no search is required. Planned's search stage is one
+named consumer, not the defining frame.
+Use for: source discovery and bounded search where a search brief is the
+right deliverable.
 Not for: exhaustive document extraction, scientific interpretation, or
 implementation decisions.
 
 ## Planner
-Plan producer for Planned's plan stage: turns the restated request, plus
-the search brief when present, into one practical plan; plans from the
-restatement alone when the search stage is off. Produces a single path,
-not alternatives.
-Use for: turning a restated request into an executable plan.
+Pipeline-internal, not part of the scientific route (v8): plan producer for
+Planned's plan stage: turns the restated request, plus the search brief when
+present, into one practical plan; plans from the restatement alone when the
+search stage is off. Produces a single path, not alternatives.
+Use for: turning a restated request into an executable plan inside Planned.
 Not for: executing the plan, which belongs to the work stage.
 
 ## Manager
 Controller of a budgeted loop: decides what happens next, who does it, with
 what context, and when to stop; does not implement. Inside Planned its
 context is exactly the three upstream reports. In scientific loops it
-translates a ScientificLead outline into work orders and Investigator
-packets and routes the Lead's review cycles, without ever substituting
+translates a ScientificLead outline into work orders and Research packets
+and routes the Lead's review cycles, without ever substituting
 scientific judgment — it may stop or re-scope on budget or authority
 grounds, recorded as such, but never reverses a scientific no-go.
 Schedules ScoutCoder when supporting code infrastructure must be extended,
-Analyst for computation over staged data packages, and Worker or
-Investigator for execution; recruits Critic for verification gates.
+Analyst for computation over staged data packages, and Worker for
+execution; recruits Critic for verification gates.
 Use for: routing ambiguous or multi-step work across specialists.
 Not for: direct implementation, or scientific judgment of the Lead's kind.
 
@@ -118,25 +118,27 @@ Not for: executing work, acquiring documents, record curation, or
 computational planning.
 
 ## Research
-Evidence curator: owns the scientific record — registration of
-observations, claims, and hypotheses, their lifecycle and status
-consistency, and their traceability to result addresses and definition
-versions. Takes direction from the ScientificLead and serves Investigator
-requests; delegates source discovery to Searcher and document acquisition
-to Reader.
-Use for: record registration, lifecycle operations, traceability queries.
-Not for: owning scientific questions, framing hypotheses, adjudicating
-what evidence means, or acquiring documents itself.
+Scientific investigator and evidence-curation centre: owns active
+scientific investigation (domain reasoning over the semantic surface,
+literature, and computational results) and the scientific evidence record —
+registration of observations, claims, and hypotheses, their lifecycle and
+status consistency, and their traceability to result addresses and
+definition versions. Takes direction from the ScientificLead; issues
+acquisition requests to Reader; delegates bulk computation to Analyst
+through Manager.
+Use for: scientific investigation, record registration, lifecycle
+operations, traceability queries.
+Not for: scientific adjudication (ScientificLead's), document acquisition
+itself (Reader's), planning execution (Manager's) or Scout infrastructure
+(ScoutCoder's).
 
 ## Investigator
-Question-owning executor for scientific investigation, derived from Worker:
-takes one assigned question through its evidence chain to a bounded
-conclusion, carrying the full Worker execution surface with an explicit,
-narrow Cortex task list — a packet executor that does not delegate onward.
-Use for: one assigned scientific question → evidence chain → bounded
-conclusion.
-Not for: question decomposition, go/no-go decisions, record curation, or
-steps outside the assigned question.
+DEPRECATED (v8): retained for backwards compatibility only. The v8
+scientific route assigns question-owning investigation to Research and
+delegation packets; this legacy Worker-derived executor is no longer part
+of the scientific route. Do not recruit for new work.
+Use for: legacy missions that still name it.
+Not for: new scientific investigations — route to Research via Manager.
 
 ## Worker
 Execution agent: runs concrete tasks on the infrastructure ScoutCoder
@@ -159,7 +161,7 @@ Use for: bulk staged data transformations, reproducible computation over
 handed-off data, number-crunching that must not depend on Scout-specific
 tooling.
 Not for: owning scientific questions or initiating investigation
-(Investigator's), interpretation or record curation (Research's,
+(Research's, v8), interpretation or record curation (Research's,
 ScientificLead's), Scout-stack or agent-layer code (ScoutCoder's), or
 generic concrete tasks with no staged data package (Worker's).
 

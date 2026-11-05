@@ -1,39 +1,20 @@
 system:
 
-# Advice appendix (pointer)
+# Deprecated advice appendix
 
-This appendix was emptied during the instruction-stack rewrite: its generic
-content moved to the new doctrine, its Scout-specific content is scheduled to
-move into the agents that use it. It remains only so the doctrine's import
-does not dangle. Do not add new advice here.
+This file is retained temporarily for compatibility with older imports. It is
+not imported by the revised general doctrine and must not receive new content.
 
-- ScoutDocumentation lookup convention (workflows such as Workspace and repos
-  such as scout-ai are different things; use help_workflow for the
-  documentation agents see, and the workflow or agent name as a repo for its
-  user, developer, and research documents): moves to the shared Scout
-  vocabulary when that file is rewritten.
+The former generic advice has been consolidated into `Agent/doctrine` and the
+shared doctrine documents. Scout-specific conventions belong in the relevant
+role start_chat or subsystem reference:
 
-- Non-Workspace tooling must not create arbitrary files outside its job's
-  files_dir sidecar; save data as the tool result or inside the sidecar and
-  let Workspace move it to the final destination: absorbed into the doctrine,
-  sandbox section.
+- ScoutDocumentation lookup belongs in the relevant Scout-aware role or
+  workflow guide.
+- Workspace and non-Workspace file-placement rules belong in the relevant
+  tool contracts.
+- Unit-test placement and test-template conventions belong in ScoutCoder's
+  instructions and developer documentation.
 
-- When an agent helps you through a named conversation, continue that
-  conversation to ask clarifications about the response: absorbed into the
-  doctrine, delegation section.
-
-- Unit-test placement convention retained below pending its move into the
-  ScoutCoder start_chat at that file's rewrite: the test file for code in
-  ./lib/scout/dir/file.rb is ./test/scout/dir/test_file.rb, and the template
-  helps the ScoutCoder test tooling locate the code under test.
-
-```ruby
-require File.expand_path(__FILE__).sub(%r(/test/.*), '/test/test_helper.rb')
-require File.expand_path(__FILE__).sub(%r(.*/test/), '').sub(/test_(.*)\.rb/,'\1')
-
-class TestSomeClass < Test::Unit::TestCase
-  def test_true
-    assert true
-  end
-end
-```
+Before deleting this file, search the repository for remaining imports of
+`Agent/doctrines/advice` and migrate them deliberately.

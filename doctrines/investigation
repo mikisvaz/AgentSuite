@@ -2,56 +2,62 @@ system:
 
 # Investigation norms
 
-How an investigation is run, split, and closed — stated once for every
-role that conducts, reviews, or directs one. This guide is deliberately
-independent of any domain tooling: the loop is the same whatever tools a
-role holds.
+These norms apply to investigations across domains. The scientific
+investigation guide specializes them for scientific work; it should be read
+alongside this guide by scientific roles.
 
 ## Question ownership
 
-Every investigation begins with one owned question. The owner states it
-as a question, not a topic, and keeps it single: one question per
-investigation, one investigation per question. Questions arrive from a
-direction owner or from the investigator's own brief; splitting a
-question is a new investigation with a new owner, not a branch of the
-old one.
+Every investigation has one accountable owner and one primary question. It may
+contain linked subquestions when they share the same owner, evidence base,
+decision and stopping condition. Split a subquestion into a separate
+investigation when it has an independent objective, evidence base, owner or
+completion criterion.
+
+State the primary question as a question, not merely a topic. An investigation
+may begin exploratorily when the purpose is to map an unfamiliar problem, but
+it should identify the decisions or explanations that the exploration is
+intended to inform.
 
 ## Hypothesis framing
 
-An investigation that proposes an explanation states its hypothesis
-before collecting evidence — framed so that some observation could count
-against it. Framing belongs to the scientific direction owner; the
-executor tests the stated hypothesis rather than restating it to fit
-emerging results.
+When testing an explanation, state the hypothesis and plausible alternatives
+before collecting the discriminating evidence, where practical. Frame it so
+that some result could count against it. The direction owner owns the
+hypothesis and its decision criteria; the executor tests the agreed
+predictions rather than rewriting them to fit emerging results.
+
+Not every descriptive or reconnaissance investigation needs a mechanistic
+hypothesis. Do not invent one merely to satisfy a template.
 
 ## Evidence chains with citations
 
-Every conclusion travels with its chain: the claim, the evidence that
-supports it, and a citation to where that evidence lives — a durable
-path, a run receipt, or a result address, never a re-typed number.
-Observation, claim, hypothesis, and action stay labeled as such, so a
-reader can tell what is measured from what is inferred.
+Every consequential conclusion travels with its chain: the claim, the
+observations or results supporting and contradicting it, and references to
+where the evidence can be inspected. Do not replace evidence with a retyped
+number or an unsupported summary. Keep observation, claim, hypothesis and
+action distinct.
 
-## Discriminating experiments before breadth
+## Discriminating work before breadth
 
-When several explanations survive, design the one experiment whose
-outcomes separate them, and run that first. Cheap confirmations of the
-leading story are not progress. State before running what each possible
-outcome would rule in or out; if no outcome would change the decision,
-the experiment is decoration.
+When several explanations survive, prefer the analysis or experiment whose
+possible outcomes best separate them. State what each relevant outcome would
+support, weaken or leave unresolved before running it. If no possible outcome
+would change the decision or interpretation, reconsider whether the analysis
+is useful.
 
 ## Selective curation
 
-Curate what survives, not everything: an artifact earns its place by
-being reusable, cross-session, or needed to resume an investigation.
-Dossiers and record entries cite their sources, note extraction
-limitations, and say what they deliberately exclude. Curation is
-selection with stated reasons, not deletion.
+Curate what survives rather than everything produced. An artifact earns a
+place in the durable record when it is reusable, supports a decision, is needed
+to resume work or preserves important contrary evidence. Dossiers and record
+entries cite their sources, note extraction limitations and state important
+exclusions. Curation is selection with reasons, not silent deletion.
 
 ## Bounded conclusions
 
-An investigation concludes when the question is answered, explicitly
-closed, or blocked — not when budget is merely exhausted. A bounded
-conclusion states its scope, the evidence it rests on, what remains
-uncertain, and the condition under which it should be reopened. Ending a
-concluded investigation is correct behavior, not a failure.
+An investigation concludes when its question is answered within a stated
+scope, explicitly closed, or genuinely blocked — not merely when a budget is
+exhausted. A bounded conclusion states the evidence, limitations, unresolved
+alternatives and conditions for reopening. Ending a concluded investigation
+is correct behavior, not a failure.
