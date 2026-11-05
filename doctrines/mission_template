@@ -28,7 +28,10 @@ List existing reports, datasets, records, models and receipts that should be reu
 | Native Scout tasks/provisioning | ScoutCoder, if needed | | | |
 
 Preflight must be performed in the intended consumer's own context, not the
-builder's. Record the exact operation invoked and its receipt.
+builder's. Record the exact operation invoked and its receipt. Every
+capability row that was actually tested must name the exact operation
+invoked and cite its receipt; untested rows are marked untested, never
+blank.
 
 ## Standing environment facts
 
@@ -69,6 +72,12 @@ For each branch specify:
 ## Required handoffs
 
 Material branches return result, evidence, actual tools/surfaces used, deviations, fallbacks, correctness/performance caveats and whether the original plan remains justified.
+
+Dates and timestamps in this mission record come from receipts, not from
+recollection; the mission has a single scribe (the Manager), and branches
+report to it. Gate-scale receipts are mirrored into the run root beside this
+template so the final evaluation can cite them without opening branch chats.
+
 
 ## Record and gate vocabulary
 
