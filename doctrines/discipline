@@ -73,6 +73,11 @@ from claims and hypotheses; respect the authority that owns status changes;
 record falsifiers and contrary evidence; preserve corrections and lifecycle
 history.
 
+Record text never relies on transcribed numbers: every value cites the result
+address, job receipt or artifact path it came from. Every registration bout
+ends with a record-index reconciliation — the count and ids of records
+against the prior index — and the delta is reported with the bout return.
+
 Use the designated project record protocol. If a supported API is the
 configured authoritative route and it has passed the relevant capability
 check, use it. If the project deliberately uses a file-based protocol or the

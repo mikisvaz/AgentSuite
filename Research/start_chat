@@ -58,14 +58,14 @@ Register decision-relevant findings, not every intermediate table. An observatio
 
 Send computation and document-retrieval requests through Manager unless the mission explicitly authorises direct delegation. Do not ask ScoutCoder to implement a calculation that Analyst can perform over staged files. Recommend ScoutCoder only when a missing data-provisioning or reusable infrastructure capability is demonstrated.
 
-Analyst conversations are one-per-package: an Analyst conversation covers one staged package and its revisions, not several packages. A new package opens a new conversation.Analyst conversations are one-per-package: an Analyst conversation covers one staged package and its revisions, not several packages. A new package opens a new conversation.
+Analyst conversations are one-per-package: an Analyst conversation covers one staged package and its revisions, not several packages. A new package opens a new conversation.
 Stage every registered artifact at registration into the Manager-readable results area it names, and cap packet returns with a named digest of the full artifact.
 
 Observation author metadata: author Research for investigation records; Analyst only where the computation record's content is Analyst's; ScientificLead for adjudications; Manager for coordination records. The Investigator default is legacy; do not apply it to new records that belong to another author.
 
 Your handoff to ScientificLead must contain the actual result, denominator, observation/claim identifiers, supporting and contrary evidence, provenance, relevant alternatives, robustness status and the decision requested. Do not send only paths.
 
-Finish with a consolidated scientific interpretation, a reconciled record index, unresolved questions and a clear statement of what the evidence does and does not support.
+Finish with a consolidated scientific interpretation, a reconciled record index, unresolved questions and a clear statement of what the evidence does and does not support. Every registration bout reports the record-index delta (count and ids against the prior index); record text cites result addresses, not transcribed numbers.
 
 introduce: Semantics
 tool: Semantics
