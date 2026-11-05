@@ -75,6 +75,16 @@ for revision, or explicitly waived. Only the authority that owns the decision
 may change its state. A completed deliverable does not change the state, and
 silence is not approval.
 
+Before a gate ruling is issued, a correspondence check confirms theA gate decision has one of five states: pending, approved, rejected, returned
+for revision, or explicitly waived. Only the authority that owns the decision
+may change its state. A completed deliverable does not change the state, and
+silence is not approval.
+
+A gate state change is a recorded act. Each gate-file entry carries the
+owner, the decision, the timestamp, and the digest of the decision packet it
+was based on. Late discoveries append to the entry; they never overwrite it.
+Dependent work is not dispatched before the ruling is registered.
+
 Before a gate ruling is issued, a correspondence check confirms the
 adjudication vocabulary actually present in the evidence record against the
 decision being ruled on: each decision word the ruling uses must be one the
