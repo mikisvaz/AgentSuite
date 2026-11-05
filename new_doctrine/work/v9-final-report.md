@@ -1,6 +1,6 @@
 # Doctrine-v9 — final report (Manager's report, transcribed faithfully)
 
-Branch `doctrine-v9` @ 21 commits from rollback 46433830 (doctrine-v8 tip),
+Branch `doctrine-v9` @ 23 commits from rollback 46433830 (doctrine-v8 tip),
 linear, 0 merges. Gate: Critic PASS (prior review + re-test; see
 `new_doctrine/work/v9-closure.md`). All claims below cite v9 artifacts.
 
@@ -165,7 +165,7 @@ e. Optionally record per-run light accounting (the two-level evaluation
 
 ## 10. Rollback point
 
-**46433830** (doctrine-v8 tip). Branch doctrine-v9 is 21 commits linear from
+**46433830** (doctrine-v8 tip). Branch doctrine-v9 is 23 commits linear from
 it, 0 merges; `git checkout doctrine-v8` restores pre-v9. The design survives
 independently (register + ledger + decisions are committed work files).
 
