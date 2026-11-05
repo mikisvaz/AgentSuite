@@ -1,6 +1,14 @@
 #!/bin/env bash
-cp doctrine scout society  doctrine_bundle/
 mkdir -p doctrine_bundle/doctrines
-cp doctrines/*  doctrine_bundle/doctrines/
-for a in *; do cp $a/start_chat doctrine_bundle/$a.start_chat; done
-for a in *; do cp $a/README.md doctrine_bundle/$a.README.md; done
+cp doctrine scout society  doctrine_bundle/
+for f in doctrines/*; do
+  [ -f "$f" ] || continue
+  cp "$f" doctrine_bundle/doctrines/
+done
+for a in */; do
+  a="${a%/}"
+  [ -f "$a/start_chat" ] || continue
+  cp "$a/start_chat" "doctrine_bundle/$a.start_chat"
+  [ -f "$a/README.md" ] && cp "$a/README.md" "doctrine_bundle/$a.README.md"
+done
+exit 0

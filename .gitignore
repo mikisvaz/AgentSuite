@@ -9,3 +9,6 @@ var
 scenarios
 __pycache__
 cortex_path_map.yaml
+cortex_path_map.yaml
+doctrine_bundle/
+doctrine_bundle.v7/
