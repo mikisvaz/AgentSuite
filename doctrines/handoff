@@ -45,7 +45,6 @@ scientific or operational meaning. Scratch files need not all be rewritten.
 A delegated work order states:
 
 - objective and decision supported;
-- current state and relevant evidence;- objective and decision supported;
 - current state and relevant evidence;
 - artifacts consumed, with version (sha or mtime);
 - design or proposed approach, where useful;
