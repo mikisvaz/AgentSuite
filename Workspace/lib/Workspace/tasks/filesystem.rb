@@ -144,6 +144,7 @@ files (results, notes, data).
   input :path, :path, 'File to write', nil, required: true
   input :content, :text, 'Content to write into the file', nil, required: true
   task :write => :string do |file,content|
+    raise ParameterException, "File is nil or empty: #{path}" if path.nil? || path.empty?
     file = normalize file, :write
     raise ParameterException, "File is a directory: #{file}" if Open.directory?(file)
     Open.write file, content

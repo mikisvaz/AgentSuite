@@ -36,6 +36,14 @@ AgentSuite=/$PWD filter="*" {
   doctrine_7
 
   doctrine_8
+
+  doctrine_evolution
+
+  doctrine_xray
+
+  pills
+
+  skills
  }
 
  Worker=Worker {
@@ -104,9 +112,9 @@ AgentSuite=/$PWD filter="*" {
   lib=lib {
    Semantics=Semantics{
     tasks=tasks{
-     entity_list_property.rb
-     entity_property.rb
      entity_query.rb
+     entity_property.rb
+     entity_list_property.rb
     }
    }
   }

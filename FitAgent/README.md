@@ -1,7 +1,7 @@
-# FitAgent: an agent fitness harness for testing and evaluating agents in any repository
+FitAgent: an agent fitness harness for testing and evaluating agents in any repository
 
 FitAgent is a Scout workflow that measures how well an LLM agent "fits" a
-task. It currently offers two avenues of investigation:
+task. It offers two avenues of investigation:
 
 1. **Scenario avenue — `use_case` + `analyze`.** Define a use case
    scenario (a blind task chat plus supporting data) and run an agent
@@ -18,8 +18,6 @@ task. It currently offers two avenues of investigation:
 Both avenues work against any agent definition directory and, for the
 scenario avenue, any target repository.
 
-## Active tasks
-
 | Task | Avenue | What it does |
 | ---- | ------ | ------------ |
 | `use_case` | scenario | Stage a sandbox (use case + agent defs + endpoints + optional repo) and run the agent via `scout-ai agent ask`; the job result is the agent's final answer |
@@ -29,131 +27,28 @@ scenario avenue, any target repository.
 
 The fit-era tasks (`compare`, `evolve`, `catalogue`, `override`, `score`,
 `run_arms`, `fit`) live in `lib/FitAgent/tasks/other.rb`, are not required
-by `workflow.rb`, and are currently deactivated. The retired README
-sections that documented them are preserved verbatim in
-`research/12-readme-retired-fit-era.md`.
+by `workflow.rb`, and are currently deactivated; the retired README
+sections are preserved in `research/12-readme-retired-fit-era.md`.
+
+Keys are never expected in the target repository: set
+`SCOUT_AI_<NAME>_KEY` in the environment (for example `SCOUT_AI_QWEN_KEY`)
+and `use_case` materializes it into the per-run job sandbox at execution
+time.
 
 Use `scout workflow task FitAgent <task> --help` or the ScoutCoder
 `list_tasks` / `task_inputs` tools to see every input.
 
-## The scenario avenue in detail
-
-A use case directory holds `main.chat` (the blind task in Scout-AI
-chat-file format), an optional `analyze.chat` (scoring criteria for the
-analyst), and any data the task needs. Agent directories (passed with
-`--agents`) hold one `<name>/start_chat` per agent; `--main_agent` selects
-which one the inner run asks.
-
-`use_case` stages everything the inner agent needs into a per-job sandbox
-(see the layout below), then executes `scout-ai agent ask` inside it. The
-inner run's stdout — the agent's final answer — becomes the job result;
-the full transcript is left in the sandbox `main.chat`.
-
-`analyze` depends on `use_case`, so it inherits every `use_case` input and
-can re-run or reuse an existing run. The analyst's instructions resolve in
-this order: an explicit `instructions` input, the sandbox `analyze.chat`,
-or a built-in default criteria message (success, tool use, token usage
-including cached tokens, multi-agent patterns, and an instruction to
-follow job and agent dependencies for the full provenance). The analyst
-receives the `use_case` job's result file plus the sandbox and `main.chat`
-locations, and may follow the run's job links.
-
-## The response avenue in detail
-
-`agent_ask` loads the named agent (its `start_chat` persona, plus the
-standard job context Scout adds), optionally appends `doctrine` as an
-extra system message, and forwards the task chat with `assistant`,
-`system` and `tool` roles stripped — the scenario arrives as user turns.
-It asks exactly once: `return_tool_calls: true` makes the backend return
-the model's first response without chaining or executing tool calls, so
-the result shows the agent's immediate reaction, tools requested included.
-
-`evaluate_agent` depends on `agent_ask` (same inputs), attaches the rubric
-file, and runs the `FitAgent` evaluator persona over: the task chat, the
-rubric, and the agent's response. The evaluator runs with its workflow
-detached, so it judges purely from the material in its chat — no tools.
-The rubric is a file path to a rubric document you supply (Markdown
-criteria for grading, for instance a rubric describing what a good
-code-review response contains).
-
-The same `FitAgent` persona, driven interactively with the scenario, the
-rubric and the result already in hand, is told to judge directly instead
-of calling `evaluate_agent` again (see `start_chat`).
-
-## Deploying FitAgent against another repository
-
-`use_case` (and `analyze`, which reuses it) accepts a `repo` input so the
-agent under test works inside any checkout:
-
-```bash
-scout workflow task FitAgent use_case \
-    --agents <agent-suite-dir> --use_case <use-case-dir> --endpoint qwen \
-    --repo /path/to/target-repo --repo_mode copy --main_agent Planned
-```
-
-`repo_mode`:
-
-- `copy` (default) — rsync the repo into the sandbox under
-  `<job>.files/<repo-name>/`, excluding `.git`, `tmp`, `etc/AI` and
-  `main.chat.files`; `etc/AI` is always removed from the copy so endpoint
-  credentials never travel with it. (The `exclude` input is declared but
-  the current rsync call applies this fixed set.)
-- `link` — symlink the repo into the sandbox; cheap, but writes can leak
-  into the original. The use case directory must be empty in this mode:
-  files are never copied onto a live repo, so the use case chat must
-  already live inside the repo.
-- `git` — when the repo contains a `.git`, clone it; otherwise the copy
-  behavior applies.
-
-When a repo is staged, the sandbox root is that repo copy and the use
-case files are copied into it; otherwise the sandbox root is
-`<job>.files/sandbox/`.
-
-## Endpoints and credential hygiene
-
-Endpoints are resolved from `etc/AI/<name>` inside the run sandbox. Keys
-are never expected in the target repository: set `SCOUT_AI_<NAME>_KEY` in
-the environment (for example `SCOUT_AI_QWEN_KEY`) and `use_case`
-materializes it into the sandbox copy at execution time. When the
-variable is absent, the repo's `etc/AI` file is copied verbatim and a
-warning is logged (keeps offline and other setups working). The
-materialized key lives only in the per-run job sandbox, which is private
-scratch space; do not commit job directories.
-
-## The run sandbox layout
-
-```
-<job>.files/sandbox/          (or <job>.files/<repo-name>/ when repo is given)
-  main.chat                   the blind task, left holding the full transcript
-  analyze.chat                optional scoring criteria consumed by analyze
-  <use case data files>       anything else the use case directory contains
-  etc/AI/                     endpoint definitions, keys materialized from env
-  etc/path_maps               path-map config (default: :current) so inner
-                              jobs and caches resolve inside the sandbox
-  Agent/                      agent definitions copied from --agents
-  workflows/                  MiniTools (always) plus every workflow named in
-                              an introduce:/tool: line of main.chat or the
-                              agents' start_chat files, symlinked in when
-                              found under FitAgent/workflows, the AgentSuite
-                              parent directory, ./workflows, or the
-                              configured workflow dir
-  var/cache/ask/              inner ask cache
-<job>.files/log.txt           inner scout-ai log (tailed live during the run)
-```
-
-The inner agent always gets `MiniTools` (shipped under `workflows/`), a
-portable minimal tool workflow (sh, read, write, list), so the agent under
-test has execution primitives no matter which checkout the run started
-from. The inner `scout-ai agent ask` runs with `BWRAP_PATH=false` because
-the run already executes inside the outer sandbox and nested user
-namespaces are denied; ask caching is disabled for the inner run
-(`SCOUT_NO_ASK_CACHE=recursive`, `ASK_PERSIST=false`), so reruns are
-clean.
+Usage detail (use case layout, analyst instruction resolution, repo
+staging with `repo_mode`, endpoint and credential hygiene) is in
+[doc/user/README.md](doc/user/README.md); the run sandbox layout,
+MiniTools staging, environment variables and testing are in
+[doc/developer/README.md](doc/developer/README.md); the
+`fitagent-agent-evaluation` skill under `skills/` helps pick the right
+avenue and task for an evaluation question.
 
 # Tasks
 
 ## agent_ask
-
 One-step inference: the named agent answers the supplied chat exactly
 once, so you can see how it reacts given its own `start_chat` and any
 additional doctrine.
@@ -180,7 +75,6 @@ scout workflow task FitAgent agent_ask \
 ```
 
 ## evaluate_agent
-
 Evaluate the performance of an agent in a scenario based on an evaluation
 rubric. Depends on `agent_ask` (same inputs: `agent`, `doctrine`, `chat`)
 and grades its response.
@@ -204,8 +98,8 @@ scout workflow task FitAgent evaluate_agent \
     --agent ScoutCoder --chat "$(cat <use-case-dir>/main.chat)" \
     --rubric my-rubric.md
 ```
-## use_case
 
+## use_case
 Stage a self-contained use case inside an isolated job sandbox and run the
 agent under test against it, end to end, through `scout-ai agent ask`.
 
@@ -238,7 +132,6 @@ scout workflow task FitAgent use_case \
 ```
 
 ## analyze
-
 Evaluate a completed scenario run with the `ChatAnalyst` agent, walking
 the chat provenance of the run (nested jobs, tool calls, delegations,
 token usage).
@@ -264,9 +157,3 @@ the process working directory at execution time (the FitAgent checkout
 when the task is invoked from it with `scout workflow task`).
 
 ```bash
-# run + analyze in one call
-scout workflow task FitAgent analyze \
-    --agents <agent-suite-dir> --use_case <use-case-dir> \
-    --endpoint qwen --endpoint_analyst qwen \
-    --instructions "Focus on tool discipline"
-```

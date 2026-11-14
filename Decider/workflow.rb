@@ -21,9 +21,11 @@ module Decider
   chat_task :ask do
     request = parse_request(chat)
 
+    questions = request.fetch(:questions)
+
     decision = Decision::Jev.new(
       model: ENV.fetch("JEV_MODEL", "jev-latest"),
-      questions: request.fetch(:questions)
+      questions: questions
     )
 
     result = decision.eval(request.fetch(:state))
@@ -43,10 +45,10 @@ module Decider
   end
 
   helper :parse_request do |chat|
-    text = Chat.print(chat)
+    decision = chat.pop[:content]
 
-    pattern = /<#{DECISION_TAG}>\s*(.*?)\s*<\/#{DECISION_TAG}>/m
-    matches = text.scan(pattern)
+    pattern = /^<#{DECISION_TAG}>$\s*(.*?)\s*^<\/#{DECISION_TAG}>$/m
+    matches = decision.scan(pattern)
 
     if matches.empty?
       raise RequestError,
@@ -79,15 +81,27 @@ module Decider
         "The <#{DECISION_TAG}> JSON must contain a non-empty 'questions' object"
     end
 
-    state = text.sub(
-      pattern,
-      ""
-    ).strip
 
-    if state.empty?
+    if chat.empty?
       raise RequestError,
         "Decider request contains no state outside the <#{DECISION_TAG}> block"
     end
+
+    short_chat = Chat.epoch_tool_compactation(
+        chat,
+        threshold: 0,                 # compact from the very first tool call, every step
+        full: 0,                      # no free full-fidelity window: only the newest call survives whole
+        base_compacted: 10,           # compact band
+        configured_max_compacted: 10, # cap the band at 19
+        compacted_growth_ratio: 0.0,  # never grow the band
+        initial_size: 1,              # epoch pinned to the newest call only
+        epochs_per_increase: 1,       # neutralized together with...
+        size_increase: 0,             # ...the two increase knobs: epoch size stays 1
+        repeat_increase: 0,
+        configured_max_size: 1        # hard-pins the schedule's epoch size at 1
+    )
+
+    state = short_chat.print
 
     {
       specification: specification,

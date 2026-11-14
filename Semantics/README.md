@@ -1,26 +1,24 @@
-# Semantics
+Semantics
 
 Semantic access layer for Scout agents: discover the entity types
 registered in the running process, list the properties registered on each,
 and evaluate a property for a single entity or for a list of entities, with
 a provenance receipt on every execution.
 
-Semantics is deliberately thin. It does not define what a gene, a pathway
-or any other scientific object is, and it does not implement scientific
+When loading the Semantics workflow it also automatically requires the
+project workflow by loading the './workflow.rb' in the current working
+directory, if present. This is to ensure that entities defined in the
+project are also prepared.
+
+Semantics is deliberately thin: it does not define what a gene, a pathway
+or any other scientific object is, and it implements no scientific
 computations of its own. Entity types and entity properties are authored
-elsewhere (through ScoutCoder or by hand) into this checkout's `share/`
-tree, live-loaded by Scout-gear's `LiveWorkflow` extension, and evaluated
-through the existing Scout entity machinery. Semantics provides only the
-discovery, dispatch and provenance plumbing that lets an agent ask "what
-entities exist", "what can I ask of this entity" and "give me this
-property for these entities" as ordinary workflow tasks.
-
-When loading the Semantics workflow it also automatically requires the project
-workflow by loading the './workflow.rb' in the current working directory, if
-present. This is to ensure that entities defined in the project are also
-prepared.
-
-## Overview
+elsewhere (ScoutCoder's `entity`/`entity_property` path kinds, or by hand)
+into a checkout's `share/` tree, live-loaded by Scout-gear's
+`LiveWorkflow`, and evaluated through the existing Scout entity machinery.
+Out of scope, deliberately: knowledge-base mutation, association
+traversal, database writes, identifier translation, and any general query
+language.
 
 The core idea is to make it easy to:
 
@@ -49,101 +47,11 @@ Semantics evaluates those capabilities; the application layer interprets
 the results. Semantics does not duplicate entity-property execution logic,
 and it must not grow its own ontology-definition mechanism.
 
-## Prerequisites: defining entities
-
-Semantics ships with no entity types of its own. Before any property can
-be queried, entity drafts must exist in this checkout:
-
-- `share/entities/<entity>.rb` — the entity module (one file per entity
-  type), e.g. a `module ::Gene` extending `EntityWorkflow`.
-- `share/entity_properties/<entity>/<property>.rb` — one property draft
-  per file, each declaring `property :<name> => :<dispatch> do ... end`.
-
-Entity files always load before their property files, so a property file
-can rely on its entity module being registered. Both are live-loaded by
-LiveWorkflow on every workflow (re)load: adding a draft file and reloading
-the workflow registers it without any other edit, and it then appears in
-the `list_entities` result immediately.
-
-The normal way to create these drafts is ScoutCoder's `define_entity` /
-`define_entity_property` generators with the `workflow:` input pointed at
-this checkout (absolute path), which redirects the authoring writes into
-`share/entities/` and `share/entity_properties/` here. Pair each draft
-with a test under `share/test/` and run it with ScoutCoder's
-`run_task_test`.
-
-Note: Entity types are always Capitalized (or CamelCase).
-
-## Example usage
-
-The examples below assume an example entity type `Gene` (identified by
-gene symbol) with a property `pubmed_articles` returning publication
-identifiers, has been defined as described above. Substitute whatever
-entity types and properties your checkout actually carries.
-
-```bash
-scout workflow task workflow.rb list_entities
-
-scout workflow task workflow.rb entity_property \
-    --entity_type Gene --entity TP53 --property pubmed_articles
-
-scout workflow task workflow.rb entity_property \
-    --entity_type Gene --entity TP53 \
-    --property pubmed_article_details --arguments '{"max": 3}'
-
-scout workflow task workflow.rb entity_list_property \
-    --entity_type Gene --property pubmed_articles \
-    --entities $'TP53\nKRAS\nZZZQQQNOTAGENE123'
-```
-
-From Ruby:
-
-```ruby
-require File.expand_path('workflow.rb', <semantics checkout>)
-
-Semantics.job(:entity_property, entity_type: 'Gene', entity: 'TP53',
-                                property: 'pubmed_articles').run
-```
-
-In this environment bare workflow names may not resolve; address the
-workflow by path (`workflow.rb`).
-
-## Notes on outputs
-
-- All tasks return **JSON** (Scout return type `:json`), so results can be
-  directly consumed by other agent tools.
-- Export mode: `entity_property` and `entity_list_property` are exported as
-  ordinary (non-exec) tasks, so one dispatched call runs as a persisted job
-  and returns value and durable job path together. Through the agent tool
-  layer, `return_path: true` answers with the persisted job path (durable,
-  readable by ordinary tools after the producing process ends) rather than a
-  temporary file; `list_entities` stays exec-exported (pure discovery, no
-  result to cite).
-- Property tasks write their jobs under the standard Scout jobs tree
-  (`var/jobs` / `~/.scout/var/jobs`); clean a job when freshness matters.
-- When a dispatched property declares an `:output_dir` kwarg and the
-  caller did not choose a location, `entity_property` routes it into the
-  task's own job files dir (`<job>.files/property_output`), so bulk
-  payloads (abstracts and similar) land on disk as one file per record
-  while the returned JSON record carries only compact pointers (the record
-  itself is persisted as the job result).
-
-## Failure policy
-
-A consistent two-level policy, shared by the property-evaluating tasks:
-
-- **Parameter problems** — unknown entity type, unknown property,
-  malformed `arguments` JSON, empty entity list — abort the run with a
-  Scout `ParameterException`. These make every downstream record invalid,
-  so they fail loud and early.
-- **Execution problems** — a property that raises for one particular
-  entity (network down for a gene without offline fallbacks, a bad
-  identifier, etc.) — are captured per entity as a structured error
-  envelope carrying the exception class and message. One entity's failure
-  never blocks or corrupts another's record.
-
-List runs also apply a modest politeness delay between dispatches, since
-some properties call rate-limited public services.
+**Usage detail:** task choice, naming rules, addressing the workflow by
+path, examples, output/receipt behavior and the failure policy are in
+[doc/user/README.md](doc/user/README.md); authoring drafts, the
+LiveWorkflow load order, layout and testing are in
+[doc/developer/README.md](doc/developer/README.md).
 
 # Tasks
 
@@ -269,42 +177,3 @@ scout workflow task workflow.rb entity_list_property \
 In this example, if `ZZZQQQNOTAGENE123` has no publications (or the
 underlying service cannot resolve it), its record reports the failure
 while TP53 and KRAS still return their results.
-
-## Layout
-
-- `workflow.rb` — entrypoint. Extends `Workflow` and `::LiveWorkflow`,
-  then requires the task files.
-- `lib/Semantics/tasks/` — the task implementations:
-  `entity_query.rb`, `entity_property.rb`, `entity_list_property.rb`.
-- `share/entities/` — entity module drafts, live-loaded by LiveWorkflow.
-- `share/entity_properties/<entity>/<property>.rb` — property drafts,
-  also live-loaded; entity files always load before their property files.
-- `share/entity/` — identifier TSVs for entity translation (when
-  registered).
-- `share/test/` — paired tests for the drafts, run in fresh processes by
-  ScoutCoder's `run_task_test`.
-- `test/Semantics/` — unit tests for the tasks.
-- `research/` — bout records and analyses (non-authoritative).
-- `tmp/` — probes and captured demo outputs (disposable).
-
-## Testing
-
-```bash
-ruby -Itest -Ilib test/Semantics/tasks/test_entity_query.rb
-ruby -Itest -Ilib test/Semantics/tasks/test_entity_property.rb
-ruby -Itest -Ilib test/Semantics/tasks/test_entity_list_property.rb
-```
-
-The task tests are structure-based: they register their own probe entity
-modules in-process (the same registration a loaded draft performs) and run
-the real task jobs, so they pass regardless of which entity drafts the
-checkout carries, involve no network, and pin both the success and failure
-contracts. Property tasks write their jobs under the standard Scout jobs
-tree; the tests clean each job before running it.
-
-## Scope and non-goals
-
-Out of scope for the current bout, deliberately: knowledge-base mutation,
-association traversal, database writes, identifier translation, and any
-general query language. The bootstrap bout that established this design
-is recorded in `research/`.

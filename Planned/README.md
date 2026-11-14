@@ -1,19 +1,9 @@
-# Planned multi-agent inference workflow
+Planned multi-agent inference workflow
 
 A staged inference pipeline for Scout-AI: a user request is restated by a
 liaison agent, optionally enriched with a research report, turned into a plan
 by a Planner agent, executed by a worker agent with full tooling, and finally
 summarized back into a report for the user.
-
-The workflow is built on `AgentWorkflow` (from `scout-ai`) using `chat_task`
-declarations. Every task takes a single `chat` input, a text in Scout-AI
-chat-file format that carries the original user request plus any chat options.
-Each `chat_task` loads one named agent, appends a prompt, lets the agent run
-(with or without tools), and returns the messages the agent produced. Scout
-wraps each result in a projected chat segment that starts with a `meta` marker
-recording the producing job, so downstream tasks can append the segment with
-`chat.follow step(:name).load` and keep provenance of where each contribution
-came from.
 
 The tasks form a linear dependency chain, and `ask` is the entry point that
 triggers the whole pipeline:
@@ -40,21 +30,11 @@ Stage by stage:
 - `ask` runs the `User` agent once more, with tools disabled, to elaborate the
   final report from everything produced upstream.
 
-Tool exposure is controlled per stage: `request` and `work` receive every
-`tool`, `kb`, `mcp` and `introduce` message of the chat, `search` and `plan`
-receive only the `introduce` messages (the workflows the user explicitly
-introduced), and `ask` disables tooling altogether. In addition, the stages
-`plan`, `work` and `ask` inject a `clear_tools` message before prompting the
-agent, so tool-call traces from earlier segments are dropped from the context
-sent to the model.
-
-Example usage:
-
-    scout workflow task Planned ask --chat chat_file
-
-where `chat_file` contains the user request in Scout-AI chat format, and may
-include lines such as `option use_search false` to skip the search stage or
-`option worker_agent Worker` to pick the executing agent.
+**Usage detail:** chat options (`use_search false`, `worker_agent`,
+`Planned_worker_agent` precedence), example invocation and how the work
+stage assembles its context are in [doc/user/README.md](doc/user/README.md);
+`chat_task` mechanics, tool exposure per stage and `clear_tools` semantics
+are in [doc/developer/README.md](doc/developer/README.md).
 
 # Tasks
 
