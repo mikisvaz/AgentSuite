@@ -33,9 +33,10 @@ current ScoutCoder task list:
   `share/entity_properties/<entity>/<property>.rb` — with the `workflow:`
   input pointed at this checkout (absolute path) the authoring writes land
   in this checkout's `share/` tree. Drafts can also be written by hand;
-  the validation rules for both shapes are in the ScoutCoder README,
-  section "Authoring ScoutCoder entities" (CamelCase canonical, legacy
-  snake accepted with a warning, extend line owned by the entity file).
+  the validation rules for both shapes are in the ScoutCoder authoring
+  guide, `ScoutCoder/doc/user/AuthoringEntities.md` (CamelCase canonical,
+  legacy snake accepted with a warning, extend line owned by the entity
+  file).
 - Scout-gear's `LiveWorkflow` loads `share/tasks`, `share/helpers`,
   `share/entities` and `share/entity_properties` under the workflow root on
   every workflow (re)load, in that order — entity files therefore always

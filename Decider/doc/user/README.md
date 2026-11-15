@@ -83,9 +83,12 @@ manager.ask(
 )
 ```
 
-The exact mechanism for exposing the `Decider#ask` `chat_task` depends on
-how the Manager is configured to delegate agents. The important contract
-is the request text.
+Concretely: Decider declares no task exports, so a whole-workflow agent
+line (`tool: Decider`) exposes `ask` through the all-tasks fallback, and
+a Manager carrying that line can call it as a tool directly. The same
+`chat_task` is also reachable programmatically
+(`Decider.job(:ask, chat: chat).run` — the route Priest uses) and from
+the scout CLI. The important contract is the request text.
 
 ## Decision questions
 

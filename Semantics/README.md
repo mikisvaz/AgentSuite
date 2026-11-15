@@ -38,7 +38,7 @@ The intended division of labor is a contract:
 
 | Layer | Responsibility | Where it lives |
 |---|---|---|
-| ScoutCoder | Constructs and edits entity definitions and properties (authoring) | `AgentSuite/ScoutCoder` |
+| ScoutCoder | Constructs and edits entity definitions and properties (authoring) | `ScoutCoder/` (sibling project in this repo) |
 | Semantics | Discovers, validates and evaluates them for agents (access) | this workflow |
 | Application workflows | Use the results in scientific investigations | e.g. BioModelAgent |
 

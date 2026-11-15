@@ -30,6 +30,13 @@ in a bout" below).
 | DOCX | `docx2md` | — | Pandoc required |
 | Markdown you already have | — (`excerpts`/`rag`/`query`) | `query` | local excerpting; `rag` needs an embedding provider |
 
+Exposure class matters at the call site: `searxng`, `html2md`, `html_query`
+and `docx2md` are agent-exposed through the whole-workflow line; the
+remaining seven (`pdf2md`, `pdf2md_full`, `pdf2md_no_images`, `excerpts`,
+`rag`, `query`, `pdf_query`) are CLI/programmatic only — `scout workflow
+task Reader <task>` / `Reader.job(:name, ...)` — unless a task-level
+`tool: Reader <task>` line exposes one explicitly.
+
 Prefer the composite retrieval tasks (`pdf_query`, `html_query`) when you
 have questions to answer, and the bare conversion tasks (`pdf2md`,
 `html2md`, `docx2md`) when you need the full converted text. Full-document
@@ -93,9 +100,12 @@ matches = Reader.job(:query, nil,
 
 The PDF conversion dependency preserves docling's image placeholders in
 `pdf2md_full`; `pdf2md` (and its target `pdf2md_no_images`) removes only
-lines beginning with `![Image]`. The retrieval tasks build their excerpt
-and index dependencies from the supplied document and options, so Scout can
-reuse cached steps when the inputs have not changed.
+lines beginning with `![Image]`. `pdf2md_full` promotes the first file
+docling generates to the step's primary file, so prefer `_no_images`
+whenever the image markers would pollute downstream text processing. The
+retrieval tasks build their excerpt and index dependencies from the
+supplied document and options, so Scout can reuse cached steps when the
+inputs have not changed.
 
 For exact input types and all dependency-propagated inputs, consult the
 task definitions or `task_inputs`.

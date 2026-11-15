@@ -29,8 +29,8 @@ Entity-TYPE names are CamelCase, matching `[A-Z][A-Za-z0-9]*` (e.g. `Gene`,
 a warning that names both spellings; the two collision cases (a snake name
 whose camelized constant collides with a coexisting CamelCase draft, and
 two snake names whose constants collide) are hard errors. The full rule,
-with examples, is in the ScoutCoder README, section "Authoring ScoutCoder
-entities".
+with examples, is in the ScoutCoder authoring guide,
+`ScoutCoder/doc/user/AuthoringEntities.md`.
 
 ## Addressing the workflow
 

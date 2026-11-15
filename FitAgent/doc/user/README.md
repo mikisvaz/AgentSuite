@@ -30,13 +30,27 @@ receives the `use_case` job's result file plus the sandbox and
 
 ## Response avenue: `agent_ask` + `evaluate_agent`
 
-`agent_ask` loads the named agent (its `start_chat` persona, plus the
+`agent_ask` takes three inputs: `agent` (the agent name; leaving it unset
+yields a bare model with no persona — `none` is not a supported value),
+`doctrine` (extra doctrine appended as a system message) and `chat` (the
+task chat in Scout-AI chat-file format).
+
+The task loads the named agent (its `start_chat` persona, plus the
 standard job context Scout adds), optionally appends `doctrine` as an
 extra system message, and forwards the task chat with `assistant`,
 `system` and `tool` roles stripped — the scenario arrives as user turns.
 It asks exactly once: `return_tool_calls: true` makes the backend return
 the model's first response without chaining or executing tool calls, so
 the result shows the agent's immediate reaction, tools requested included.
+The transcript is saved at `<job>.files/<agent>.chat` (nested
+conversations land under `<job>.files/<agent>.society/`). CLI example:
+
+```bash
+scout workflow task FitAgent agent_ask \
+    --agent ScoutCoder \
+    --doctrine "Prefer the smallest change that resolves the requirement." \
+    --chat "$(cat <use-case-dir>/main.chat)"
+```
 
 `evaluate_agent` depends on `agent_ask` (same inputs), attaches the rubric
 file, and runs the `FitAgent` evaluator persona over: the task chat, the

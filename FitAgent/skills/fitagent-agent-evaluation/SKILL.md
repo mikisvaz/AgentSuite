@@ -1,6 +1,6 @@
 ---
 name: fitagent-agent-evaluation
-description: Choose the right FitAgent avenue and task when evaluating an LLM agent in this repo. Use when a question is about how well an agent fits a task, running a blind scenario end to end, re-analyzing an existing run, doing a single-step agent inference probe, or grading an agent response against a rubric. Triggers: FitAgent, use_case, analyze, agent_ask, evaluate_agent, fitness, blind task chat, rubric grading, agent evaluation scenario, scenario avenue, response avenue, job sandbox staging.
+description: "Choose the right FitAgent avenue and task when evaluating an LLM agent in this repo. Use when a question is about how well an agent fits a task, running a blind scenario end to end, re-analyzing an existing run, doing a single-step agent inference probe, or grading an agent response against a rubric. Triggers: FitAgent, use_case, analyze, agent_ask, evaluate_agent, fitness, blind task chat, rubric grading, agent evaluation scenario, scenario avenue, response avenue, job sandbox staging."
 ---
 
 # Agent evaluation with FitAgent
@@ -9,7 +9,7 @@ description: Choose the right FitAgent avenue and task when evaluating an LLM ag
 
 Picking the right FitAgent avenue and task for an evaluation question,
 and reading what each run leaves behind. Deep usage detail lives in
-[FitAgent/doc/user/README.md](../../FitAgent/doc/user/README.md); the
+[FitAgent/doc/user/README.md](../../../FitAgent/doc/user/README.md); the
 workflow introduction and the four task entries are in
 `FitAgent/README.md`.
 
@@ -46,14 +46,21 @@ Rules of thumb:
 
 ## Operational cautions
 
+- Do NOT expect a `tool: FitAgent` line to work: a scout-ai
+  tool-definition bug triggered by the hidden `endpoint_analyst` input on
+  `use_case` makes `LLM.workflow_tools(FitAgent)` raise, so an agent
+  provisioned with `tool: FitAgent` receives no FitAgent tools. Invoke
+  the tasks through the CLI (`scout workflow task FitAgent ...`) or
+  programmatically (`FitAgent.job(...).run`) until the framework defect
+  is fixed.
 - Pass agent definitions with `--agents <agent-suite-dir>` and pick the
   inner agent with `--main_agent`.
 - `--endpoint` reaches the inner `use_case` run; `endpoint_analyst`
   reaches the ChatAnalyst only (it is NOT forwarded to the dep despite
   its description) — set both when one endpoint must serve the whole
   `analyze` call.
-- The `agent='none'` special value on `agent_ask` is ineffective and
-  raises; leave the input unset for a bare model.
+- On `agent_ask`, leaving `agent` unset yields a bare model with no
+  persona; `none` is not a supported value.
 - Keys are never expected in the target repo: set
   `SCOUT_AI_<NAME>_KEY` in the environment; it is materialized into the
   per-run sandbox.

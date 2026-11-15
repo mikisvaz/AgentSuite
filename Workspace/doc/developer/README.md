@@ -46,7 +46,8 @@ ruby -Itest test/Workspace/tasks/test_precise_edit.rb
 
 They cover the TSV suite, the sandbox/exec helpers, patch conversion, and
 precise_edit; they do not require network services or external CLIs, and they
-do not test or modify ComputerUse or Research.
+do not test or modify other workflows such as the deprecated ComputerUse or
+Research.
 
 `test/Workspace/tasks/test_filesystem.rb` also exists in the tree and is not
 listed by the historical README test block (noted during the step-2 audit;

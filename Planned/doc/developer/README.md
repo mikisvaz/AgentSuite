@@ -20,13 +20,15 @@ provenance of where each contribution came from.
 
 Tool exposure is controlled per stage in `workflow.rb`: `request` and
 `work` receive every `tool`, `kb`, `mcp` and `introduce` message of the
-chat (`tooling: self.tooling`), `search` and `plan` receive only the
-`introduce` messages (`tooling: self.tooling_intro` — the workflows the
-user explicitly introduced), and `ask` disables tooling altogether
-(`tooling: false`). In addition, the stages `plan`, `work` and `ask`
-inject a `chat.message :clear_tools, true` before prompting the agent, so
-tool-call traces from earlier segments are dropped from the context sent
-to the model.
+chat (the `agent` helper defaults to `tooling: self.tooling` when no
+value is passed, which is what `request` relies on; `work` passes
+`tooling: self.tooling` explicitly), `search` and `plan` receive only
+the `introduce` messages (`tooling: self.tooling_intro` — the workflows
+the user explicitly introduced), and `ask` disables tooling altogether
+(`tooling: false`). In addition, the stages `plan` and `ask` inject a
+`chat.message :clear_tools, true` before prompting the agent
+(`workflow.rb` L46 and L80), so tool-call traces from earlier segments
+are dropped from the context sent to the model.
 
 Segment-following differs by stage: `plan` and `work` follow only the
 `.last` message of their upstream segments (`work` also follows

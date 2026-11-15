@@ -1,6 +1,6 @@
 ---
 name: workspace-files
-description: Read, write, edit, search and manage files under the Workspace workflow root with the right tool each time. Use when an agent must create or rewrite a file, make a count-checked exact edit, apply a patch, read or inspect a file or directory, copy/delete files, or when a path was rejected by a Workspace tool and the sandbox permission model needs to be consulted. Triggers: write, read, patch, precise_edit, copy, delete, search, list_directory, file_stats, sandbox_paths, "workflow root", "sandbox permissions", "rejected path", "choose edit tool", "where do job outputs land".
+description: "Read, write, edit, search and manage files under the Workspace workflow root with the right tool each time. Use when an agent must create or rewrite a file, make a count-checked exact edit, apply a patch, read or inspect a file or directory, copy/delete files, or when a path was rejected by a Workspace tool and the sandbox permission model needs to be consulted. Triggers: write, read, patch, precise_edit, copy, delete, search, list_directory, file_stats, sandbox_paths, \"workflow root\", \"sandbox permissions\", \"rejected path\", \"choose edit tool\", \"where do job outputs land\"."
 ---
 
 # Workspace file operations (sandbox-aware)
@@ -9,7 +9,7 @@ description: Read, write, edit, search and manage files under the Workspace work
 
 Choosing the right Workspace task for file work, and the sandbox rules that
 decide which paths each task can reach. The eight TSV tasks are covered by
-the separate root skill `skills/scout-tsv-toolkit/SKILL.md` — do not
+the sibling skill `Workspace/skills/workspace-tsv/SKILL.md` — do not
 duplicate that here.
 
 ## Scope: the workflow root
@@ -96,7 +96,7 @@ script.
 - `Workspace/doc/user/SandboxAndOutputs.md` — sandbox model, the two
   permission layers, scratch-file etiquette, output handling, job trees.
 - `Workspace/README.md` — the `# Tasks` entries for every file task.
-- `Workspace/doc/user/TSV.md` — per-task TSV detail (or see the root TSV
-  skill).
+- `Workspace/doc/user/TSV.md` — per-task TSV detail, or the sibling skill
+  `Workspace/skills/workspace-tsv/SKILL.md`.
 - scout-ai `doc/developer/Sandbox.md` §2 — which paths each action can
   reach (external to this repo).

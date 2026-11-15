@@ -1,6 +1,6 @@
 ---
 name: workspace-execution
-description: Run bash, Python, Ruby or R code through the Workspace exec tasks with fresh-process discipline and durable provenance. Use when an agent must run a shell command or a script, compute a value, reproduce a calculation, decide which language surface fits the job, or interpret exec task failures such as condensed stderr or sandbox launch errors. Triggers: bash, python, ruby, r, "run command", "execute script", "compute", "stderr_full", "exit_status", "fresh process", "return_path", "reproducible check", "bwrap".
+description: "Run bash, Python, Ruby or R code through the Workspace exec tasks with fresh-process discipline and durable provenance. Use when an agent must run a shell command or a script, compute a value, reproduce a calculation, decide which language surface fits the job, or interpret exec task failures such as condensed stderr or sandbox launch errors. Triggers: bash, python, ruby, r, \"run command\", \"execute script\", \"compute\", \"stderr_full\", \"exit_status\", \"fresh process\", \"return_path\", \"reproducible check\", \"bwrap\"."
 ---
 
 # Workspace execution (bash / python / ruby / r)
@@ -11,7 +11,7 @@ Choosing among the four Workspace execution surfaces, running them with
 reproducibility and provenance, and reading their structured results.
 File-tool choice and sandbox permission inspection are covered by the
 sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
-the root skill `skills/scout-tsv-toolkit/SKILL.md`.
+`Workspace/skills/workspace-tsv/SKILL.md`.
 
 ## Choosing the surface (decision is self-contained here)
 
@@ -65,7 +65,7 @@ the root skill `skills/scout-tsv-toolkit/SKILL.md`.
 | Numeric or data computation | `python` |
 | Ruby / Scout-ecosystem computation | `ruby` |
 | R analysis | `r` |
-| Exact current time (also in ComputerUse) | `current_time` |
+| Exact current time (also registered on the deprecated ComputerUse) | `current_time` |
 | Where jobs and their outputs live | see workspace-files skill |
 
 ## Common mistakes

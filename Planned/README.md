@@ -80,10 +80,11 @@ do rather than doing it.
 ## work
 Execute the plan
 
-This task follows the last messages of the `request` and `plan` segments,
-injects a `clear_tools` message, and loads the agent in charge of executing
-the plan with the full tooling of the chat, asking it to proceed with the
-plan.
+This task follows the last messages of the `request` and `plan` segments
+(and the `search` segment's, when the search stage ran) and loads the agent
+in charge of executing the plan with the full tooling of the chat, asking it
+to proceed with the plan. Unlike `plan` and `ask`, it injects no
+`clear_tools` message: the worker keeps the chat's tool-call context.
 
 The executing agent is selected from the chat options: `Planned_worker_agent`
 if present, then `worker_agent`, and the `Manager` agent by default. This is

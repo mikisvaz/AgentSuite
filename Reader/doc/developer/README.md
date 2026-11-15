@@ -94,8 +94,10 @@ shell where the Scout workflow resolution path is visible.
 
 ## Cross-registration note
 
-The same 11-task document family is also registered on ComputerUse
-(`ComputerUse/lib/ComputerUse/tasks/documents.rb` is a near-copy; the only
-diff is the alias target receiver). Cross-reference it when tracing where a
+The same 11-task document family is also registered on the **deprecated**
+ComputerUse workflow (`ComputerUse/lib/ComputerUse/tasks/documents.rb` is a
+near-copy; the only diff is the alias target receiver; ComputerUse is
+deprecated — its README carries the deprecation notice and the retired
+capability list). Cross-reference it when tracing where a legacy
 `pdf2md`-family job actually came from; do not describe the family as
-unique to Reader.
+unique to Reader, and do not cite ComputerUse as a current surface for it.

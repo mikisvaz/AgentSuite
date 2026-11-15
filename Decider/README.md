@@ -8,10 +8,14 @@ request, runs the configured `Decision::Jev` model, records the decision
 in the `<job>.files/decisions.json` sidecar, and returns the structured
 result as JSON.
 
-`ask` is invoked through the agent route (it is an `AgentWorkflow`
-persona whose `start_chat` system prompt carries the Decider
-instructions), not through a direct CLI tool call; agents delegate a chat
-whose last message holds the request block.
+`ask` runs no agent itself: it is a plain `chat_task` that parses the
+`<scout-decision>` block from the chat's last message, runs the
+configured model directly, and returns structured JSON. Decider declares
+no task exports, so the whole-workflow agent line (`tool: Decider`)
+exposes `ask` through the all-tasks fallback — agents can call it as a
+tool by delegating a chat whose last message holds the request block. It
+is equally reachable programmatically (`Decider.job(:ask, chat:
+chat).run`, the route Priest uses) and from the scout CLI.
 
 Request format, worked examples, question types (`noul`/`choice`/`score`)
 and the Manager pattern are in [doc/user/README.md](doc/user/README.md);

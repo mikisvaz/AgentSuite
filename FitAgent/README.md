@@ -38,6 +38,14 @@ time.
 Use `scout workflow task FitAgent <task> --help` or the ScoutCoder
 `list_tasks` / `task_inputs` tools to see every input.
 
+Agent-tool caveat: due to a scout-ai tool-definition bug triggered by the
+hidden `endpoint_analyst` input on `use_case` (`LLM.workflow_tools` raises
+`NoMethodError`; reproduction:
+`doc_redesign/consolidation/tmp/pin_hidden_input_bug.rb` and its
+`.out.json`), an agent given `tool: FitAgent` currently receives NO
+FitAgent tools. The tasks remain fully runnable via the CLI and
+programmatic job routes until the framework defect is fixed.
+
 Usage detail (use case layout, analyst instruction resolution, repo
 staging with `repo_mode`, endpoint and credential hygiene) is in
 [doc/user/README.md](doc/user/README.md); the run sandbox layout,
@@ -53,26 +61,15 @@ One-step inference: the named agent answers the supplied chat exactly
 once, so you can see how it reacts given its own `start_chat` and any
 additional doctrine.
 
-| Input | Type | Default | Description |
-| ----- | ---- | ------- | ----------- |
-| `agent` | string | | Agent name. The special value `none` is currently ineffective (an internal nil assignment is immediately overwritten) and raises `No agent found with name none`; leave the input unset to get a bare model with no persona |
-| `doctrine` | text | | Additional doctrine, incorporated as a system role message on top of the agent's start_chat |
-| `chat` | text | | The task chat in Scout-AI chat-file format; `assistant`, `system` and `tool` roles are stripped before it is forwarded, so the scenario arrives as user turns |
-
-Behavior: the agent is loaded with its persona and standard job context,
-the optional doctrine message is appended, and the model is asked once
-with `return_tool_calls: true` — its first response is returned without
-chaining or executing tool calls. The task result is a chat; the
-transcript is saved at `<job>.files/<agent>.chat` (the job's files
-directory, named after the agent; nested conversations land under
-`<job>.files/<agent>.society/`).
-
-```bash
-scout workflow task FitAgent agent_ask \
-    --agent ScoutCoder \
-    --doctrine "Prefer the smallest change that resolves the requirement." \
-    --chat "$(cat <use-case-dir>/main.chat)"
-```
+Inputs: `agent` (agent name; leaving it unset yields a bare model with no
+persona — `none` is not a supported value), `doctrine` (additional
+doctrine, appended as a system message), `chat` (the task chat in
+Scout-AI chat-file format, with `assistant`/`system`/`tool` roles
+stripped). The model is asked once with `return_tool_calls: true` — the
+first response is returned without chaining or executing tool calls. The
+result is a chat; the transcript is saved at `<job>.files/<agent>.chat`.
+Behavior detail, input semantics and the CLI example:
+[doc/user/README.md](doc/user/README.md) § "Response avenue".
 
 ## evaluate_agent
 Evaluate the performance of an agent in a scenario based on an evaluation

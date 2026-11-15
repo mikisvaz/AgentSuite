@@ -1,6 +1,6 @@
 ---
 name: reader-doc-acquisition
-description: Acquire documents and web sources with the Reader workflow - pick the right task for each source type (web search, HTML, PDF, DOCX), plan conversions vs targeted retrieval, and avoid re-embedding costs. Use when a bout needs to find sources on the web, convert a document to Markdown, or answer questions against a document via the excerpts-rag-query retrieval path. Triggers: searxng, html2md, html_query, pdf2md, pdf_query, docx2md, excerpts, rag, query, "web search", "convert PDF", "convert docx", "read a document", "RAG", "retrieval", "excerpt".
+description: "Acquire documents and web sources with the Reader workflow - pick the right task for each source type (web search, HTML, PDF, DOCX), plan conversions vs targeted retrieval, and avoid re-embedding costs. Use when a bout needs to find sources on the web, convert a document to Markdown, or answer questions against a document via the excerpts-rag-query retrieval path. Triggers: searxng, html2md, html_query, pdf2md, pdf_query, docx2md, excerpts, rag, query, \"web search\", \"convert PDF\", \"convert docx\", \"read a document\", \"RAG\", \"retrieval\", \"excerpt\"."
 ---
 
 # Reader document acquisition and conversion
@@ -24,6 +24,15 @@ converters, service configuration, sandbox paths).
 | Convert DOCX | `docx2md` | Pandoc |
 | Questions against Markdown you have | `query` (path: excerpts→rag→query) | embedding provider |
 | Split text only | `excerpts` | none (local) |
+
+**Exposure (matches the live export surface):** a bare `tool: Reader`
+whole-workflow line surfaces only the 4 exported tasks — `searxng`,
+`html2md`, `html_query`, `docx2md`. The other seven (`pdf2md`,
+`pdf2md_full`, `pdf2md_no_images`, `excerpts`, `rag`, `query`, `pdf_query`)
+are CLI/programmatic: run them as `scout workflow task Reader <task>` or
+`Reader.job(:name, ...)`, or surface one explicitly with a task-level
+`tool: Reader <task>` line. Do not expect `pdf_query` from a bare
+`tool: Reader` introduction.
 
 **Retrieval vs full conversion**: for questions, prefer the composite
 retrieval tasks (`pdf_query`, `html_query`, `query`); they embed once per
