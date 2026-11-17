@@ -4,12 +4,28 @@ Research=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.sass *
  README.md
  chats=chats filter="*"{
   path_kinds
+  research_dossiers
  }
  lib=lib{
   Research=Research{
-   path_kinds.rb
-   path_kinds=path_kinds{
-    records.rb
+   ids.rb
+   layout.rb
+   line_edit.rb
+   roots.rb
+   store.rb
+   store_bytes.rb
+   tasks=tasks{
+    common.rb
+    dossier_capture.rb
+    dossier_check.rb
+    dossier_create.rb
+    dossier_history.rb
+    dossier_list.rb
+    dossier_read.rb
+    dossier_update.rb
+    evidence.rb
+    evidence_attach.rb
+    evidence_read.rb
    }
   }
  }

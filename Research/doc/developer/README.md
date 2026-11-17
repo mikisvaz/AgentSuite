@@ -1,119 +1,135 @@
-# Research developer documentation
+# Research developer notes
 
-Implementation and maintenance material for the Research path-kinds
-engine. Agent-facing usage lives in `Research/README.md` and
-[doc/user/README.md](../user/README.md). The authoritative contract for
-schemas, lifecycle and validation is
-[research/path-kinds-spec.md](../../research/path-kinds-spec.md); the
-implementation lives in `lib/Research/path_kinds/`.
+How the workflow is built and why. The user-facing contract is in
+[doc/user](../user/README.md); this page does not repeat it. The Markdown
+files under `research/` are [development history](HISTORY.md), not
+current authority.
 
-## Path-kind registration mechanics
+## Task layout
 
-Research declares three agent Path kinds — **observation**, **claim**,
-**hypothesis** — through `lib/Research/path_kinds.rb`. They register
-through an explicit `path_kind: Research` chat line (optionally naming a
-subset of kinds, e.g. `path_kind: Research claim, observation`); a
-task-level tool line (`tool: Research register`) registers nothing.
-Whole-workflow `tool: Research` incorporation still loads the kinds, but
-only for an agent without a start_chat file.
+`workflow.rb` is a bootstrap: it requires Scout and `scout-ai`, opens
+`module Research; extend Workflow; end`, and requires the task files.
+All nine tasks are ordinary declarations inside `module Research` in
+`lib/Research/tasks/*.rb` — each file holds its own `desc`, `input`
+declarations (adjacent to the task they belong to) and `export_exec`,
+with the orchestration in the task body:
 
-`workflow.rb` requires the Workspace workflow and merges its helpers
-(`Workflow.require_workflow 'Workspace'`;
-`Research.helpers.merge!(Workspace.helpers)`) so the engine's command
-execution uses the merged helpers (`cmd_json` and friends). Research
-registers no tasks; the require exists for the engine, not for any task.
-
-## Register operation contract
-
-The only way to create a record is the shared `register` operation (one
-tool across all three kinds): it allocates the ID from an atomic per-kind
-counter inside a lock, validates the complete record, writes the body and
-its `.info` sidecar atomically, and returns the ID and path. Agents never
-allocate IDs. `statement` is required; `sources` is required in effect for
-observations; `title`, `scope`, `links`, `limitations` and the per-kind
-fields (`value` for observations; `predictions`, `test_ideas`,
-`assessment` for hypotheses; `assessment` for claims) are optional.
-`status` and `version` are system-managed and rejected as inputs.
-
-## Validation: hard errors vs warnings
-
-**Validation separates record integrity from scientific assessment.** Hard
-errors (missing/ill-typed fields, unknown top-level keys, invalid status or
-transition, malformed links, relationship not allowed between the source
-and target kinds, broken local references, duplicate IDs) reject the
-operation. Warnings — a hypothesis with no predictions yet, a proposed
-claim not yet challenged, an unreachable external source, a mutable source
-with no digest, a claim that has not considered counterevidence, a
-non-re-executable derivation, a link whose target is invalidated or
-superseded — never block, they are reported for the author to consider.
-Backlinks and reference resolution are derived at validate/list time by
-scanning the records; they are never stored or maintained by hand.
-
-## Link vocabulary
-
-(direction: from the linking record to `target`):
-
-| from \ relationship | `supported_by` | `contradicted_by` | `qualified_by` | `motivated_by` | `explains` | `supersedes` | `related_to` |
-|---|---|---|---|---|---|---|---|
-| observation | → observation | → observation | → observation | | | → observation | → any |
-| claim | → observation, claim | → observation, claim | → observation, claim | | | → claim | → any |
-| hypothesis | | → observation, claim | | → observation, claim | → observation, claim | → hypothesis | → any |
-
-The observation row is the chosen symmetric closure reported in step 3
-(the spec tabulates claim and hypothesis only); **it is pending user
-adjudication** and must be carried through unchanged until adjudicated.
-
-## Sources and provenance reference model
-
-A source entry is `{type, ref}` plus optional `locator` and `digest`, with
-`type` one of `file`, `entity_property`, `task`, `workflow`, `external`
-(plus the general `tool_result` type described in the citation contract).
-Local `file`/receipt refs must resolve at registration time (a broken
-local path is a hard error); `external` URLs are never fetched by the
-validator (reachability is a warning only); unknown-but-well-formed types
-are accepted as opaque with a warning.
-
-Sources may use the general type `tool_result`: the `ref` cites the
-persisted result of any tool invocation — an absolute path, or a
-Research-root-relative path — resolving to an existing file inside a
-persisted job tree (`var/jobs/<Workflow>/<task>/...` with result +
-`.info`, at either the checkout root or the user-global
-`~/.scout/var/jobs`) or a named durable store
-(`var/records-attachments/`). Non-exec tool calls return the durable path
-in `receipt.job.path` (or as the `return_path` answer); cite that path. A
-temporary result (TmpFile/exec-mode scratch, temp roots) is never silently
-registered: either promote it first with the `promote_tool_result`
-operation (copies the bytes into
-`var/records-attachments/<destination>/` and returns the durable path to
-cite) or re-run the tool non-exec and cite the returned job path.
-`locator` for a `tool_result` source is one minimal string `kind:value`
-with kind in {row, range, line, section}. A missing `digest` is a warning;
-a recorded digest that no longer matches its file is a hard error at
-edit/validate. The full contract is
-[research/return-path-citation-contract.md](../../research/return-path-citation-contract.md).
-
-## Testing
-
-Run from the Research checkout root:
-
-```bash
-ruby -Itest test/Research/tasks/test_registration.rb
+```ruby
+module Research
+  input :type, :select, 'Dossier type', nil, select_options: %w[question claim hypothesis]
+  desc '…'
+  task :dossier_create do |type, title, content|
+    …
+  end
+  export_exec :dossier_create
+end
 ```
 
-and the record-kinds suites from the same root: `ruby -Itest
-test/Research/path_kinds/test_records.rb`,
-`.../test_path_kinds_engine.rb`, `.../test_spec9_matrix.rb` (the last
-includes fork-based concurrency tests). Together they cover workflow
-loading, that none of the 11 tasks moved to Reader is registered on
-Research, that the Workspace helpers stay merged, and the full
-scientific-record Path-kinds contract. They do not require network
-services, LLM credentials, or document-conversion programs. The
-deterministic excerpting test that used to live here moved with the
-`excerpts` task to Reader.
+`lib/Research/tasks/common.rb` holds shared validation helpers
+(`parse_id!`, `int!`, `reject_placeholder_text!`, `map_store_errors`,
+`store_root`); `lib/Research/evidence.rb` (outside `tasks/`, because it
+declares no tasks) holds sandbox-authorized source/destination
+resolution, durable/ephemeral classification and citation building.
+`lib/Research/{layout,store,store_bytes,ids,line_edit}.rb` are the store
+layer.
 
-The registration test loads `Research/workflow.rb`, which resolves
-Workspace through `Workflow.require_workflow 'Workspace'`; an environment
-that cannot resolve the Workspace workflow fails at load time with
-`Workflow Workspace not found` — an environment/visibility failure (for
-example, running inside the Workspace bwrap sandbox, which cannot see
-`~/.scout` where the Workspace agent install lives), not a code defect.
+## Project-context propagation
+
+The store root is resolved at **execution time inside the task body**:
+
+```ruby
+def store_root
+  File.expand_path('research', Dir.pwd)
+end
+```
+
+Why execution time and not declaration or job-build time: the root must
+never be captured into job inputs or Step construction, because anything
+captured there becomes part of the job digest and the memoization key.
+Resolved per execution from the working directory it is invisible to the
+framework's caching, so two projects are isolated purely by `Dir.chdir`
+between dispatches in one process, and no configuration chain, registry
+or fallback exists to drift. Other contents of `research/` are not the
+store's; the store owns `questions/`, `claims/`, `hypotheses/` and the
+per-dossier `store/` directories only.
+
+## Exec behavior
+
+All nine tasks are exec-exported. Each call executes fresh: identical
+inputs do not replay an earlier result, a repeated `dossier_create`
+allocates a new ID, and caller job names flow through to the job.
+
+Historical note (why there is no dispatch apparatus): the pre-refactor
+workflow passed a `research_root` **Directory input** to every task.
+Scout's `Task#job` memoizes one Step per (task, inputs) keyed on the
+input digest, and empty directory inputs all digest identically
+(`Directory MD5: []`), so unrelated calls could collide on a memoized
+Step. The fix was structural: the directory input was removed, the root
+moved into the task body (above), and the dispatch-id/memoization
+workarounds (`dispatch_job_id`, `DISPATCH_EXEC_TASKS`, the `Research.job`
+override) were deleted rather than patched. Remaining inputs are
+strings/integers whose digests are faithful; memoized Steps re-execute
+their blocks.
+
+## Store transaction guarantees
+
+`Store.transaction(root, type, id, expected_revision:, …) { |ctx| … }`
+yields a conventional context object (no `instance_exec` binding). Under
+the per-dossier lock it runs the S/J/M/V/C protocol:
+
+- **S** — stage content-addressed objects for every staged byte
+  (idempotent, ordered; objects are never swept).
+- **J** — journal the complete revision record.
+- **M** — write the marker that disambiguates redo from drift.
+- **V** — materialize document/attachment views.
+- **C** — pointer swap; the linearization point.
+
+An interrupted commit is recovered on the next transaction (`recover!`)
+and redone if the marker is present, detected as drift otherwise.
+`expected_revision` provides optimistic concurrency; `dossier_capture`
+is the only caller passing `allow_drift: true` (it adopts observed
+external edits explicitly). Failure maps to Scout `ParameterException`
+via `map_store_errors` so exec dispatch surfaces actionable errors. The
+on-disk format is unchanged from the pre-refactor store; old stores
+remain valid (`test_legacy_store_compatibility.rb`).
+
+## Line-edit contract
+
+`lib/Research/line_edit.rb` is a pure one-based, half-open
+`[start_line, end_line)` editor (nil `end_line` = through end of
+document), checked against the exact revision the caller read.
+`delete_lines` exists as an explicit mode (rather than an empty
+replacement) so a span deletion cannot be confused with a zero-length
+replacement and remains reachable from every surface.
+
+## Link-checker contract
+
+`dossier_check` scans document bytes with a bounded, documented syntax:
+inline links/images `[text](target "title")` (angle-bracket and
+balanced-paren targets included); fenced code blocks (``` and ~~~)
+skipped and counted; fragments split from file paths and never
+validated; ordinary links resolved relative to the **containing
+document**; absolute links resolved, not skipped; resolution constrained
+inside the research root. **Unsupported syntax** — reference-style links
+(`[text][ref]`), HTML anchors (`<a href>`, autolinks) — is counted under
+`unsupported_syntax`, never silently treated as checked; the task-level
+`not_checked` list states what was not validated (external URLs, targets
+outside the root, fragments). The legacy bare-ID pseudo-link form
+(`[x](C-001/README.md)`) remains supported for cross-kind links.
+
+## Tests
+
+See [Testing.md](Testing.md) for the ten suites, the runner, and the
+temp-project harness discipline.
+
+## Limitations
+
+- Link checking is bounded to the documented syntax above; fragments and
+  headings are never validated, external URLs are never fetched.
+- `dossier_list` `query` scans current document contents (one read per
+  document per listed dossier); it never searches history or evidence
+  bytes.
+- Evidence binaries are not readable through `dossier_read`/`evidence_read`
+  text surfaces; they return file/media info.
+- The placeholder guard matches a fixed marker list
+  (`TOOL-COMPACTION-RECORD`); it is a write guard, not a content policy.

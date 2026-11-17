@@ -1,3 +1,10 @@
+> **Historical design note (2026-11-17).** This document is a historical
+> record of the retired `path_kinds`/observation-registry design phase. It
+> is superseded by the native dossier workflow; the current contract lives
+> in `README.md`, `doc/user/` and `doc/developer/`, and the implementation
+> authority is `research/native-dossier-design-decisions.md` (kept current).
+
+
 # Scientific-record Path kinds — consolidated implementation report
 
 Status: verification gate PASSED (all eight acceptance criteria; gate

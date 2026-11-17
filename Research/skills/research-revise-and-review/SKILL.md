@@ -1,0 +1,88 @@
+---
+name: research-revise-and-review
+description: >
+  Revise a dossier after new evidence: change an interpretation, correct a
+  number, replace an attachment, resolve a stale-revision conflict or an
+  external edit, and review integrity. Triggers: editing a claim, fixing an
+  error, expected_revision rejection, drift found by dossier_check,
+  adopting external edits via dossier_capture.
+---
+
+# Revise and review
+
+## When
+
+Evidence moved, an interpretation must change, a number was wrong, an
+attachment must be replaced, a `StaleRevision` error appeared, or an external
+edit hit a dossier and needs adopting or reverting.
+
+## Procedure
+
+1. **Read before writing**: `dossier_read` the current revision — line
+   numbers come from the read you base the edit on. Use `overview: true` for
+   structure, `dossier_history` for what changed and when.
+2. **Guarded edit**: `dossier_update` with `expected_revision` = the revision
+   you just read. Spans are one-based half-open `[start_line, end_line)`; the
+   replacement includes its own line breaks; `delete_lines` deletes a span;
+   `[N+1, N+1)` appends after the last line.
+3. **Replace an attachment explicitly**: `evidence_attach` with
+   `replace: true` on the same attachment key — collisions without `replace`
+   fail; previous evidence mappings stay in history (old revision records
+   keep the old digest).
+4. **Conflicts**: `StaleRevision` means someone wrote first — re-read, merge
+   your intent into the new state, re-apply. Never retry the identical
+   dispatch hoping for a different result.
+5. **External edits (drift)**: `dossier_check` reports view drift when a
+   document was edited outside the tasks (e.g. by hand). To *keep* the
+   external work, `dossier_capture` with `id`, `expected_revision`, the
+   document names and a `change_note` — it is the only adoption path, guarded
+   by the revision you read and the observed digests, and it refuses when
+   retained evidence is corrupted (repair that first) or when nothing
+   drifted. There is no task that discards drift — ordinary updates refuse
+   a drifted dossier, so external edits are either adopted with
+   `dossier_capture` or the file bytes are restored externally back to the
+   pinned content, after which `dossier_check` confirms consistency.
+6. **Narrow, do not retcon**: when contrary evidence weakens a claim, edit
+   the current document (e.g. bounding the claim to the subset that
+   survived) and put the reason in `change_note` ("narrow claim after
+   stricter multiple-testing"). The earlier revision in history keeps the
+   original statement — the record shows the claim was narrowed, not that it
+   always predicted the result. Do not rewrite the historical hypothesis.
+7. **Mechanical check**: `dossier_check` after structural work (attachments,
+   links, captures) — missing/changed references, corrupted retained copies,
+   broken local links. It is an integrity report: `status: "ok"` means the
+   machinery is consistent, not that the science is right. Scientific review
+   — whether the claim is warranted by the evidence — is a judgment you or a
+   reviewing agent make against the attachments; no task issues that verdict.
+
+## Example (narrow a claim after contrary evidence)
+
+```ruby
+# current claim C-006 README (3 lines):
+#   # Changed genes concentrate in metabolism
+#   All changed genes map to metabolism terms.
+#   Evidence: enrichment table, attachment revision 3.
+r = LLM.call_workflow(Research, :dossier_read, 'id' => 'C-006')
+# revision 1, total_lines 3
+
+LLM.call_workflow(Research, :dossier_update,
+  'id' => 'C-006', 'expected_revision' => r['current_revision'],
+  'mode' => 'replace_lines', 'start_line' => 2, 'end_line' => 3,
+  'replacement' =>
+    "After stricter multiple-testing, one term remains significant; the claim is\n" \
+    "narrowed to that term. The broader statement did not survive correction.\n",
+  'change_note' => 'narrow claim after stricter multiple-testing (was: metabolism genes changed)')
+# => {"id"=>"C-006", "revision"=>2, "changed"=>true, "previous_revision"=>1, ...}
+
+LLM.call_workflow(Research, :dossier_history, 'id' => 'C-006')
+# revisions[1] keeps change_note null (original claim) — history stays honest.
+```
+
+## Details
+
+- Line-edit contract and error recovery (stale revisions, range errors,
+  placeholder guard): `doc/user/Walkthrough.md`; capture semantics and
+  task signatures: `doc/user/Tasks.md`; when/how-to-use guidance per
+  task: repository `README.md` (`# Tasks`).
+- Resuming long work: keep settled definitions and the next action in the
+  question dossier (see `research-question-to-dossier`).
