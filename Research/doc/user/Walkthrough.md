@@ -4,8 +4,8 @@ The [task reference](Tasks.md) lists every task with its real registered
 inputs and output shapes. This page is a short runnable walkthrough of the
 normal working loop, with the behaviors most likely to surprise: relative
 evidence sources, references versus copies, safe line editing and error
-recovery. All examples are real payloads produced in a temp project
-(`tmp/bout_c/examples/`).
+recovery. All examples are real payloads produced by running the tasks
+in a temporary project.
 
 ## The working loop
 

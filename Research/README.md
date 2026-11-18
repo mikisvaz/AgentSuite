@@ -1,26 +1,16 @@
-# Research
-
-Research records scientific questions, evidence-backed claims and
-falsifiable hypotheses as versioned **dossiers** stored inside your
-working project.
+Research dossiers: versioned records for scientific questions, claims and hypotheses.
 
 Every dossier holds authored Markdown documents, attached evidence and an
 immutable revision history. Mutations are revisioned with optimistic
 concurrency: pass the revision you read as `expected_revision`; a mismatch
 rejects the change with a `StaleRevision` message naming both revisions.
-All tasks are exec-exported: each call executes fresh, caller job names
-flow through, and identical inputs produce a new execution (a repeated
-`dossier_create` allocates a new ID).
 
-## Dossier types
+Dossier types and ID prefixes: `question` (one answerable scientific
+question, `Q-###`), `claim` (a bounded statement the attached evidence
+supports, `C-###`), `hypothesis` (a falsifiable explanation with
+predictions, `H-###`).
 
-| Type | Purpose | ID prefix |
-|---|---|---|
-| question | One answerable scientific question, its evidence and current answer | `Q-###` |
-| claim | A bounded statement the attached evidence supports | `C-###` |
-| hypothesis | A falsifiable explanation with predictions | `H-###` |
-
-## Storage layout
+Storage layout:
 
 The store is fixed and project-relative:
 
@@ -166,7 +156,8 @@ the history silently.
 
 # Examples
 
-Real payloads from a temp project (`tmp/bout_c/examples/`):
+Real payloads generated while exercising the tasks in a temporary
+project:
 
 ```
 dossier_create  {type: question, title: "Does the intervention change the measured endpoint?"}
@@ -191,6 +182,10 @@ dossier_update  {id: Q-001, expected_revision: 2, mode: "replace_lines",
 
 # Documentation
 
-- [User guide and walkthrough](doc/user/README.md)
-- [Task reference](doc/user/Tasks.md)
-- [Developer notes](doc/developer/README.md)
+- [Agent introduction](doc/user/README.md) — first call and representative
+  path
+- [Task reference](doc/user/Tasks.md) — real registered inputs, output
+  shapes, error cases
+- [Developer notes](doc/developer/README.md) — task layout, store
+  protocol, tests
+

@@ -77,7 +77,7 @@ module Research
   # bare word) is handled by the classifier, not this predicate.
   EXTERNAL_URL = /\A[a-z][a-z0-9+.-]*:/i.freeze
   input :id, :string, 'Check one dossier only (overrides type/limit)'
-  input :type, :select, 'Restrict the selection to one dossier type', nil, select_options: %w[question claim hypothesis]
+  input :type, :select, 'Restrict the check to one dossier type; omit to check all types', nil, select_options: %w[question claim hypothesis]
   input :limit, :integer, 'Maximum dossiers to check (1..1000; default 100)', 100
   input :continuation, :string, 'Continuation token from a previous page'
   desc 'Run the mechanical integrity check over dossiers: references, retained copies, view drift, local links, metadata. Read-only; never a scientific verdict.'
