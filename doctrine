@@ -272,3 +272,5 @@ survives.
 Tool success is not correctness. Read what the run actually produced before
 treating it as a finding, and route consequential results through appropriate
 verification.
+
+tool: Cortex cortex_read
