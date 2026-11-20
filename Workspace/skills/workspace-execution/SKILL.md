@@ -50,7 +50,7 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
 - On failure or huge error streams, `stderr` is condensed root-cause-first
   (distinct error lines hoisted, repeats collapsed as `line [x N]`,
   framework backtraces dropped, giant argv dumps summarized, long streams
-  cut with `... [N lines omitted] ...`). The complete stream is preserved
+  cut with `... [N lines omitted] ...`). When persistence succeeds, the complete stream is preserved
   on disk and its path returned in `stderr_full` — read that file when the
   condensed view is not enough.
 - Sandbox launch failures surface as the bwrap argv in stderr; treat them
@@ -65,7 +65,7 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
 | Numeric or data computation | `python` |
 | Ruby / Scout-ecosystem computation | `ruby` |
 | R analysis | `r` |
-| Exact current time (also registered on the deprecated ComputerUse) | `current_time` |
+| Current time with UTC offset | `current_time` |
 | Where jobs and their outputs live | see workspace-files skill |
 
 ## Common mistakes

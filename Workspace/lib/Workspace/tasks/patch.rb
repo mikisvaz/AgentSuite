@@ -261,35 +261,10 @@ module Workspace
     result.end_with?("\n") ? result : result + "\n"
   end
 
-  desc <<-EOF
-Apply a patch to files under the repository root using the system 'patch' utility.
-
-Enhancements:
-- Converts ChatGPT-style patches into canonical unified diffs with a/ and b/ headers
-- Auto-detects -p (strip) level via --dry-run if not specified
-- Returns structured diagnostics, including generated_patch, used_strip and tried_strips
-- Optional apply_direct fallback to write files directly when the patch utility fails and the
-  content appears to be full-file content (not a diff)
-
-Inputs:
-- patch: the patch content (unified diff or ChatGPT-style); required
-- strip: integer -pN override (auto-detected if nil)
-- dry_run: if true, checks only (does not modify files)
-- apply_direct: if true, attempt a direct apply fallback on failure
-
-Returns a JSON object with keys:
-- stdout, stderr, exit_status (from the final attempt)
-- generated_patch (the unified diff text we produced)
-- applied (boolean)
-- applied_directly (boolean)
-- used_strip (integer or nil)
-- tried_strips ([{strip, stdout, stderr, exit_status}])
-- suggestion (string)
-  EOF
   input :patch, :text, 'Patch content', nil, required: true
   input :strip, :integer, 'Number for patch -pN (strip count). If nil, auto-detect.', nil
-  input :dry_run, :boolean, 'If true, perform a dry-run (do not modify files)', false
-  input :apply_direct, :boolean, 'If true, fallback to direct file writes if patch fails', false
+  input :dry_run, :boolean, 'Preview the system patch command. Leave apply_direct false for a read-only preview.', false
+  input :apply_direct, :boolean, 'Allow eligible plain-content blocks to write directly when no strip count succeeds, including during dry_run', false
   extension :json
   task :patch => :text do |patch_text, strip, dry_run, apply_direct|
     patch_text ||= ''

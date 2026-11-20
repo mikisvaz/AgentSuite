@@ -135,13 +135,7 @@ module Workspace
     end.compact
   end
 
-  desc <<-EOF
-Write a file. For Scout workflow source drafts (task/entity/property/test
-files) prefer the ScoutCoder path tools (`path_write`), which validate the
-registered root and reload-register the draft; use this task for ordinary
-files (results, notes, data).
-  EOF
-  input :path, :path, 'File to write', nil, required: true
+  input :path, :path, 'Writable destination path for the complete contents', nil, required: true
   input :content, :text, 'Content to write into the file', nil, required: true
   task :write => :string do |file,content|
     raise ParameterException, "File is nil or empty: #{path}" if path.nil? || path.empty?
@@ -151,15 +145,11 @@ files (results, notes, data).
     "success writing to #{file}"
   end
 
-  desc <<-EOF
-Read a file. Don't specify a limit to read it complete. If you specify a limit specify a file_end which can be head or tail.
-You may also specify start (line offset). For head start is 0-based from the beginning; for tail start is 0-based from the end (0 == last line).
-  EOF
   input :path, :path, 'Path to the file to read', nil, required: true
   input :limit, :integer, 'Maximum number of lines to return from chosen end of the file'
-  input :chars, :integer, 'Maximum number of chars to return from chosen end of the file'
+  input :chars, :integer, 'Character window from the selected end, applied after line selection'
   input :file_end, :select, 'Side of file to read', :head, select_options: %w(head tail)
-  input :start, :integer, 'Line offset: for head -> 0-based from start; for tail -> 0-based from end (0 == last line)', 0
+  input :start, :integer, 'Zero-based line offset for head with a positive line limit. Use zero for the last group with tail.', 0
   task :read => :text do |file, limit, chars, file_end, start|
     file = normalize file
 
@@ -241,16 +231,9 @@ You may also specify start (line offset). For head start is 0-based from the beg
     res
   end
 
-  desc <<-EOF
-List all the files and subdirectories in a directory and returns the files and
-directories separatedly, and optionaly some file stats like size, and
-modification time.
-
-Example: {files: ['foo', 'bar/bar'], directories: ['bar'], stats: {'foo' => {size: 100, mtime='2025-10-2 15:00:00'}}, 'bar/bar' => {size: 200, mtime='2025-10-3 15:30:10'}} }
-  EOF
-  input :directory, :path, 'Directory to list. Regular expressions not allowed.', nil, required: true
+  input :directory, :path, 'Readable directory path to enumerate', nil, required: true
   input :recursive, :boolean, 'List recursively', true
-  input :stats, :boolean, 'Return some stats for the files', false
+  input :stats, :boolean, 'Request size and modification time for listed files', false
   task :list_directory => :json do |directory,recursive,stats|
     raise ParameterException, "Directory is a regular expression" if Regexp === directory
     directory = normalize directory
@@ -286,14 +269,7 @@ Example: {files: ['foo', 'bar/bar'], directories: ['bar'], stats: {'foo' => {siz
     info
   end
 
-  desc <<-EOF
-Return stats if a file.
-
-Stats: size, modification time, binary or
-not, number of lines (if not binary), etc
-
-  EOF
-  input :file, :path, 'File with stats to report', nil, required: true
+  input :file, :path, 'Readable file or directory path', nil, required: true
   task :file_stats => :json do |file,root|
     normalize file
     raise ParameterException, "File not found: #{file}" unless Open.exists?(file)
@@ -311,14 +287,6 @@ not, number of lines (if not binary), etc
 
   export_exec :list_directory, :write, :read, :file_stats
 
-  desc <<-EOF
-Return the effective sandbox filesystem permissions: which paths the
-filesystem tasks (read, write, delete, search, list_directory, file_stats)
-may access, with the origin of each entry, whether it is a file, a directory,
-or a symlink (and where it points), and how each path is mounted inside the
-bwrap sandbox used by the exec tasks (bash, ruby, python, r). Read-only
-introspection, takes no inputs.
-  EOF
   task :sandbox_paths => :json do
     writable = [Workspace.root, Workspace.allowed_paths].flatten.compact.uniq
     readable = Workspace.allowed_read_paths.flatten.compact.uniq
@@ -342,7 +310,7 @@ introspection, takes no inputs.
       pwd_realpath: File.realpath(Dir.pwd),
       home: ENV['HOME'],
       bwrap: bwrap.nil? ? nil : bwrap.to_s,
-      note: "Two permission layers apply. Layer 1 (Ruby allowlist): read, write, delete, search, list_directory and file_stats accept paths under root, writable and readable below. Layer 2 (bwrap mounts): bash, ruby, python and r run inside a bwrap sandbox built from the same lists plus exec extras, so a path can be readable from bash yet rejected by read, or granted by the allowlist yet read-only inside bwrap. The mounts section is the bwrap plan: source is the host path bound, destination is the path inside the sandbox, mode is ro or rw, and redirect is true when the destination had to be moved to the realpath because of a symlink. realized_mounts, when present, is the current process /proc/mounts view.",
+      note: "File tasks check their input paths against Scout-AI grants. Reads accept writable and read grants. Writes require a writable location. For commands, mounts shows the base bwrap plan with host source, child destination and mode. Command-specific mounts are added at launch. realized_mounts describes the reporting process.",
       writable: classify.call(writable),
       readable: classify.call(readable),
       mounts: sandbox_mount_plan.collect do |m|
@@ -353,21 +321,12 @@ introspection, takes no inputs.
     }
   end
 
-  desc 'Return the current process working directory (PWD)'
 
   task :pwd => :string do
     ENV['PWD'] || Dir.pwd
   end
 
   # Delete task
-  desc <<-EOF
-Delete a file or directory. The path must be relative to the
-`Workspace.root` directory, and deletion is performed with the same
-path sanity checks as the read/write tasks.
-
-If the target is a directory it is removed recursively.
-
-  EOF
   input :file, :path, 'File or directory to delete', nil, required: true
   task :delete => :string do |file|
     file = normalize file, :write
@@ -384,15 +343,8 @@ If the target is a directory it is removed recursively.
   end
 
   # Copy task
-  desc <<-EOF
-Copy a file or directory. The target path must be relative to the
-`Workspace.root` directory.
-
-If the source is a directory it is copied recursively. There is
-no need to create directories in the target, they will be created automatically
-  EOF
-  input :source, :path, 'File or directory to copy', nil, required: true
-  input :target, :path, 'Target path', nil, required: true
+  input :source, :path, 'Readable source path', nil, required: true
+  input :target, :path, 'Writable destination path', nil, required: true
   task :copy => :string do |source,target|
     source = normalize source, :read
     target = normalize target, :write
@@ -406,23 +358,10 @@ no need to create directories in the target, they will be created automatically
   # Search for files within a directory whose content matches a query string.
   # The search is performed recursively on the supplied path (which must be a
   # subpath of Workspace.root).
-  desc <<-EOF
-  Search for files within a directory whose content matches a query string.
-
-  Parameters:
-  * **path** – Directory to start searching from.
-  * **query** – String to look for in file contents. Only plain‑text files
-    are considered; binary files are skipped.
-  * **max_results** – Maximum number of matches to return. If not supplied, all
-    matches will be returned.
-
-  The task returns a JSON array of relative file paths (relative to
-  Workspace.root). If no files match, an empty array is returned.
-  EOF
   input :path, :path, 'Root directory to search', nil, required: true
   input :query, :string, 'String to search for in file contents', nil, required: true
   input :max_results, :integer, 'Maximum number of results to return', 10
-  input :max_files, :integer, 'Maximum number of results to examine', 200
+  input :max_files, :integer, 'Maximum glob entries allowed, including directories (default 200)', 200
   task :search => :array do |path, query, max_results, max_files|
     path = normalize path
     raise ParameterException, "Directory not found: #{path}" unless Open.exists?(path)

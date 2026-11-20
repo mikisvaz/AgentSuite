@@ -15,15 +15,11 @@ semantics (`single`/`list`/`flat`/`double`, `sep2`) live in scout-gear
 
 ## Prepare first, then operate
 
-Only `tsv_read` (and `tsv_info`, for inspection) accept source
-interpretation options (`sep`, `sep2`, `header_hash`, `type`, `key_field`,
-`fields`, `cast`, `select`, `grep`, `merge`, `one2one`). The six operating
-tasks do not: normalize the source once with `tsv_read`, then operate on
-the canonical result.
+`tsv_info` and `tsv_read` accept source delimiters and header options. Use `tsv_read` to produce canonical TSV for downstream operations. Individual tasks also accept field, type or cast options as described in their task help.
 
 Recommended flow on an unfamiliar source:
 
-1. `tsv_info` — shape: interpreted key field, value fields, type, row/key
+1. `tsv_info` — shape: interpreted key field, value fields, type, materialized key
    counts, entity-format candidates (hints, not validated identifiers).
 2. `tsv_read` with any needed options — normalize into canonical Scout TSV
    (tab columns, pipe multi-values, `#` headers); text result feeds the

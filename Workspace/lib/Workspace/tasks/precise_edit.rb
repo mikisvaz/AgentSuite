@@ -2,11 +2,6 @@ require 'digest'
 require 'tempfile'
 
 module Workspace
-  desc <<-EOF
-Apply one exact, count-checked mutation to a file under the allowed write paths.
-The operation is replace, insert (after the selector), or delete. The file is
-changed only when the selector count and optional SHA-256 precondition match.
-  EOF
   input :path, :path, 'File to mutate', nil, required: true
   input :operation, :select, 'Mutation operation', nil, required: true, select_options: %w(replace insert delete)
   input :selector, :text, 'Exact text to find', nil, required: true

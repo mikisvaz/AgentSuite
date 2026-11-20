@@ -1,89 +1,41 @@
-# Workspace developer documentation
+# Developing Workspace
 
-Implementation, environment, testing and cross-repo material for the
-Workspace workflow. Agent-facing usage lives in `Workspace/README.md` and
-[doc/user/SandboxAndOutputs.md](../user/SandboxAndOutputs.md); this file
-owns the developer view.
+Load the workflow through `workflow.rb` with Ruby, Scout and scout-ai available. The task definitions live under `lib/Workspace/tasks/`. Filesystem, execution, edit and time tasks use `export_exec`. The TSV tasks use `export`. The system patch utility supports diff application, and bubblewrap provides process isolation for the exec runner.
 
-## Dependencies and environment
+## Register access in the calling context
 
-- Ruby and the Scout/Rbbt environment (the workflow extends Workflow)
-- The system `patch` utility for the patch task
-- bwrap for sandboxed execution (optional; see below)
+Use the public scout-ai registrar from the Ruby thread that will invoke Workspace. For example, given existing input and output directories:
 
-## Layout
-
-- `workflow.rb` — entrypoint; requires the task files and declares the
-  export surface (`export_exec` for the filesystem/exec/patch/precise_edit
-  tasks; the eight TSV tasks exported as regular workflow tasks).
-- `lib/Workspace/tasks/` — task implementations (`filesystem.rb`,
-  `exec.rb`, `patch.rb`, `precise_edit.rb`, `tsv.rb`, and the
-  exec/sandbox helpers).
-- `doc/user/` — agent-facing usage (TSV.md, SandboxAndOutputs.md).
-- `test/Workspace/tasks/` — task implementation tests (see Testing).
-
-## Export surface
-
-All Workspace tasks are exported for use by other workflows: `write`, `read`,
-`list_directory`, `file_stats`, `pwd`, `copy`, `delete`, `search`,
-`sandbox_paths`, `bash`, `python`, `ruby`, `r`, `patch`, and `precise_edit`
-are exported for direct execution (`export_exec`), and the eight TSV tasks
-are exported as regular workflow tasks. No Workspace task is internal-only.
-Verified against `Workspace/workflow.rb` and a live task listing (24 tasks
-registered; see `doc_redesign/baseline/Workspace.json`).
-
-## Testing
-
-From the Workspace workflow directory, the task implementation tests can be
-run with:
-
-```bash
-ruby -Itest test/Workspace/tasks/test_tsv.rb
-ruby -Itest test/Workspace/tasks/test_exec_helpers.rb
-ruby -Itest test/Workspace/tasks/test_patch.rb
-ruby -Itest test/Workspace/tasks/test_precise_edit.rb
+```ruby
+LLM::Sandbox.allow_read_path('/data/study')
+LLM::Sandbox.allow_path('/analysis/results')
 ```
 
-They cover the TSV suite, the sandbox/exec helpers, patch conversion, and
-precise_edit; they do not require network services or external CLIs, and they
-do not test or modify other workflows such as the deprecated ComputerUse or
-Research.
+For a Scout Step, `allow_read_job(job)` and `allow_job(job)` on the same module register its result path, info file and files directory in the corresponding mode. Thread-local registration scopes access to the caller. Check the receiving context separately when delegating.
 
-`test/Workspace/tasks/test_filesystem.rb` also exists in the tree and is not
-listed by the historical README test block (noted during the step-2 audit;
-adding it to the block above is a small open item).
+| Purpose | Scout configuration keys |
+| --- | --- |
+| Shared writable grants | `allowed_paths`, `dirs`, `root`, `thread` |
+| Additional shared read grants | `allowed_read_paths`, `exec_paths`, `read_paths`, `thread_read` |
+| Extra writable or read-only exec mounts | `bwrap_paths`, `bwrap_read_paths` respectively |
 
-## Exec-output condensation internals
+Workspace requests grants with scope `Workspace`. Core consults the workflow and sandbox configuration tokens and uses the uppercase environment variable as a fallback for each key. String lists accept colon or comma separators. Prefer absolute directory names in configuration. Unlocated Scout paths use the resource maps. For the core implementation, see [scout-ai sandbox.rb](https://github.com/mikisvaz/scout-ai/blob/main/lib/scout/llm/sandbox.rb).
 
-The `stderr` condensation performed by the exec tasks (root-cause-first
-reordering, `[x N]` collapse, backtrace-frame dropping, argv summarization,
-`... [N lines omitted] ...` markers, `stderr_full` persistence) is
-implemented in the exec/sandbox helpers under `lib/Workspace/tasks/`
-(`exec.rb`); the user-facing contract is documented in
-[doc/user/SandboxAndOutputs.md](../user/SandboxAndOutputs.md) § "Output
-handling and `stderr_full`".
+## Enforcement and reporting
 
-## bwrap details
+- In `filesystem.rb`, `normalize` calls `LLM::Sandbox.authorize_path` with the root, shared grants, operation mode and relative base. Use the decision to authorize the operation and preserve the operational spelling for I/O. An allowed decision concerns containment. OS permissions remain applicable.
+- In `exec.rb`, `sandbox_run` starts from the same grants, includes the workflow root as writable, and adds exec-specific paths before building bwrap arguments. Planning resolves mount sources, selects destinations and orders parents before children. The base plan reported by `sandbox_paths` omits per-command additions. The runner falls back to host execution if bwrap is absent or disabled.
+- When extending a task, identify where it opens each input and output. The native TSV helpers and patch's direct fallback perform file I/O in the workflow process. Filesystem tasks check the arguments passed to `normalize`. Recursive operations require separate consideration of descendants.
+- Keep task descriptions in the parsed root README and input help on the declarations. The [agent introduction](../user/README.md) owns first-call guidance.
 
-Execution is unsandboxed when bwrap is not available in the system or when
-`BWRAP_PATH` is set to `false`; the mount lists are built from the same
-allowlists as the Ruby permission layer plus exec extras. The authoritative
-sandbox model (which tools are confined, the two permission layers, recovery
-for a path a tool cannot see) is the scout-ai developer document
-`doc/developer/Sandbox.md` (§2 "Which paths can this action reach?") —
-cross-repo pointer, verified present in the scout-ai checkout.
+## Tests
 
-## Cross-repo pointers (verified)
+From the Workspace checkout with its Scout dependencies installed, run each task suite in a fresh Ruby process:
 
-- scout-ai `doc/developer/Sandbox.md` — sandbox model, which tools are
-  confined, recovery for a path a tool cannot see.
-- scout-ai `doc/user/ToolCalling.md` (§ "Exposing an entire workflow") —
-  why every exported task here appears as a callable tool to an agent.
-- scout-gear `doc/user/ProcessingTabularData.md` — TSV value types
-  (`single`/`list`/`flat`/`double`), opening options, `sep2`.
-- scout-essentials `doc/user/WorkingWithFiles.md`,
-  `doc/user/RunningCommands.md`, `doc/user/HandlingStreams.md` — the `Open`
-  and `CMD` layers beneath code run through `bash`/`python`/`ruby`/`r`.
+```bash
+for suite in test/Workspace/tasks/test_*.rb; do
+  ruby -Itest "$suite" || exit 1
+done
+```
 
-Mirrors `doc/developer/ToolingDocumentation.md` pointer policy; that file
-owns the convention.
+The filesystem suite exercises grant scope, symlink resolution, missing descendants and relative paths. The exec helper suite covers mount planning and diagnostics. The other suites cover patches, precise edits and TSV operations. To check a deployment, run `sandbox_paths` and exercise the intended file and exec operations in the same caller context.

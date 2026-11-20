@@ -748,12 +748,6 @@ module Workspace
   # Task definitions
   # ===========================================================================
 
-  desc <<-EOF
-Run a bash command.
-
-Returns a JSON object with two keys, stderr and stdout, pointing to the STDOUT
-and STDERR outputs as strings, and exit_status, the exit status of the process
-  EOF
   input :cmd, :string, 'Bash command to run', nil, required: true
   input :timeout, :integer, 'Timeout in seconds', nil
   extension :json
@@ -762,16 +756,6 @@ and STDERR outputs as strings, and exit_status, the exit status of the process
     cmd_json :bash, cmd, timeout: timeout
   end
 
-  desc <<-EOF
-Run a file or code using python.
-
-For edits to existing files prefer `patch`/`precise_edit`; use this task for
-computation.
-
-If `file` is provided it will be executed. Otherwise `code` will be written to a temporary
-file under the task `root` and executed. Returns a JSON object with keys stdout,
-stderr and exit_status.
-  EOF
   input :code, :text, 'Python code to run (ignored if file provided)'
   input :file, :path, 'File to run'
   input :timeout, :integer, 'Timeout in seconds', nil
@@ -810,17 +794,6 @@ stderr and exit_status.
     end
   end
 
-  desc <<-EOF
-Run a file or code using ruby.
-
-For edits to existing files prefer `patch`/`precise_edit`; use this task for
-computation.
-
-If `file` is provided it will be executed. Otherwise `code` will be written to a temporary
-file under the task `root` and executed.
-
-Returns a JSON object with keys stdout, stderr and exit_status.
-  EOF
   input :code, :text, 'Ruby code to run (ignored if file provided)'
   input :file, :path, 'File to run'
   input :timeout, :integer, 'Timeout in seconds', nil
@@ -844,14 +817,6 @@ Returns a JSON object with keys stdout, stderr and exit_status.
     end
   end
 
-  desc <<-EOF
-Run a file or code using R.
-
-If `file` is provided it will be executed. Otherwise `code` will be written to a temporary
-file under the task `root` and executed.
-
-Returns a JSON object with keys stdout, stderr and exit_status.
-  EOF
   input :code, :text, 'R code to run (ignored if file provided)'
   input :file, :path, 'File to run'
   input :timeout, :integer, 'Timeout in seconds', nil

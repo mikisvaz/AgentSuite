@@ -162,11 +162,10 @@ module Workspace
     end
   end
 
-  desc 'Summarize a TSV row count, materialized key count, type and fields.'
   input :file, :path, 'TSV file path', nil, required: true
   input :key_field, :string, 'Override key field', nil
   input :fields, :array, 'Select value fields', nil
-  input :type, :string, 'TSV type override', nil
+  input :type, :string, 'Source table type: single, list, flat or double', nil
   input :sep, :string, 'Column separator', "\t"
   input :sep2, :string, 'Multi-value separator', '|'
   input :header_hash, :string, 'Header marker', '#'
@@ -208,7 +207,6 @@ module Workspace
   end
   export :tsv_info
 
-  desc 'Read a TSV and return normalized Scout TSV text.'
   input :file, :path, 'TSV file', nil, required: true
   input :keys, :array, 'Exact keys to retain, empty means all', []
   input :key_field, :string, 'Override key field', nil
@@ -295,7 +293,6 @@ module Workspace
   end
   export :tsv_read
 
-  desc 'Fetch exact key values in request order.'
   input :file, :path, 'TSV file', nil, required: true
   input :keys, :array, 'Keys to fetch', [], required: true
   input :key_field, :string, 'Override key field', nil
@@ -330,13 +327,12 @@ module Workspace
   end
   export :tsv_query
 
-  desc 'Edit one field or a complete row supplied as JSON; type and row shape are validated.'
   input :file, :path, 'TSV file', nil, required: true
   input :key, :string, 'Existing key', nil, required: true
   input :field, :string, 'Field for scalar edit; omit for row replacement', nil
   input :value, :text, 'Replacement value', nil
   input :row, :text, 'Full row JSON replacement', nil
-  input :type, :string, 'TSV type override', nil
+  input :type, :string, 'Source table type: single, list, flat or double', nil
   extension :tsv
   task tsv_edit: :string do |file, key, field, value, row, type|
     TSVTasks.file!(file); TSVTasks.type!(type)
@@ -374,7 +370,6 @@ module Workspace
   end
   export :tsv_edit
 
-  desc 'Merge compatible TSV tables; replace delegates to TSV#merge (right wins), zip delegates to TSV#merge_zip for double tables.'
   input :left, :path, 'Left TSV', nil, required: true
   input :right, :path, 'Right TSV', nil, required: true
   input :strategy, :string, 'replace or zip', 'replace'
@@ -398,13 +393,12 @@ module Workspace
   end
   export :tsv_merge
 
-  desc 'Attach right-side TSV fields on exact matches with TSV.attach, using a copy because that API mutates its source.'
   input :source, :path, 'Source TSV', nil, required: true
   input :other, :path, 'Right TSV', nil, required: true
   input :match_key, :string, 'Source key or field', nil, required: true
   input :other_key, :string, 'Right key or field', nil, required: true
   input :fields, :array, 'Right-side value fields (default non-key fields)', nil
-  input :one2one, :boolean, 'Use one2one behavior', true
+  input :one2one, :boolean, 'Use Scout one-to-one pairing when interpreting matched values', true
   extension :tsv
   task tsv_attach: :string do |source, other, match_key, other_key, fields, one2one|
     [source, other].each { |path| TSVTasks.file!(path) }
@@ -433,15 +427,14 @@ module Workspace
   end
   export :tsv_attach
 
-  desc 'Translate a TSV key or value field with TSV.translate and an explicit identifier mapping.'
   input :file, :path, 'TSV file', nil, required: true
   input :field, :string, 'Key or value field', nil, required: true
   input :target_format, :string, 'Target identifier format', nil, required: true
   input :identifiers, :path, 'Identifier mapping TSV', nil, required: true
-  input :type, :string, 'TSV type override', nil
+  input :type, :string, 'Source table type: single, list, flat or double', nil
   input :key_field, :string, 'Key-field override', nil
   input :fields, :array, 'Value-field selection', nil
-  input :one2one, :boolean, 'Use one2one behavior', false
+  input :one2one, :boolean, 'Use Scout one-to-one pairing when interpreting matched values', false
   extension :tsv
   task tsv_translate: :string do |file, field, target_format, identifiers, type, key_field, fields, one2one|
     [file, identifiers].each { |path| TSVTasks.file!(path) }; TSVTasks.type!(type)
@@ -456,7 +449,6 @@ module Workspace
   end
   export :tsv_translate
 
-  desc 'Sort a TSV by key or field and return one page as TSV or sorted keys.'
   input :file, :path, 'Prepared Scout TSV file', nil, required: true
   input :column, :string, 'Key or value field to sort by (default: key)', 'key'
   input :direction, :select, 'Sort direction', 'ascending', select_options: %w[ascending descending]

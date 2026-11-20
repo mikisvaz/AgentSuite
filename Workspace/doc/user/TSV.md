@@ -11,7 +11,7 @@ the README summarizes them. TSV value-type semantics (`single`/`list`/`flat`/
 ## Recommended ingest flow
 
 1. Run `tsv_info` on an unfamiliar source to inspect the interpreted key field,
-   value fields, type, row/key counts, and possible entity-format fields. Pass
+   value fields, type, materialized counts, and possible entity-format fields. Pass
    source interpretation options such as `sep`, `sep2`, `header_hash`, or `type`
    when required. `key_field` and `fields` select an alternative interpretation.
 2. Run `tsv_read` with those source options to normalize the source into canonical
@@ -53,8 +53,8 @@ default), and `header_hash` the header/comment marker (`#` by default).
 ## `tsv_info`
 
 `tsv_info` returns the selected key field and value fields, type, materialized
-row/key counts, and candidate fields matching registered `Entity.formats`.
-Candidate names are hints, not validated entity identifiers. `type`, `key_field`,
+materialized counts, and candidate fields matching registered `Entity.formats`.
+Both `source_rows` and `unique_keys` count materialized keys. Count physical input rows separately when duplicate keys matter. Candidate fields are identified by name. `type`, `key_field`,
 `fields`, delimiters, and header marker describe how to interpret the source.
 
 The optional `new_key_field`, `rename_fields`, `cast`, `new_type`, `namespace`,
@@ -110,8 +110,7 @@ whole colliding row with the right row. `zip` is distinct and supported only for
 
 `tsv_attach` explicitly names `match_key` and `other_key` (key or value field),
 attaches selected right-side fields to matching source rows, ignores right-only
-rows, and leaves unmatched source rows. It rejects `flat` inputs, duplicate
-right-side matching values, and field collisions. Scout's attach operation
+rows, and leaves unmatched source rows. Duplicate right-side match values are rejected for either setting of `one2one`. It rejects `flat` inputs, and field collisions. Scout's attach operation
 mutates its receiver, so Workspace works on a copy. No identifier translation
 is implicit.
 
@@ -133,7 +132,7 @@ sorting on `flat` TSVs is unsupported.
 ## Mutation safety and outputs
 
 `tsv_edit` always mutates its source on success. `tsv_info` mutates only when a
-metadata mutation input is provided. Mutation requires a writable regular,
+metadata mutation input is provided. These tasks open their inputs in the workflow process. Their file checks are separate from Workspace file-task grants and bwrap mounts. Mutation requires a writable regular,
 non-symlink input and writable parent directory; replacement uses a
 same-directory temporary file and rename. Read/query/merge/attach/translate do
 not modify their sources. TSV-producing tasks return text by default. A
