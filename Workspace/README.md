@@ -14,16 +14,15 @@ Every task runs as a Scout job with provenance and caching.
 
 The doc-acquisition tasks (web-search, document conversion, retrieval) that
 once lived beside these are now the Reader workflow; `kb_register` and
-`playwright` are ComputerUse-only capabilities with no successor
-registration anywhere: they remain only in the deprecated ComputerUse
-(pending migration decision — see its README deprecation notice);
-`current_time` is registered here and in the deprecated ComputerUse. Usage detail for agents — sandbox semantics, the two
-permission layers, choosing the write/edit tool, examples, where job outputs
-land: [Sandbox, execution and output
-handling](doc/user/SandboxAndOutputs.md); per-input TSV detail:
-[Working with TSV files](doc/user/TSV.md); developer material —
-dependencies, testing, export surface:
-[Developer documentation](doc/developer/README.md).
+`playwright` are ComputerUse-only capabilities with no successor registration
+anywhere: they remain only in the deprecated ComputerUse (pending migration
+decision — see its README deprecation notice); `current_time` is registered
+here and in the deprecated ComputerUse. Usage detail for agents — sandbox
+semantics, the two permission layers, choosing the write/edit tool, examples,
+where job outputs land: [Sandbox, execution and output
+handling](doc/user/SandboxAndOutputs.md); per-input TSV detail: [Working with
+TSV files](doc/user/TSV.md); developer material — dependencies, testing, export
+surface: [Developer documentation](doc/developer/README.md).
 
 All 24 registered tasks are agent-exposed: a `tool: Workspace`
 whole-workflow introduction surfaces every task, and every task is also
