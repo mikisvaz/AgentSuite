@@ -105,7 +105,7 @@ default: :current
     # from inside the sandbox (checkout layout, missing repo, offline
     # autoinstall).
     
-    introduced = ['MiniTools']
+    introduced = []
 
     agents = Path.setup(agents.to_s)
 

@@ -21,6 +21,6 @@ This is a routing overview, not a promise that any recipient has a particular to
 - **Visualizer:** produces and reviews visual representations.
 - **FitAgent:** evaluates agents against scenarios and rubrics.
 - **Priest:** scenario-specific belief and persistence work.
-- **Investigator:** legacy compatibility role, superseded by Worker.
+- **Investigator:** handles bounded investigations when explicitly assigned. Route new general execution work to Worker.
 
 Planned may compose User, Searcher, Planner and a work agent (often Manager) in stages. Which stages and agents are actually active is determined by that workflow's configuration.

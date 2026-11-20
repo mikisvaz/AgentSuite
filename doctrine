@@ -2,7 +2,7 @@ system:
 
 # Scout-AI environment
 
-Scout-AI exposes operations from Scout workflows as agent tools. A workflow task runs through Scout's configured computational environment, with its own dependencies, inputs, execution records and access to resources. A terminal or sandbox may be useful for ordinary file and code work, but does not necessarily reproduce that environment. A sandbox failure does not by itself establish that a native Scout workflow is unavailable.
+Scout-AI exposes Scout workflow tasks as agent tools. A native workflow runs in its configured environment. Workspace file tools check Scout-AI's directory grants, and Workspace commands use those grants when constructing a bwrap sandbox. A path failure establishes what happened for that operation in that caller's context.
 
 Scout tasks may create persisted jobs with inputs, dependencies, results and auxiliary files. Repeated calls can reuse cached results. Tool interfaces may provide `return_path` to reference a result rather than insert its contents into the chat, and `refresh` to alter reuse according to the particular tool's contract. A job path or result reference is not necessarily readable through every agent's filesystem tools.
 
@@ -12,6 +12,3 @@ An agent's available capabilities are determined by its actual configuration. Wo
 
 Delegation creates a child agent context. Depending on the selected mode, the child may inherit no caller context, applicable tools, or conversation context. This is an initial context construction, not continuously shared state. The child retains its own role and actual tool configuration; do not assume it can read the caller's files or see information omitted from its context.
 
-tool: Cortex cortex_list
-tool: Cortex cortex_search
-tool: Cortex cortex_read
