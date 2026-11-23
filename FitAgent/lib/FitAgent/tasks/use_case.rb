@@ -172,8 +172,6 @@ default: :current
   input :experiment, :string, "Experiment tag recorded in the report header for cross-repo bookkeeping", "Default"
   input :endpoint_analyst, :select, 'Endpoint used by the analyst AND forwarded to the use_case dep (fixpoint of the same name)', nil, hidden: true
   extension :md
-  # DEPRECATED (fit-era): superseded by the deterministic Scoring.score_scenario
-  # rubric path (score task); kept for compatibility with existing job references.
   task :analyze => :text do |instructions,experiment,endpoint|
     use_case = dependencies.first
     sandbox = Path.setup(use_case.info[:sandbox] || use_case.file('sandbox'))
@@ -181,6 +179,7 @@ default: :current
     analyze_chat = sandbox['analyze.chat']
 
     analyst = LLM.load_agent :ChatAnalyst
+    analyst.save_file = file('analysis.chat')
     analyst.endpoint = endpoint if endpoint
     Chat.allow_job use_case
 
@@ -213,9 +212,7 @@ Below is the Use Case report
 The Use Case was ran here: #{use_case.file('sandbox')}, and chat file is here: #{main_chat}.
     EOF
 
-    response = analyst.chat
-    analyst.save('analysis.chat')
-    response
+    analyst.chat
   end
 
   export :use_case, :analyze
