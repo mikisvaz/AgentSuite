@@ -31,6 +31,14 @@
 #   or non-UTF-8-encoded input RAISES (LineEdit::EncodingError) — bytes
 #   are never transcoded. (ASCII-8BIT binary input is rejected too: the
 #   authored-document surface is UTF-8 text.)
+# - span(text, start_line, end_line) returns the current text of the
+#   one-based half-open span [start_line, end_line) with exactly edit's
+#   positioning, validation and encoding discipline, and with NO
+#   normalization of any kind: the returned String compares
+#   byte-identical with the substring the caller last read (terminators
+#   included), so a caller can verify what a span currently holds before
+#   replacing it. It is the pure substrate of content anchoring; this
+#   module stays dossier-agnostic and never learns who calls it.
 #
 # Counting rule: a line is a maximal segment terminated by "\n" (the
 # terminator may be preceded by "\r"); a final segment with no terminator
@@ -50,34 +58,26 @@ module Research
         check_input!(text, 'document')
         check_input!(replacement, 'replacement')
 
-        lines = split_lines(text)
-        n = lines.length
-
-        unless Integer === start_line && Integer === end_line
-          raise RangeError,
-                "line positions must be Integers (got " \
-                "#{start_line.inspect}, #{end_line.inspect})"
-        end
-        unless start_line >= 1 && start_line <= n + 1
-          raise RangeError,
-                "start_line #{start_line} out of range: with #{n} line(s), " \
-                "valid start_line is 1..#{n + 1}"
-        end
-        unless end_line >= start_line && end_line <= n + 1
-          raise RangeError,
-                "end_line #{end_line} out of range for start_line " \
-                "#{start_line}: valid end_line is #{start_line}..#{n + 1} " \
-                '(half-open [start_line, end_line), 1-based)'
-        end
-
-        head = lines[0, start_line - 1] || []
-        # One-based half-open [start_line, end_line): the tail begins at
-        # one-based line end_line, which is zero-based index end_line - 1.
-        tail = lines[end_line - 1..] || []
+        head, _selected, tail = split_span(text, start_line, end_line)
         # join of empty arrays yields a US-ASCII "" — tag the result UTF-8
         # so callers always receive the document encoding (no byte is
         # transcoded; inputs are strictly validated UTF-8).
-        (head.join + replacement + tail.join).force_encoding(Encoding::UTF_8)
+        (head + replacement + tail).force_encoding(Encoding::UTF_8)
+      end
+
+      # span(text, start_line, end_line) -> current text of the span.
+      # One-based half-open [start_line, end_line): exactly the segment
+      # edit removes, terminators included, so "anchor == span(...)" means
+      # the edit will replace exactly the anchored text. Empty span
+      # returns "" (pure insertion point). Same RangeError/EncodingError
+      # discipline as edit; byte-faithful, no normalization. Pure.
+      def span(text, start_line, end_line)
+        check_input!(text, 'document')
+
+        _head, selected, = split_span(text, start_line, end_line)
+        # join of an empty span would tag "" US-ASCII; keep UTF-8 (no byte
+        # is transcoded).
+        selected.dup.force_encoding(Encoding::UTF_8)
       end
 
       # lines(text) -> Array of line segments including terminators.
@@ -88,7 +88,7 @@ module Research
         split_lines(text)
       end
 
-      # count(text) -> Integer number of lines.      # diff(old, new, max_lines: 2000) -> Array of hunks between two
+      # diff(old, new, max_lines: 2000) -> Array of hunks between two
       # UTF-8 documents. Pure: no dossier/store knowledge. Hunk shape:
       #   { 'start' => one-based line in NEW text where the hunk begins,
       #     'end'   => line AFTER the last new-text line of the hunk
@@ -187,13 +187,53 @@ module Research
         [del_start, oi2, add_start, ni2]
       end
 
-
+      # count(text) -> Integer number of lines. Pure.
       def count(text)
         check_input!(text, 'document')
         split_lines(text).length
       end
 
-      private
+      # split_span(text, start_line, end_line) -> [head, selected, tail]
+      #
+      # THE single positioning helper: splits the text into lines ONCE and
+      # returns the three parts around the one-based half-open span
+      # [start_line, end_line) — head (lines before the span), selected
+      # (the span itself) and tail (lines after the span). It performs the
+      # whole validation the pinned contract states (no clamping;
+      # RangeError on out-of-range, inverted or non-Integer positions), so
+      # edit and span share one validation and one split of the text.
+      # Public: the contract tests pin the edit/span/split_span agreement.
+      def split_span(text, start_line, end_line)
+        lines = split_lines(text)
+        n = lines.length
+
+        unless Integer === start_line && Integer === end_line
+          raise RangeError,
+                "line positions must be Integers (got " \
+                "#{start_line.inspect}, #{end_line.inspect})"
+        end
+        unless start_line >= 1 && start_line <= n + 1
+          raise RangeError,
+                "start_line #{start_line} out of range: with #{n} line(s), " \
+                "valid start_line is 1..#{n + 1}"
+        end
+        unless end_line >= start_line && end_line <= n + 1
+          raise RangeError,
+                "end_line #{end_line} out of range for start_line " \
+                "#{start_line}: valid end_line is #{start_line}..#{n + 1} " \
+                '(half-open [start_line, end_line), 1-based)'
+        end
+
+        # One-based half-open [start_line, end_line): the span covers
+        # zero-based indices start_line - 1 ... end_line - 1, the head is
+        # zero-based 0 ... start_line - 1, and the tail begins at
+        # one-based line end_line (zero-based end_line - 1). Joining the
+        # parts (join of [] is '') keeps empty parts String and UTF-8,
+        # which span()'s contract test pins.
+        [ (lines[0, start_line - 1] || []).join,
+          (lines[(start_line - 1)...(end_line - 1)] || []).join,
+          (lines[end_line - 1..] || []).join ]
+      end
 
       def split_lines(text)
         return [] if text.empty?

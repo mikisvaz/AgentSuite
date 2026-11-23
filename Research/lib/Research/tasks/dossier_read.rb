@@ -12,7 +12,16 @@
 # message points there.
 #
 # Line semantics are one-based, exactly the LineEdit counting rule the
-# update path uses (dossier_read and dossier_update share them).
+# update path uses (dossier_read and dossier_update share them). The
+# read payload carries everything a later edit needs to anchor itself:
+# pass the span text from the read as dossier_update's `anchor` — line
+# numbers go stale as soon as any earlier edit lands, and the anchor
+# turns a stale span into a clean rejection instead of a mis-anchored
+# edit (the header of dossier_update.rb explains the contract). The
+# anchor verifies the current text of the stated span only: it cannot
+# distinguish identical text at two different positions, and an empty
+# span's anchor is always empty (no position protection for
+# insertions).
 
 require_relative 'common'
 

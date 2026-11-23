@@ -73,7 +73,13 @@ unfamiliar dossier; `start_line`/`max_lines` (defaults 1/500) bound the
 returned window, with continuation metadata so long documents can be
 paged. Text is returned separately from line-number metadata, so keep the
 reported line numbers when you edit later — `dossier_update` spans are
-addressed by them.
+addressed by them, and line numbers go stale as soon as any earlier edit
+lands. Pass the span text from this read as `dossier_update`'s `anchor`:
+it is compared with the live span before anything is staged, turning stale
+line numbers into a clean rejection instead of a mis-anchored edit. The
+anchor verifies the current text of the stated span only — it cannot
+distinguish identical text at two different positions, and an empty span's
+anchor is always empty (no position protection for insertions).
 
 ## dossier_update
 Edit an authored document and commit a new revision.
@@ -81,9 +87,23 @@ Edit an authored document and commit a new revision.
 The only way to change authored text. Inputs: `id`, `expected_revision`
 (the revision you last read), `mode`, `document`, optional `change_note`.
 Document modes take full `content`; line modes take `replacement` with
-`start_line`/`end_line` (one-based, half-open; include the line breaks
-you want; omit `replacement` for `delete_lines`). On success the new bytes
-go to `store/objects/<sha256>`, an immutable record to
+`start_line`/`end_line` (one-based, half-open; `end_line` is required for
+`replace_lines` and `delete_lines` — to edit through end of document pass
+`total_lines + 1` from the read; include the line breaks you want; omit
+`replacement` for `delete_lines`). For line modes the optional `anchor`
+is the exact text currently occupying `[start_line, end_line)` — it is
+compared with the live span before anything is staged, so stale line
+numbers reject cleanly instead of editing the wrong span (an anchor
+mismatch tells you to re-read and retry with the corrected span and an
+anchor, never to drop the anchor and edit positionally). When a
+non-empty tail follows the span and the replacement does not end with a
+line terminator, the adjacent terminator is appended so no line is
+merged with the retained tail; the result reports `newline_normalized`.
+On success the result echoes the after-state — `total_lines`,
+`lines_removed`, `lines_inserted` and a `context` excerpt (2 lines before
+and after the span plus the first lines of the new span, truncated) — so
+a wrong span is visible from the payload without another read. The new
+bytes go to `store/objects/<sha256>`, an immutable record to
 `store/history/rN.json`, and the `README.md`/`supplements/` views are
 re-materialized from objects — history and attachments are never touched.
 A no-op edit creates no revision and reports `changed: false`; a stale

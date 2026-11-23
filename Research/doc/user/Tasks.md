@@ -92,7 +92,8 @@ Research.input :document, :string, "Target authored document: 'README.md' (defau
 Research.input :content, :text, 'New document content for create_document / replace_document'
 Research.input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)'
 Research.input :start_line, :integer, 'First line of the edited span (one-based)'
-Research.input :end_line, :integer, 'End of the edited span (exclusive); nil means through end of document'
+Research.input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
+Research.input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged. Verifies the current text of the stated span only — it cannot distinguish identical text at different positions, and an empty span's anchor is always empty (no position protection for insertions). A mismatch means: re-read the document, then retry with the corrected span and an anchor quoting the text you intend to replace'
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
 Research.desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; no-op edits create no revision.'
 ```
@@ -100,6 +101,17 @@ Research.desc 'Apply revisioned edits to authored documents: create, replace or 
 Output (`update_lines.json`, `delete_lines.json`): `{id, type, document,
 mode, changed, revision, previous_revision, change_summary, change_note}`.
 A no-op edit returns `changed: false` and creates no revision.
+
+Line-mode results also carry an `update_echo` after-state: `total_lines`,
+`lines_removed`, `lines_inserted`, `newline_normalized` and a `context`
+excerpt (up to 2 lines before and after the edited span plus the first
+lines of the new span, each truncated with a marker) — a wrong span is
+visible from the payload without another read. When a non-empty tail
+follows the span and the replacement does not end with a line terminator,
+the adjacent terminator is appended (the terminator of the last removed
+line, reused as-is for CRLF documents) so no line is merged with the
+retained tail; at end of document (empty tail) bytes are preserved
+exactly and nothing is appended.
 
 Errors: stale `expected_revision` (`stale.json`); span out of range with
 the valid range in the message (`range_error.json`); placeholder markers

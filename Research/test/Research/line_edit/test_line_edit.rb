@@ -257,4 +257,132 @@ class TestLineEditContract < Test::Unit::TestCase
     Research::LineEdit.edit(text, 1, 2, 'ONE')
     assert_equal frozen, text
   end
+
+  # ---- span(): current text of a half-open span, pure ---------------
+
+  def test_span_extracts_exact_span_including_terminators
+    assert_equal "two\n", Research::LineEdit.span("one\ntwo\nthree\n", 2, 3)
+    assert_equal "one\ntwo\n", Research::LineEdit.span("one\ntwo\nthree\n", 1, 3)
+    assert_equal "two\nthree\n", Research::LineEdit.span("one\ntwo\nthree\n", 2, 4)
+    assert_equal "one\ntwo\nthree\n", Research::LineEdit.span("one\ntwo\nthree\n", 1, 4)
+  end
+
+  def test_span_empty_span_is_empty_insertion_point
+    assert_equal '', Research::LineEdit.span("one\ntwo\n", 1, 1)
+    assert_equal '', Research::LineEdit.span("one\ntwo\n", 2, 2)
+    # one past the last line: the append point
+    assert_equal '', Research::LineEdit.span("one\ntwo\n", 3, 3)
+  end
+
+  def test_span_final_line_without_terminator
+    # document whose last line lacks a terminator: the span covers it
+    assert_equal 'two', Research::LineEdit.span("one\ntwo", 2, 3)
+    # trailing-newline semantics unchanged: terminator not part of the
+    # span when end_line stops before it
+    assert_equal "two\n", Research::LineEdit.span("one\ntwo\n", 2, 3)
+  end
+
+  def test_span_rejects_the_same_ranges_edit_rejects
+    assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.span("a\n", 0, 1) }
+    assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.span("a\n", 1, 3) }
+    assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.span("a\n", 2, 1) }
+    assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.span("a\n", nil, 1) }
+  end
+
+  def test_span_matches_what_edit_removes
+    # invariant: edit replaces exactly the text span() reports
+    text = "one\ntwo\nthree\n"
+    1.upto(4) do |s|
+      s.upto(4) do |e|
+        next unless e >= s
+
+        extracted = Research::LineEdit.span(text, s, e)
+        # invariant: edited == head + replacement + tail where head/tail
+        # are the complements of span() in the original text
+        head_len = (Research::LineEdit.lines(text)[0, s - 1] || []).join.bytesize
+        expected = text.byteslice(0, head_len) + 'X' +
+                   text.byteslice(head_len + extracted.bytesize, text.bytesize)
+        assert_equal expected, Research::LineEdit.edit(text, s, e, 'X'),
+                     "span [#{s}, #{e}) must be what edit removes"
+      end
+    end
+  end
+
+  def test_span_is_pure_and_byte_faithful
+    text = "a\r\nb\nc"
+    frozen = text.dup
+    out = Research::LineEdit.span(text, 1, 3)
+    # byte faithful: terminators included as-is, nothing normalized;
+    # span [1, 3) covers lines 1-2 including their terminators, not the
+    # unterminated final line
+    assert_equal "a\r\nb\n", out
+    assert_equal frozen, text
+    assert_equal Encoding::UTF_8, out.encoding
+    # empty span still reports UTF-8 (join of [] would tag US-ASCII)
+    assert_equal Encoding::UTF_8, Research::LineEdit.span(text, 2, 2).encoding
+  end
+
+  ## -- single-helper refactor (D5) ------------------------------------
+
+  def test_edit_and_span_agree_for_all_span_shapes
+    # One helper (split_span) validates positions once and returns
+    # [head, selected, tail]; edit and span must therefore agree on
+    # validation AND extraction for every span shape, including the
+    # final line without terminator, empty spans and [n+1, n+1) append.
+    shapes = [
+      ["alpha\nbeta\ngamma\n", 1, 1],   # empty span at head
+      ["alpha\nbeta\ngamma\n", 2, 2],   # empty span mid-document
+      ["alpha\nbeta\ngamma\n", 4, 4],   # [n+1, n+1) append point
+      ["alpha\nbeta\ngamma\n", 1, 4],   # whole document
+      ["alpha\nbeta\ngamma",   3, 4],   # final line, no terminator
+      ["a\r\nb\r\nc\r\n",      2, 3],   # CRLF terminator reuse
+      ["a\nb\rc\n",            1, 3],   # mixed terminators
+      ["",                     1, 1]    # empty document
+    ]
+    shapes.each do |(text, s, e)|
+      selected = Research::LineEdit.span(text, s, e)
+      # exact invariant: edit with '' removes exactly what span returns
+      assert_equal Research::LineEdit.edit(text, s, e, '').bytesize + selected.bytesize, text.bytesize,
+                   "edit(text,#{s},#{e},'') must equal text minus span(text,#{s},#{e})"
+      # and inserting the extracted span back reproduces edit(text, s, e, span)
+      assert_equal Research::LineEdit.edit(text, s, e, selected), text,
+                   "re-inserting the extracted span must reproduce the original text for [#{s}, #{e})"
+    end
+  end
+
+  def test_split_span_validates_and_splits_in_one_pass
+    # The helper itself: [head, selected, tail] with head+selected+tail ==
+    # original bytes, same validation as edit/span raise for bad positions.
+    text = "a\nb\nc\n"
+    head, selected, tail = Research::LineEdit.split_span(text, 2, 3)
+    assert_equal 'a' + "\n", head
+    assert_equal "b\n", selected
+    assert_equal "c\n", tail
+    assert_equal text.bytesize, head.bytesize + selected.bytesize + tail.bytesize
+    assert_equal text, head + selected + tail
+    # validation parity for rejected positions (LineEdit::RangeError is
+    # the pinned class for out-of-range, inverted or non-Integer
+    # positions)
+    [[0, 1], [2, 1], [1, 5], [-1, 2], ['1', 2]].each do |(s, e)|
+      assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.split_span(text, s, e) }
+      assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.edit(text, s, e, 'X') }
+      assert_raise(Research::LineEdit::RangeError) { Research::LineEdit.span(text, s, e) }
+    end
+    # purity: input unchanged
+    frozen = 'a' + "\nb\nc\n"
+    Research::LineEdit.split_span(frozen.dup, 1, 3)
+    assert_equal 'a' + "\nb\nc\n", frozen
+  end
+
+  def test_split_span_byte_faithfulness_on_mixed_terminators
+    # CRLF/LF mixes must pass through untouched — no terminator
+    # rewriting anywhere in head/selected/tail.
+    text = "a\r\nb\nc\r\nd"
+    head, selected, tail = Research::LineEdit.split_span(text, 2, 4)
+    assert_equal "a\r\n", head
+    assert_equal "b\nc\r\n", selected
+    assert_equal 'd', tail
+    assert_equal text, head + selected + tail
+    assert_equal Encoding::UTF_8, selected.encoding
+  end
 end

@@ -323,6 +323,182 @@ class TestDossierTasksExported < Test::Unit::TestCase
     assert_equal 7, run_task(:dossier_read, @p.merge('id' => id))['current_revision']
   end
 
+  # ---- per-mode parameter contract (audit follow-up: msgs 297/300/465,
+  # three failed dispatches to assemble one valid call) ---------------
+
+  def test_update_missing_mode_is_a_missing_parameter
+    r = run_task(:dossier_create, @p.merge('type' => 'claim', 'title' => 'MM', 'content' => "# MM\n"))
+    id = r['id']
+    # omitted (nil) mode — never reported as the invalid value ""
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'replacement' => 'x', 'start_line' => 1))
+    end
+    assert_match(/mode is required; one of: /, e.message)
+    assert_not_match(/unknown update mode/, e.message)
+    # empty-string mode behaves the same (model tool layers coerce)
+    e2 = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => '', 'replacement' => 'x', 'start_line' => 1))
+    end
+    assert_match(/mode is required; one of: /, e2.message)
+    # a non-empty bad value is still reported as a VALUE
+    e3 = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'frobnicate'))
+    end
+    assert_match(/unknown update mode "frobnicate"/, e3.message)
+    # no side effects: nothing staged, revision untouched
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision']
+  end
+
+  def test_update_contract_reports_all_problems_in_one_message
+    r = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'CP', 'content' => "# CP\n"))
+    id = r['id']
+    # replace_lines missing start_line AND end_line AND carrying forbidden
+    # content: all must appear in ONE message (no serial discovery).
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines',
+                                         'replacement' => 'x', 'content' => 'y'))
+    end
+    assert_match(/mode replace_lines requires replacement, start_line, end_line;/, e.message)
+    assert_match(/missing: start_line, end_line/, e.message)
+    assert_match(/unexpected: content/, e.message)
+    assert_match(/mode replace_lines requires replacement, start_line, end_line; missing: start_line, end_line; unexpected: content/, e.message)
+    # document modes forbid the line-edit inputs
+    e2 = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_document',
+                                         'content' => 'y', 'replacement' => 'x',
+                                         'start_line' => 1, 'anchor' => 'z'))
+    end
+    assert_match(/mode replace_document requires content; unexpected: replacement, anchor, start_line/, e2.message)
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision']
+  end
+
+  def test_update_end_line_required_rejects_nil_and_omitted
+    # D1: end_line is REQUIRED for replace_lines — no implicit EOF. An
+    # accidentally omitted end_line must not become a destructive edit
+    # (the audit's stated motivation); nil and omitted behave alike.
+    r = run_task(:dossier_create, @p.merge('type' => 'hypothesis', 'title' => 'E',
+                                           'content' => "a\nb\nc\nd\n"))
+    id = r['id']
+    path = File.join(@root, 'hypotheses', id, 'README.md')
+
+    # omitted entirely -> one-pass contract error, nothing staged
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines', 'start_line' => 3,
+                                         'replacement' => "c2\n"))
+    end
+    assert_equal 'mode replace_lines requires replacement, start_line, end_line; missing: end_line', e.message
+    # explicit nil behaves identically (only nil counts as absent)
+    e2 = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines', 'start_line' => 3,
+                                         'end_line' => nil,
+                                         'replacement' => "c2\n"))
+    end
+    assert_equal e.message, e2.message
+    # revision untouched by both rejected calls
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision']
+    assert_equal "a\nb\nc\nd\n", File.read(path)
+  end
+
+  def test_update_end_line_total_plus_one_edits_through_end_of_document
+    # D1/T2: the explicit EOF convention — end_line = total_lines + 1
+    # replaces (and deletes) through end of document.
+    r = run_task(:dossier_create, @p.merge('type' => 'hypothesis', 'title' => 'E2',
+                                           'content' => "a\nb\nc\nd\n"))
+    id = r['id']
+    path = File.join(@root, 'hypotheses', id, 'README.md')
+
+    u = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                           'mode' => 'replace_lines', 'start_line' => 3,
+                                           'end_line' => 5,
+                                           'replacement' => "c2\n"))
+    assert u['changed']
+    assert_equal "a\nb\nc2\n", File.read(path)
+
+    # delete_lines through EOF with the same convention (document is now
+    # 3 lines, so total + 1 = 4)
+    run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
+                                       'mode' => 'delete_lines', 'start_line' => 2,
+                                       'end_line' => 4))
+    doc = run_task(:dossier_read, @p.merge('id' => id))
+    assert_equal "a\n", doc['content']
+  end
+
+  def test_update_delete_lines_end_line_required
+    r = run_task(:dossier_create, @p.merge('type' => 'claim', 'title' => 'DN',
+                                           'content' => "a\nb\nc\nd\n"))
+    id = r['id']
+    path = File.join(@root, 'claims', id, 'README.md')
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'delete_lines', 'start_line' => 3))
+    end
+    assert_equal 'mode delete_lines requires start_line, end_line; missing: end_line', e.message
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision']
+    assert_equal "a\nb\nc\nd\n", File.read(path)
+  end
+
+  def test_update_anchor_matching_text_edits_normally
+    doc = "l1\nl2\nl3\n"
+    r = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'A', 'content' => doc))
+    id = r['id']
+    path = File.join(@root, 'questions', id, 'README.md')
+    u = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                           'mode' => 'replace_lines',
+                                           'start_line' => 2, 'end_line' => 3,
+                                           'anchor' => "l2\n",
+                                           'replacement' => "X2\n"))
+    assert u['changed']
+    assert_equal 2, u['revision']
+    assert_equal "l1\nX2\nl3\n", File.read(path)
+    # anchor on an empty span (pure insertion) matches "" and inserts
+    u2 = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
+                                            'mode' => 'replace_lines',
+                                            'start_line' => 3, 'end_line' => 3,
+                                            'anchor' => '',
+                                            'replacement' => "i\n"))
+    assert u2['changed']
+    assert_equal "l1\nX2\ni\nl3\n", File.read(path)
+    # anchor works for delete_lines too
+    u3 = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 3,
+                                            'mode' => 'delete_lines',
+                                            'start_line' => 4, 'end_line' => 5,
+                                            'anchor' => "l3\n"))
+    assert u3['changed']
+    assert_equal "l1\nX2\ni\n", File.read(path)
+  end
+
+  def test_update_anchor_mismatch_rejects_and_leaves_store_untouched
+    r = run_task(:dossier_create, @p.merge('type' => 'hypothesis', 'title' => 'AM',
+                                           'content' => "l1\nl2\nl3\n"))
+    id = r['id']
+    path = File.join(@root, 'hypotheses', id, 'README.md')
+    # msg-488 failure shape: caller holds a stale anchor (the document
+    # already moved on) — must be rejected, not spliced.
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines',
+                                         'start_line' => 2, 'end_line' => 3,
+                                         'anchor' => "OPEN — investigating.\n",
+                                         'replacement' => "Status: resolved.\n"))
+    end
+    assert_match(/anchor mismatch/, e.message)
+    # the message quotes the observed span so the caller can re-anchor
+    assert_match(/lines \[2, 3\) currently read "l2\\n"/, e.message)
+    assert_match(/the anchor was "OPEN — investigating\.\\n"/, e.message)
+    assert_match(/document has 3 line\(s\)/, e.message)
+    # rejected edit: no revision staged, bytes untouched
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision'],
+                 'rejected anchor must leave the revision history untouched'
+    assert_equal "l1\nl2\nl3\n", File.read(path)
+  end
+
   def test_update_stale_revision_rejected
     r = run_task(:dossier_create, @p.merge('type' => 'claim', 'title' => 'S', 'content' => "# S\n"))
     id = r['id']
@@ -381,14 +557,16 @@ class TestDossierTasksExported < Test::Unit::TestCase
     doc = run_task(:dossier_read, @p.merge('id' => id))
     assert_equal("a\nb\n", doc['content'])
 
-    # delete_lines must not silently swallow a supplied replacement
+    # delete_lines must not silently swallow a supplied replacement: the
+    # one-pass per-mode contract reports the forbidden input together
+    # with everything else wrong in the call.
     e = assert_raise(ParameterException) do
       run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
                                          'mode' => 'delete_lines',
                                          'start_line' => 1, 'end_line' => 1,
                                          'replacement' => "x\n"))
     end
-    assert_match(/replacement must be omitted for delete_lines/, e.message)
+    assert_match(/mode delete_lines requires start_line, end_line; unexpected: replacement/, e.message)
   end
 
   def test_update_unknown_mode_and_missing_content
@@ -398,10 +576,148 @@ class TestDossierTasksExported < Test::Unit::TestCase
       run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1, 'mode' => 'frobnicate'))
     end
     assert_match(/unknown update mode/, e.message)
+    # the one-pass per-mode contract replaces the old serial
+    # "content is required" from deep inside the transaction
     e2 = assert_raise(ParameterException) do
       run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1, 'mode' => 'replace_document'))
     end
-    assert_match(/content is required/, e2.message)
+    assert_match(/mode replace_document requires content; missing: content/, e2.message)
+  end
+
+  # ---- document path security (Manager ruling 4) ----------------  # ---- v3 audit regressions (D2/D3/D4) ----------------------------
+
+  def test_update_v3_wrong_span_with_anchor_is_rejected
+    # T3 — msg-317 shape: fresh read, WRONG span relative to that read
+    # (needed [32,36), called [31,35)), no remediation by positional
+    # editing. WITH the anchor quoting the intended block text, the
+    # mismatch must reject before staging, quoting the observed span.
+    content = ("FILLER\n" * 31) + "alpha\nbeta\ngamma\ndelta\n" + ("TAIL\n" * 10)
+    r = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'V3A', 'content' => content))
+    id = r['id']
+    path = File.join(@root, 'questions', id, 'README.md')
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines',
+                                         'start_line' => 31, 'end_line' => 35,
+                                         'anchor' => "alpha\nbeta\ngamma\ndelta\n",
+                                         'replacement' => "alpha2\nbeta2\ngamma2\ndelta2"))
+    end
+    assert_match(/anchor mismatch/, e.message)
+    # the message quotes the OBSERVED span, not the anchor
+    assert_match(/lines \[31, 35\) currently read "FILLER\\nalpha\\nbeta\\ngamma\\n"/, e.message)
+    assert_equal 1, run_task(:dossier_read, @p.merge('id' => id))['current_revision'],
+                 'rejected anchor must leave the store untouched'
+    assert_equal content, File.read(path)
+  end
+
+  def test_update_v3_wrong_span_without_anchor_echoes_retained_tail
+    # T4 — the same call WITHOUT an anchor succeeds (positional editing
+    # is a legitimate mode); the after-state echo must make the retained
+    # old tail visible so the wrong span can be SEEN from the payload:
+    # 4-line replacement spliced over 4 lines, first tail line 'delta'
+    # survives as its own line (normalization prevents the merge).
+    content = ("FILLER\n" * 31) + "alpha\nbeta\ngamma\ndelta\n" + ("TAIL\n" * 10)
+    r = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'V3B', 'content' => content))
+    id = r['id']
+    path = File.join(@root, 'questions', id, 'README.md')
+    u = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                           'mode' => 'replace_lines',
+                                           'start_line' => 31, 'end_line' => 35,
+                                           'replacement' => "alpha2\nbeta2\ngamma2\ndelta2"))
+    assert u['changed']
+    assert_equal 2, u['revision']
+    echo = u['update_echo']
+    assert_equal 4, echo['lines_removed']
+    assert_equal 4, echo['lines_inserted']
+    assert_equal 45, echo['total_lines']
+    assert echo['newline_normalized'], 'replacement lacking a trailing newline must be flagged'
+    # the retained OLD line 'delta' is visible in the context excerpt
+    assert(echo['context'].any? { |l| l.include?('  35: delta') },
+           'context must show the surviving old first-tail line')
+    assert(File.read(path).include?("delta2\ndelta\n"),
+           'normalization must prevent the merged-line corruption')
+  end
+
+  def test_update_newline_normalization_rules
+    # T5 — replacement without trailing newline, tail follows: no merged
+    # line in the result; flagged in the payload. Span at EOF: no
+    # normalization, exact bytes. CRLF: the adjacent terminator is
+    # reused, not replaced by "\n".
+    r = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'NN',
+                                           'content' => "l1\nl2\nl3\nl4\nl5\n"))
+    id = r['id']
+    path = File.join(@root, 'questions', id, 'README.md')
+    u1 = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                            'mode' => 'replace_lines',
+                                            'start_line' => 2, 'end_line' => 3,
+                                            'replacement' => 'X2'))
+    assert u1['update_echo']['newline_normalized']
+    assert_equal "l1\nX2\nl3\nl4\nl5\n", File.read(path)
+
+    # span at EOF (end_line = total + 1): byte-exact, no normalization
+    u2 = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
+                                            'mode' => 'replace_lines',
+                                            'start_line' => 5, 'end_line' => 6,
+                                            'replacement' => 'l5NOBREAK'))
+    refute u2['update_echo']['newline_normalized']
+    assert_equal 'none (span at end of document)', u2['update_echo']['tail_after_span']
+    assert_equal "l1\nX2\nl3\nl4l5NOBREAK".sub('l4', "l4\n"), File.read(path)
+
+    # CRLF document: terminator of the last removed line ("\r\n") reused
+    r2 = run_task(:dossier_create, @p.merge('type' => 'claim', 'title' => 'CRLF',
+                                            'content' => "a\r\nb\r\nc\r\n"))
+    p2 = File.join(@root, 'claims', r2['id'], 'README.md')
+    u3 = run_task(:dossier_update, @p.merge('id' => r2['id'], 'expected_revision' => 1,
+                                            'mode' => 'replace_lines',
+                                            'start_line' => 2, 'end_line' => 3,
+                                            'replacement' => 'B'))
+    assert u3['update_echo']['newline_normalized']
+    assert_equal "a\r\nB\r\nc\r\n", File.binread(p2)
+  end
+
+  def test_update_anchor_limitations_documented_by_tests
+    # T6 — D3b limitations the docs now state: an anchor verifies the
+    # CURRENT text of the stated span only. It cannot distinguish
+    # identical text at two positions, and an empty span's anchor is
+    # always '' (no position protection for insertions).
+    content = "head\ndup\ntail\ndup\n"
+    r = run_task(:dossier_create, @p.merge('type' => 'hypothesis', 'title' => 'AL',
+                                           'content' => content))
+    id = r['id']
+    path = File.join(@root, 'hypotheses', id, 'README.md')
+    # identical text at two positions: anchor succeeds at the STATED one
+    u = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                           'mode' => 'replace_lines',
+                                           'start_line' => 4, 'end_line' => 5,
+                                           'anchor' => "dup\n",
+                                           'replacement' => "second\n"))
+    assert u['changed']
+    assert_equal "head\ndup\ntail\nsecond\n", File.read(path)
+    # empty-span anchor '' matches at [n,n): always succeeds, no position
+    # protection — insertions rely on start_line alone
+    u2 = run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
+                                            'mode' => 'replace_lines',
+                                            'start_line' => 5, 'end_line' => 5,
+                                            'anchor' => '',
+                                            'replacement' => "append\n"))
+    assert u2['changed']
+    assert_equal "head\ndup\ntail\nsecond\nappend\n", File.read(path)
+  end
+
+  def test_update_mismatch_remediation_points_at_re_anchor
+    # D3a — the remediation text must steer to re-read + corrected span
+    # with an anchor, NEVER to positional (anchor-less) editing.
+    r = run_task(:dossier_create, @p.merge('type' => 'claim', 'title' => 'RM',
+                                           'content' => "l1\nl2\nl3\n"))
+    id = r['id']
+    e = assert_raise(ParameterException) do
+      run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
+                                         'mode' => 'replace_lines',
+                                         'start_line' => 2, 'end_line' => 3,
+                                         'anchor' => "stale\n", 'replacement' => "x\n"))
+    end
+    assert_match(/re-read the document, then retry with the corrected span and an anchor/, e.message)
+    refute_match(/omit the anchor/i, e.message)
   end
 
   # ---- document path security (Manager ruling 4) ----------------
@@ -481,22 +797,51 @@ class TestDossierTasksExported < Test::Unit::TestCase
     err = dispatch('dossier_read', @p.merge('id' => 'Q-999'))
     assert err.is_a?(ScoutException), 'Scout exceptions become structured error values on the exec path'
   end
-end
-  def test_nested_supplement_documents_any_depth
-    c = run_task(:dossier_create, @p.merge('type' => 'question', 'title' => 'Nested'))
-    id = c['id']
-    run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 1,
-                                       'mode' => 'create_document',
-                                       'document' => 'supplements/nested/inner.md',
-                                       'content' => "# inner\n"))
-    run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2,
-                                       'mode' => 'create_document',
-                                       'document' => 'supplements/a/b/c/deep.md',
-                                       'content' => "# deep\n"))
-    rd = run_task(:dossier_read, @p.merge('id' => id,
-                                          'document' => 'supplements/a/b/c/deep.md'))
-    assert_equal "# deep\n", rd['content']
-    ls = run_task(:dossier_list, @p.merge('query' => 'inner'))
-    assert ls['items'].any? { |i| i['id'] == id }
+
+  def test_json_round_trip_through_dispatch_coercion
+    # T8 — the model-facing layer. Arguments travel as JSON text; the
+    # runtime bridge (scout-ai Scout::LLM::Tools::Workflow.call_workflow,
+    # lines 139-143) parses the payload and DROPS keys whose value is ''
+    # ("Some models use '' for optional parameters"), so an omitted key
+    # and an empty string are the same thing by the time the task runs.
+    # The real bridge IS loadable here (scout-ai is required by this
+    # test), and dispatch() calls it through LLM.call_workflow — so the
+    # coercion is exercised for real, not replicated.
+    r = dispatch('dossier_create',
+                 JSON.parse(JSON.generate('type' => 'question', 'title' => 'JRT',
+                                          'content' => "l1\nl2\nl3\n")))
+    id = r['id']
+    path = File.join(@root, 'questions', id, 'README.md')
+
+    # (1) end_line dropped by JSON ('' is the only way to "send nothing")
+    # and by the bridge ('' rejected before the job) -> contract error
+    e = dispatch('dossier_update',
+                 JSON.parse(JSON.generate('id' => id, 'expected_revision' => 1,
+                                          'mode' => 'replace_lines',
+                                          'start_line' => 2, 'end_line' => '',
+                                          'replacement' => "X2\n")))
+    assert e.is_a?(ScoutException)
+    assert_match(/missing: end_line/, e.message)
+    assert_equal "l1\nl2\nl3\n", File.read(path)
+
+    # (2) empty-string mode -> the bridge drops it -> "mode is required"
+    e2 = dispatch('dossier_update',
+                  JSON.parse(JSON.generate('id' => id, 'expected_revision' => 1,
+                                           'mode' => '',
+                                           'start_line' => 2, 'end_line' => 3,
+                                           'replacement' => "X2\n")))
+    assert e2.is_a?(ScoutException)
+    assert_match(/mode is required; one of: /, e2.message)
+
+    # (3) multiline replacement without trailing newline -> normalized
+    u = dispatch('dossier_update',
+                 JSON.parse(JSON.generate('id' => id, 'expected_revision' => 1,
+                                          'mode' => 'replace_lines',
+                                          'start_line' => 2, 'end_line' => 3,
+                                          'replacement' => "n1\nn2")))
+    assert_equal 2, u['revision']
+    assert u['update_echo']['newline_normalized']
+    assert_equal "l1\nn1\nn2\nl3\n", File.read(path)
   end
+end
 

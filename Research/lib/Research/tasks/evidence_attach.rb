@@ -40,7 +40,7 @@ module Research
 
   input :id, :string, 'Dossier id, e.g. Q-001'
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-  input :items, :text, 'JSON array of attachment items: source (absolute path, or relative resolved against the working project), slot, name, mode (copy|reference), caption, replace, and declared script/parameters/inputs/receipt'
+  input :items, :text, 'JSON array of attachment items: source (absolute path, or relative resolved against the working project), slot, name, mode (copy|reference), caption, replace, and declared script/parameters/inputs/receipt. mode "reference" retains NO source bytes — only the source identity plus the digest observed at attach time, with integrity re-checked against the live source on every later read — so use mode "copy" whenever the bytes themselves must be retained durably'
   input :change_note, :string, 'Human-readable note recorded with the new revision'
   desc 'Attach evidence files (copy or reference mode) to a dossier. Batch-atomic: one invalid item rolls back the whole batch. Returns per-item retained locations and digests.'
   task :evidence_attach do |id, expected_revision, items, change_note|

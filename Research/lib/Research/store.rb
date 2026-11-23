@@ -265,13 +265,17 @@ module Research
 
           sweep_orphans!(dir)
 
-          { 'id' => id, 'revision' => new_revision, 'changed' => true,
-            'documents' => record['documents'],
-            'attachments' => record['attachments'],
-            'record' => Layout.revision_path(dir, new_revision),
-            'record_digest' => StoreBytes.digest(
-              Layout.revision_path(dir, new_revision)
-            ) }
+          out = { 'id' => id, 'revision' => new_revision, 'changed' => true,
+                  'documents' => record['documents'],
+                  'attachments' => record['attachments'],
+                  'record' => Layout.revision_path(dir, new_revision),
+                  'record_digest' => StoreBytes.digest(
+                    Layout.revision_path(dir, new_revision)
+                  ) }
+          # Task-layer after-state echo: present only when the task set
+          # it (dossier_update line modes); otherwise absent.
+          out['update_echo'] = ctx.update_echo if ctx.update_echo
+          out
         end
       end
 
@@ -642,6 +646,10 @@ module Research
     class Ctx
       attr_reader :root, :type, :id, :dir, :current, :current_record
       attr_accessor :change_note
+      # Task-layer after-state echo (dossier_update D4): opaque to the
+      # store — set by the task, surfaced in the transaction result so
+      # the payload can show the edit that landed. Never persisted.
+      attr_accessor :update_echo
 
       def initialize(store, root, type, id, dir, current, current_record)
         @store = store

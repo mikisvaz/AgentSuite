@@ -22,9 +22,18 @@ edit hit a dossier and needs adopting or reverting.
    numbers come from the read you base the edit on. Use `overview: true` for
    structure, `dossier_history` for what changed and when.
 2. **Guarded edit**: `dossier_update` with `expected_revision` = the revision
-   you just read. Spans are one-based half-open `[start_line, end_line)`; the
-   replacement includes its own line breaks; `delete_lines` deletes a span;
-   `[N+1, N+1)` appends after the last line.
+   you just read. Spans are one-based half-open `[start_line, end_line)`;
+   `end_line` is required for `replace_lines`/`delete_lines` — to edit through
+   end of document pass `total_lines + 1` from the read; the replacement
+   includes its own line breaks; `delete_lines` deletes a span; `[N+1, N+1)`
+   appends after the last line. Pass the span text from that read as
+   `anchor` — line numbers go stale as soon as any earlier edit lands, and
+   the anchor makes a stale span reject cleanly (observed span quoted,
+   nothing staged) instead of editing the wrong lines. Note what the anchor
+   does NOT do: it verifies the current text of the stated span only, so it
+   cannot distinguish identical text at two different positions, and an
+   empty span's anchor is always empty (no position protection for
+   insertions).
 3. **Replace an attachment explicitly**: `evidence_attach` with
    `replace: true` on the same attachment key — collisions without `replace`
    fail; previous evidence mappings stay in history (old revision records
