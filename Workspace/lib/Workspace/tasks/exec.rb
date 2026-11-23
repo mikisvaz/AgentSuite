@@ -69,9 +69,11 @@ module Workspace
   #   2. Compute which destinations will be mounted.
   #   3. Adjust destinations that traverse symlinks whose parent is mounted.
   #   4. Add symlink dependency mounts (parent dirs + symlink targets).
-  #   5. Semantic deduplication (same source+dest+mode = duplicate;
-  #      child under same-or-broader-mode parent = redundant).
-  #   6. Resolve read/write conflicts at the same destination.
+  #   5. Resolve read/write conflicts at the same destination (keep :rw),
+  #      BEFORE dedup so pruning only ever sees effective modes.
+  #   6. Semantic deduplication (same source+dest+mode = duplicate; a child
+  #      is pruned only when its DEEPEST mounted ancestor has the same mode
+  #      AND maps the source subtree at the same relative position).
   #   7. Sort by destination depth (parents before children).
   # ===========================================================================
   helper :plan_mounts do |read_paths, writable_paths|
@@ -159,6 +161,15 @@ module Workspace
       if parent_mounted && target_of_sym
         # The symlink target must exist at its canonical path so the
         # symlink resolves.  Add a read-only mount for the target.
+        #
+        # Breadth note (plan step 8): the dependency mount is the symlink's
+        # OWN target (target_of_sym), never an ancestor of it.  Mounting a
+        # broader ancestor (e.g. /bulk/user/rbbt when only /bulk/user/rbbt/var
+        # is the target) would expose host data the caller never asked for;
+        # bwrap will create any missing intermediate directories inside the
+        # sandbox, so the exact target is always sufficient.  The two
+        # `already_*` guards below prevent both re-adding a subtree another
+        # mount already covers and duplicating within `additional`.
         already_covered = mounts.any? { |om| path_under?(target_of_sym, om.destination) }
         already_in_additional = additional.any? { |am| path_under?(target_of_sym, am.destination) }
 
@@ -174,47 +185,60 @@ module Workspace
     end
     mounts.concat(additional)
 
-    # --- Phase 5: Semantic deduplication ---
+    # --- Phase 5: Resolve read/write conflicts at same destination ---
+    #
+    # Runs BEFORE dedup pruning so pruning only ever sees the EFFECTIVE
+    # mode of each destination.  If the same destination has both :ro and
+    # :rw mounts, keep only :rw.
+    mounts = mounts.uniq { |m| [m.source, m.destination, m.mode] }
+
+    dest_modes = mounts.group_by(&:destination)
+    mounts = mounts.reject do |m|
+      siblings = dest_modes[m.destination]
+      siblings.any? { |s| s.mode == :rw && m.mode == :ro }
+    end
+
+    # --- Phase 6: Semantic deduplication ---
     #
     # Two mounts are exact duplicates only if ALL of (source, destination,
     # mode) are identical.  Canonical source equality alone is NOT
     # sufficient — two paths resolving to the same host object but at
     # different sandbox destinations are NOT duplicates.
     #
-    # A child mount is redundant (can be removed) if:
-    #   - Its destination is under a parent mount's destination.
-    #   - The parent has the SAME mode (ro parent + ro child, or rw parent + rw child).
-    #     Different-mode children are NOT redundant: a rw child of a ro parent
-    #     must remain to provide writable access, and a ro child of a rw parent
-    #     must remain to restrict access.
-    mounts = mounts.uniq { |m| [m.source, m.destination, m.mode] }
-
+    # A child mount is redundant (can be removed) ONLY when its DEEPEST
+    # mounted ancestor (after same-destination resolution above) has the
+    # SAME access mode AND mounts the same host source subtree at the SAME
+    # relative position.  Comparing against the deepest — not the
+    # shallowest — ancestor matches what the kernel resolves for paths
+    # under the child; the old shallowest-ancestor comparison let a
+    # distant ro ancestor prune a same-mode ro child that had a different
+    # mode (or different relative mapping) on every intermediate mount.
     mounts = mounts.reject do |candidate|
-      mounts.any? do |other|
-        next false if other.equal?(candidate)
-        next false if candidate.destination == other.destination
-        next false unless path_under?(candidate.destination, other.destination)
-
-        if other.mode == candidate.mode
-          # Same-mode parent covers same-mode child (redundant child).
-          # ro parent covers ro child; rw parent covers rw child.
-          true
-        else
-          # Different modes: child is NOT redundant.
-          # ro parent does not cover rw child.
-          # rw parent does not suppress ro child (ro child is intentional).
-          false
-        end
+      # Consider every OTHER mount that is an ancestor of the candidate's
+      # destination, and keep only the DEEPEST one (the mount the kernel
+      # actually resolves first for paths under the candidate).
+      ancestors = mounts.select do |other|
+        ! other.equal?(candidate) &&
+          candidate.destination != other.destination &&
+          path_under?(candidate.destination, other.destination)
       end
-    end
+      next false if ancestors.empty?
 
-    # --- Phase 6: Resolve read/write conflicts at same destination ---
-    #
-    # If the same destination has both :ro and :rw mounts, keep only :rw.
-    dest_modes = mounts.group_by(&:destination)
-    mounts = mounts.reject do |m|
-      siblings = dest_modes[m.destination]
-      siblings.any? { |s| s.mode == :rw && m.mode == :ro }
+      nearest = ancestors.max_by { |a| a.destination.count('/') }
+
+      # Only redundant when the deepest ancestor mounts the same host
+      # subtree (or an ancestor of it), the child's source sits at the
+      # SAME relative position inside it as the destination sits inside
+      # the ancestor's destination, AND the modes match:
+      #   ro parent + rw child            → child KEPT (widens, by design)
+      #   rw parent + ro child            → child KEPT (re-restricts)
+      #   same mode + same mapping        → child redundant
+      #   same mode + different mapping   → child KEPT (different host data
+      #                                   →  mapped to a different position)
+      same_subtree = path_under?(candidate.source, nearest.source)
+      same_mapping = candidate.source.delete_prefix(nearest.source) ==
+                     candidate.destination.delete_prefix(nearest.destination)
+      same_subtree && same_mapping && nearest.mode == candidate.mode
     end
 
     # --- Phase 7: Sort by destination depth (parents before children) ---
@@ -347,9 +371,20 @@ module Workspace
   end
 
   # Condense a raw stderr stream into <= max_chars chars, root cause first.
+  # The limit is applied INCLUSIVE of markers/elision text (plan step 4.4):
+  # `fit_to_budget` below appends the framework-frame marker and performs
+  # the final hard cap accounting for the marker bytes themselves, so the
+  # returned string never exceeds max_chars.
+  # WP-E, plan step 2b: the 127-plus-"not found" launch inference and its
+  # `executable_missing?` helper are REMOVED.  Exit 127 keeps its real
+  # status and its streams follow the shared byte-bounded rule like every
+  # other ordinary exit (see run_child); words in child output are never
+  # evidence of a launch failure.
   #
-  # When +max_chars+ is 0 (or falsy) the stream is returned untouched
-  # (explicit opt-out).
+  # condense_stderr is no longer on the runner path (the runner now uses
+  # the single bound_stream rule below); it stays defined for its unit
+  # tests in test_exec_helpers.rb.  WP-F should decide whether to retire it
+  # together with those tests.
   helper :condense_stderr do |raw, max_chars: nil|
     max_chars ||= 4000
     max_chars = max_chars.to_i
@@ -394,16 +429,12 @@ module Workspace
     end
     lines = collapsed.map { |l, n| n > 1 ? "#{l}  [x #{n}]" : l }
 
-    # 4. Under budget after cleanup?  Return as-is.
-    text = lines.join("\n")
-    if text.length <= max_chars
-      return text + (dropped_frames > 0 ? "\n[#{dropped_frames} framework backtrace frames elided]" : '')
-    end
-
-    # 5. Over budget: head = root-cause lines, tail = last lines.
+    # 4. Over budget: head = root-cause lines, tail = last lines.
     # Scan ALL error lines but keep at most 5 DISTINCT ones, so a real
     # error buried mid-stream (after thousands of repeated error-shaped
-    # noise lines) still surfaces.
+    # noise lines) still surfaces.  IN-ORDER: head keeps the first distinct
+    # error lines (in stream order), tail keeps the final lines, and the
+    # elision marker between them records what was dropped.
     error_idx = lines.each_index.select { |i| error_line_match?(lines[i]) }
     head_lines = []
     error_idx.each do |i|
@@ -423,38 +454,133 @@ module Workspace
     parts.concat(tail_lines)
     text = parts.join("\n")
 
-    # 6. Final hard cap on pathological single-line monsters.
+    # 5. Final hard cap on pathological single-line monsters.  The cap is
+    # INCLUSIVE of the elision marker (plan step 4.4): the marker text is
+    # part of the budget, so the result never exceeds max_chars.
     if text.length > max_chars
-      keep = max_chars / 2
-      text = text[0, keep] + "\n... [#{text.length - keep - 60} chars elided] ...\n" + text[-60, 60].to_s
+      marker = "\n... [chars elided] ...\n"
+      keep = max_chars - marker.length - 60
+      keep = max_chars / 2 if keep < 0
+      head_txt = text[0, keep]
+      tail_txt = text[-60, 60].to_s
+      text = head_txt + marker + tail_txt
     end
 
-    text + (dropped_frames > 0 ? "\n[#{dropped_frames} framework backtrace frames elided]" : '')
+    # 6. Framework-frame marker (also inside the budget).
+    frame_marker = dropped_frames > 0 ? "\n[#{dropped_frames} framework backtrace frames elided]" : ''
+    if text.length + frame_marker.length > max_chars
+      room = max_chars - frame_marker.length
+      if room > 0
+        text = text[0, room]
+      else
+        text = frame_marker.sub(/\A\n/, '')
+      end
+    end
+    text + frame_marker
   end
 
   # Persist +text+ for post-hoc debugging and return its path (nil on
   # failure).  Written under the step files_dir when available, else /tmp.
+  # Return an in-order bounded head+tail view of +text+ whose length is
+  # bound_head_tail is the LEGACY character-based bounding helper, kept
+  # only for patch.rb's inline diagnostics (generated_patch / tried_strips),
+  # whose tests pin its "chars elided" marker.  The exec runner does NOT
+  # use it any more: runner streams go through `bound_stream` below, whose
+  # budget is BYTES (WP-E, plan step 2b).  WP-F should migrate patch.rb
+  # onto bound_stream and retire this helper.
+  helper :bound_head_tail do |text, max_chars = 4000|
+    text = text.to_s
+    return text if text.length <= max_chars
+    marker = "\n... [chars elided] ...\n"
+    head_room = (max_chars - marker.length) * 2 / 3
+    tail_room = (max_chars - marker.length) / 3
+    head_txt = text[0, head_room]
+    tail_txt = text[-tail_room, tail_room].to_s
+    head_txt + marker + tail_txt
+  end
+
+  # The ONE stream-truncation rule for exec results (WP-E, plan step 2b):
+  # a byte-bounded, in-order head+tail view of +text+ whose size is
+  # <= max_bytes BYTES with the elision marker INSIDE that budget.  It is
+  # applied to BOTH stdout and stderr on EVERY outcome path (ordinary
+  # exit, signal, timeout, launch failure).  Byte slicing can split a
+  # multibyte character; `scrub` drops the orphaned bytes so the result
+  # stays valid UTF-8, and scrubbing only ever shrinks, so the byte budget
+  # still holds.
+  helper :bound_stream do |text, max_bytes = 4000|
+    text = text.to_s
+    return text if text.bytesize <= max_bytes
+    marker = "\n... [bytes elided] ...\n"
+    budget = max_bytes - marker.bytesize
+    return marker if budget <= 0
+    head_room = budget * 2 / 3
+    tail_room = budget - head_room
+    enc = text.encoding
+    head = text.byteslice(0, head_room).to_s.force_encoding(enc).scrub('')
+    tail = text.byteslice(-tail_room, tail_room).to_s.force_encoding(enc).scrub('')
+    head + marker + tail
+  end
+
+  # Persist +text+ for post-hoc debugging and return its path (nil on
+  # failure).  The artifact lives under the STEP's files_dir (plan step
+  # 4.4): the caller context can open it (files_dir paths are bwrap-granted
+  # to the reporting process), whereas the old `Dir.mktmpdir` fallback
+  # produced a host temp path that `Workspace.read` could NOT open from the
+  # same caller — advertising an unreadable path was the bug.  If no
+  # files_dir exists or the write fails we return nil rather than a path
+  # we cannot stand behind.
   helper :persist_full_stream do |text, label = 'stderr_full'|
     begin
       dir = respond_to?(:files_dir) ? files_dir : nil
-      dir = nil if dir && !Open.exists?(dir.to_s)
-      dir ||= Dir.mktmpdir
-      path = File.join(dir.to_s, "#{label}.log")
+      return nil unless dir
+      dir = dir.to_s
+      FileUtils.mkdir_p(dir) unless Open.exists?(dir)
+      return nil unless Open.exists?(dir)
+      path = File.join(dir, "#{label}.log")
       Open.write(path, text.to_s)
+
+      # The spool path is returned to the CALLER, so the caller's own
+      # thread must be able to read it back (plan step 4.4: `Workspace.read`
+      # must be able to open every returned path from the same caller
+      # context).  Register a READ grant on the current thread; the file
+      # task's authorization composes thread read grants into its policy.
+      begin
+        LLM::Sandbox.allow_read_path(dir)
+        LLM::Sandbox.allow_read_path(path)
+      rescue
+        # Grant registration is best-effort: without it the artifact still
+        # exists on disk; the caller simply sees a read violation.
+      end
       path
     rescue
       nil
     end
   end
 
-  # Build the failure hash for a failed exec, condensing stderr while
-  # persisting the full stream for post-hoc debugging.
-  helper :failure_result do |exit_status, stdout, stderr, prefix: nil|
-    raw = [prefix, stderr].compact.join("\n")
-    condensed = condense_stderr(raw)
-    result = { exit_status: exit_status, stdout: stdout, stderr: condensed }
-    if condensed != stderr.to_s || condensed != raw
-      path = persist_full_stream(raw)
+  # Build the standard exec result shape (WP-E, plan step 2b): ONE stream
+  # rule applied to BOTH streams on EVERY path.  `bound_stream` returns a
+  # byte-bounded in-order head+tail copy whose elision marker counts inside
+  # the byte budget; whenever the inline copy is truncated, the COMPLETE
+  # stream is spooled under the step files_dir and advertised as
+  # `stdout_full` / `stderr_full`, re-openable by the exported read tool in
+  # the same caller context.  `base` carries the per-run context fields
+  # (execution_mode, cwd, launcher diagnostics); `failure_kind` classifies
+  # non-ordinary outcomes for machine consumers and stays ABSENT for plain
+  # exits that carry a real exit code.
+  helper :failure_result do |exit_status, stdout, stderr, prefix: nil, base: {}, failure_kind: nil|
+    raw_out = stdout.to_s
+    raw_err = [prefix.to_s.empty? ? nil : prefix,
+               stderr.to_s.empty? ? nil : stderr.to_s].compact.join("\n")
+    bounded_out = bound_stream(raw_out)
+    bounded_err = bound_stream(raw_err)
+    result = base.merge({ exit_status: exit_status, stdout: bounded_out, stderr: bounded_err })
+    result[:failure_kind] = failure_kind if failure_kind
+    if bounded_out != raw_out
+      path = persist_full_stream(raw_out, 'stdout_full')
+      result[:stdout_full] = path if path
+    end
+    if bounded_err != raw_err
+      path = persist_full_stream(raw_err)
       result[:stderr_full] = path if path
     end
     result
@@ -525,13 +651,45 @@ module Workspace
   end
 
   # ===========================================================================
+  # Base sandbox path composition (plan step 8) — the ONE definition of the
+  # canonical grant lists shared by `sandbox_paths` reporting (in
+  # filesystem.rb, via its `sandbox_mount_plan`) and by execution here.
+  # Both compose: bwrap_* config lists, the workflow allowed lists, and the
+  # workflow root always writable.  Per-call additions (runtime dirs,
+  # PATH-scanned runtime roots, resolv.conf, step files_dir, caller extras)
+  # are applied by each caller on top of this base and stay explicit.
+  # ===========================================================================
+  helper :base_sandbox_paths do
+    read_paths = Workspace.allowed_read_paths.dup
+    bwrap_read = Workspace.get_allowed_paths(:bwrap_read_paths)
+    read_paths += bwrap_read if bwrap_read && !bwrap_read.empty?
+
+    writable_paths = Workspace.allowed_paths.dup
+    bwrap_writable = Workspace.get_allowed_paths(:bwrap_paths)
+    writable_paths += bwrap_writable if bwrap_writable && ! bwrap_writable.empty?
+
+    # The exec sandbox always grants write access to the workflow root.
+    begin
+      root = Workspace.root
+      root = root.find if Path === root
+      writable_paths << root.to_s if root && ! root.to_s.empty?
+    rescue
+    end
+
+    {
+      read_paths:     read_paths.flatten.compact.uniq,
+      writable_paths: writable_paths.flatten.compact.uniq
+    }
+  end
+
+  # ===========================================================================
   # sandbox_run — execute +executable+ with +argv+ inside a bwrap sandbox.
   #
   # Uses the mount planner to construct a principled, namespace-preserving
   # set of bind mounts.  Falls back to unsandboxed execution with a warning
   # when bwrap is not available.
   # ===========================================================================
-  helper :sandbox_run do |executable, argv, options = {}, writable_paths = []|
+  helper :sandbox_run do |executable, argv, options = {}, writable_paths_extra = []|
     bwrap = find_bwrap
 
     timeout = options[:timeout]
@@ -545,28 +703,28 @@ module Workspace
                 timeout
               end
 
-    bwrap_paths       = Workspace.get_allowed_paths(:bwrap_paths)
-    bwrap_read_paths  = Workspace.get_allowed_paths(:bwrap_read_paths)
+    # Base path composition is SHARED (plan step 8) with the mount plan
+    # that `sandbox_paths` reports: one helper, `base_sandbox_paths`,
+    # defines the canonical grant composition (bwrap_* lists + allowed
+    # lists + always-root-writable).  Per-call additions below are
+    # explicit and separate so reporting and execution cannot drift.
+    base = base_sandbox_paths
+    read_paths      = base[:read_paths]
+    writable_paths  = base[:writable_paths]
 
-    writable_paths += Workspace.allowed_paths.dup
-    read_paths      = Workspace.allowed_read_paths.dup
+    # Per-call writable extras (e.g. the step files_dir) passed by the
+    # caller via the writable_paths argument:
+    writable_paths += Array(writable_paths_extra).flatten.compact.uniq
 
-    writable_paths += bwrap_paths      if bwrap_paths
-    read_paths     += bwrap_read_paths if bwrap_read_paths
-
-    # Add per-call writable dirs (e.g. step files_dir) - callers may pass extras.
-    writable_paths = Array(writable_paths).flatten.compact.uniq
-
-    # Ensure root is writable so the sandbox can access repo files.
-    root_dir = nil
-    begin
-      root_dir = Workspace.root
-    rescue
-    end
-    if root_dir && !root_dir.to_s.empty?
-      root_dir = root_dir.find if Path === root_dir
-      writable_paths << root_dir.to_s
-    end
+    # Root is already in the base plan; keep resolving root_dir for cwd.
+    root_dir = begin
+                 r = Workspace.root
+                 r = r.find if Path === r
+                 r.to_s
+               rescue
+                 nil
+               end
+    writable_paths << root_dir if root_dir && !root_dir.to_s.empty?
 
     writable_paths.uniq!
     read_paths.uniq!
@@ -576,6 +734,12 @@ module Workspace
     use_network = config(:use_network, :sandbox, :bwrap, default: 'true') == 'true'
     
     read_paths << '/etc/resolv.conf' if use_network
+
+    # WP-E, plan step 2b — the working directory is computed ONCE, before
+    # the mode branch, so the bwrap branch (--chdir) and the HOST branch
+    # (chdir spawn option) land on the SAME directory: the working root
+    # whenever one exists, otherwise the child inherits Dir.pwd.
+    cwd = root_dir && !root_dir.to_s.empty? ? root_dir.to_s : nil
 
     if use_bwrap
       Log.debug "Workspace sandbox_run read_paths: #{read_paths.inspect}, writable_paths: #{writable_paths.inspect}"
@@ -626,10 +790,10 @@ module Workspace
         bwrap_args << '--share-net'
       end
 
-      # Ensure we chdir into the repo root if available.
-      if root_dir && !root_dir.to_s.empty?
-        bwrap_args.concat(['--chdir', root_dir.to_s])
-      end
+      # Working directory: computed ONCE above the mode branch (WP-E, plan
+      # step 2b) so bwrap (--chdir) and the host fallback (chdir spawn
+      # option) use the SAME value — the working root when one exists.
+      bwrap_args.concat(['--chdir', cwd]) if cwd
 
       # End of bwrap args marker.
       bwrap_args << '--'
@@ -637,31 +801,13 @@ module Workspace
       # --- Build the full command as an argv array ---
       full_argv = [bwrap.to_s] + bwrap_args + [resolved_exec] + Array(argv).map(&:to_s)
 
-      begin
-        io = CMD.cmd(full_argv, options.merge(save_stderr: true, pipe: false, no_fail: false, log: true, timeout: timeout))
-        out = io.read.to_s
-        err = io.std_err.to_s
-        status = io.exit_status
-        if status == 0 && err.length <= 4000
-          { stdout: out, stderr: err, exit_status: status }
-        else
-          # Failure (or oversized stream): condense, keep raw copy on disk.
-          failure_result(status, out, err)
-        end
-      rescue => e
-        # CMD.cmd re-raises with the whole flattened bwrap argv embedded
-        # in the message; failure_result() summarizes it and drops the
-        # HOST backtrace, which only describes the caller's stack.
-        begin
-          program_err = e.io ? e.io.std_err.to_s : nil
-        rescue
-          program_err = nil
-        end
-        prefix = (e.message || e.class.to_s)
-        failure_result(-1, nil, program_err || '', prefix: prefix)
-      end
+      run_child(full_argv, cwd: cwd, timeout: timeout, options: options,
+                execution_mode: 'bwrap', bwrap_argv: [bwrap.to_s] + bwrap_args)
     else
-      # Fallback: warn and run unsandboxed.
+      # Fallback: run unsandboxed.  The POLICY is unchanged (host fallback
+      # still happens); the only new behavior is TRUTHFUL REPORTING of the
+      # mode in the result so callers can distinguish it from a sandboxed
+      # run (plan step 8: execution_mode reporting).
       if defined?(Log)
         Log.warn 'bwrap not found — running unsandboxed'
       else
@@ -670,26 +816,175 @@ module Workspace
 
       full_argv = [executable.to_s] + Array(argv).map(&:to_s)
 
-      begin
-        io = CMD.cmd(full_argv, options.merge(save_stderr: true, pipe: false, no_fail: false, log: true, timeout: timeout))
-        out = io.read.to_s
-        err = io.std_err.to_s
-        status = io.exit_status
-        if status == 0 && err.length <= 4000
-          { exit_status: status, stdout: out, stderr: err }
-        else
-          failure_result(status, out, err)
-        end
-      rescue => e
-        begin
-          program_err = e.io ? e.io.std_err.to_s : nil
-        rescue
-          program_err = nil
-        end
-        prefix = (e.message || e.class.to_s)
-        failure_result(-1, nil, program_err || '', prefix: prefix)
-      end
+      # Same cwd policy as the bwrap branch (plan step 4.1; WP-E, plan
+      # step 2b): when a working root exists the child runs there in BOTH
+      # modes.  `run_child` now hands that directory to the HOST child
+      # itself (a trailing chdir spawn option on the argv), so the child's
+      # actual pwd equals the working root even when it differs from
+      # Dir.pwd; the bwrap branch reaches the same directory via --chdir.
+      # Without a root the child inherits Dir.pwd and the result's `cwd`
+      # field reports nothing while `execution_mode` says `host_fallback`,
+      # so any real difference stays explicit.
+      host_cwd = cwd || Dir.pwd
+      run_child(full_argv, cwd: host_cwd, timeout: timeout, options: options,
+                execution_mode: 'host_fallback', bwrap_argv: nil)
     end
+  end
+
+  # ===========================================================================
+  # run_child — the single shared child-execution runner (plan step 4.1).
+  #
+  # Both the bwrap branch and the host-fallback branch previously carried
+  # VERBATIM-DUPLICATE copies of this logic (CMD.cmd call, io.read /
+  # io.std_err / io.exit_status, the status/err-size test and the rescue
+  # clause).  They are now ONE runner, parameterized by:
+  #   full_argv      — the complete launcher argv (bwrap prefix + exec +
+  #                    args, or bare executable + args)
+  #   cwd            — the working directory for the child.  The HOST
+  #                    branch runs the child THERE (WP-E, plan step 2b: a
+  #                    trailing chdir spawn option is appended to the argv
+  #                    so the child's actual pwd equals this value even
+  #                    when it differs from Dir.pwd); when the bwrap branch
+  #                    passes an explicit --chdir, that SAME value is given
+  #                    here so both modes use the SAME effective cwd
+  #                    (plan step 4.1), and the result reports it via
+  #                    `cwd`.
+  #   execution_mode — 'bwrap' or 'host_fallback', reported in the result.
+  #   bwrap_argv     — launcher argv diagnostics (plan step 4.5): the full
+  #                    bwrap prefix is preserved for debugging.
+  #
+  # Contract (plan step 4.2; WP-E, plan step 2b):
+  #   * The outcome is classified FIRST and only from reliable runner
+  #     information: ordinary exit (real exit status from CMD's io),
+  #     signal death (io.exit_status nil — no exit code exists),
+  #     timeout / launch failure (runner exception classes / CMD returning
+  #     nil).  Words in the child's output are NEVER evidence of anything.
+  #   * ONE stream rule then applies to BOTH stdout and stderr on EVERY
+  #     path: byte-bounded in-order head+tail inline (`bound_stream`,
+  #     marker inside the byte budget), complete stream spooled under the
+  #     step files_dir whenever truncation happened.
+  #   * Ordinary nonzero exits return the REAL exit code and, when small,
+  #     the child's streams VERBATIM (nothing truncated → nothing spooled);
+  #     stdout is preserved independently of stderr.
+  #   * -1 remains ONLY the sentinel for "no exit code exists" (signal
+  #     death, timeout, launch failure) and is NEVER used to mean "exit
+  #     code 1" or inferred from status 1 alone.
+  #   * failure_kind classifies the failure for machine consumers:
+  #     :timeout, :signal, :launch, :runner_exception, or nil for a plain
+  #     nonzero exit that carries a real exit code.
+  # ===========================================================================
+  helper :run_child do |full_argv, cwd: nil, timeout: nil, options: {}, execution_mode: nil, bwrap_argv: nil|
+    cmd_options = options.merge(save_stderr: true, pipe: false, log: true)
+    cmd_options[:timeout] = timeout unless timeout.nil?
+
+    base = { execution_mode: execution_mode }
+    base[:cwd] = cwd if cwd
+    base[:launcher] = bwrap_argv if bwrap_argv && Log.severity <= Log::LOW
+
+    # WP-E, plan step 2b — correction 1: pass the REAL working directory to
+    # the HOST child.  In CMD's array mode a trailing spawn-options hash
+    # inside the argv is consumed by Open3.popen3, so `chdir:` moves the
+    # child itself instead of leaving it in Dir.pwd.  The bwrap branch
+    # (bwrap_argv present) already chdirs via --chdir and is left untouched,
+    # so both modes end up with the SAME effective cwd.  The hash must stay
+    # the LAST argv element; every option key run_child passes to CMD.cmd
+    # is consumed there (save_stderr/pipe/log/no_fail/timeout/in), so CMD
+    # appends nothing after it.
+    spawn_argv = full_argv
+    if cwd && !cwd.to_s.empty? && bwrap_argv.nil?
+      spawn_argv = full_argv + [{ chdir: cwd.to_s }]
+    end
+
+    begin
+      # no_fail: true — CMD returns the io instead of raising, so BOTH
+      # streams and the REAL exit status are available to handlers even on
+      # nonzero exit (plan step 2 design decision; see
+      # reports/impl/02-cmd-probe.md).
+      io = CMD.cmd(spawn_argv, cmd_options.merge(no_fail: true))
+
+      # LAUNCH failure, from the runner fact alone (plan step 4.3): CMD
+      # returns nil when popen3 could not start the executable at all, so
+      # no exit code exists and -1 is the sentinel — never conflated with
+      # a plain exit-1 of some successfully started process.  The streams
+      # follow the same shared rule as every other path (here: plain text,
+      # nothing to truncate).
+      return base.merge(exit_status: -1, stdout: '',
+                        stderr: "Launch failed: no such executable — #{full_argv.first}",
+                        failure_kind: :launch) if io.nil?
+
+      # The CMD io object is a StringIO and `io.read` DRAINS it, so keep the
+      # raw text before any bounding.
+      raw_out = io.read.to_s
+      raw_err = io.std_err.to_s
+      status = io.exit_status
+
+      # Classify the outcome FIRST, from runner facts only (WP-E, plan step
+      # 2b — correction 2).  CMD's io exposes exit_status, which is NIL
+      # exactly when the process died by signal: no exit code exists, so
+      # the -1 sentinel and :signal are justified by a runner fact.  Every
+      # other status — INCLUDING exit 127 whose output happens to contain
+      # "not found" words — is an ORDINARY exit that keeps its real code;
+      # words in child output are never evidence.
+      signal_death = status.nil?
+      exit_code = signal_death ? -1 : status
+      kind = signal_death ? :signal : nil
+
+      # ONE stream rule on EVERY path (WP-E, plan step 2b): byte-bounded
+      # head+tail for BOTH streams, complete stream spooled under the step
+      # files_dir whenever the inline copy was truncated.
+      failure_result(exit_code, raw_out, raw_err, base: base, failure_kind: kind)
+    rescue => e
+      kind = classify_runner_exception(e)
+      build_exception_result(e, base: base, kind: kind)
+    end
+  end
+
+  # Classify a raised runner exception from the exception CLASS alone
+  # (WP-E, plan step 2b): message text is never trusted as evidence,
+  # because a ProcessFailed message embeds the CHILD'S OUTPUT — the exact
+  # channel the old word-matching inferences used.  The installed
+  # scout-essentials 1.9.3 classes are top-level `ProcessFailed` and
+  # `CMD::Timeout < ProcessFailed` (matched FIRST), plus Errno launch
+  # failures raised by the spawn itself.  A plain ProcessFailed arriving
+  # here carries no reliable signal information, so it stays
+  # :runner_exception rather than being guessed at.
+  helper :classify_runner_exception do |e|
+    case
+    when defined?(CMD::Timeout) && CMD::Timeout === e then :timeout
+    when Errno::ENOENT === e, Errno::EACCES === e, Errno::ENOEXEC === e then :launch
+    else :runner_exception
+    end
+  end
+
+  # Build a result from a raised runner exception, recovering whatever the
+  # underlying API exposes (io streams, exit status); -1 is the sentinel
+  # ONLY when no real exit code is available.  WP-E, plan step 2b: both
+  # streams go through the SAME shared rule as every other path, and stream
+  # text is never nil — when the exception carries no io (the CMD::Timeout
+  # of scout-essentials 1.9.3 does not) the streams are honest empty
+  # strings plus the runner's own report as the stderr prefix.
+  helper :build_exception_result do |e, base: {}, kind: nil|
+    program_out = ''
+    program_err = ''
+    status = -1
+    begin
+      io = e.io if e.respond_to?(:io)
+      if io
+        program_out = io.read.to_s if io.respond_to?(:read)
+        program_err = io.std_err.to_s if io.respond_to?(:std_err)
+        status = io.exit_status if io.respond_to?(:exit_status)
+      end
+    rescue
+      program_out = ''
+      program_err = ''
+    end
+    status = -1 if status.nil?
+
+    prefix = [e.message || e.class.to_s]
+    prefix.unshift("failure_kind: #{kind}") if kind
+
+    failure_result(status, program_out, program_err || '', base: base,
+                   prefix: prefix.join("\n"), failure_kind: kind)
   end
 
   # ===========================================================================
@@ -733,8 +1028,12 @@ module Workspace
     # Ensure args are strings
     args_array = Array(args_array).collect(&:to_s)
 
-    # Collect writable dirs to expose inside the sandbox
-    writable_paths = Workspace.get_allowed_paths(:allowed_paths)
+    # Collect writable dirs to expose inside the sandbox.
+    # Build a FRESH array (plan step 8): the call below used to assign the
+    # grant list itself and then mutate it with <<, so any caller-supplied
+    # `writable_paths` extras were overwritten and only survived by
+    # accident.  Keep the parameter intact and union it with the grants.
+    writable_paths = (Workspace.get_allowed_paths(:allowed_paths) + Array(writable_paths)).compact.uniq
     begin
       writable_paths << self.files_dir if respond_to?(:files_dir) && self.files_dir && Open.exists?(self.files_dir)
     rescue => _e

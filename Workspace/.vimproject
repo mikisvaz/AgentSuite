@@ -10,6 +10,9 @@ Workspace=/$PWD filter="*" {
   sandbox
 
   paths
+
+  biomodel_fixes
+
  }
  lib=lib {
   Workspace=Workspace {

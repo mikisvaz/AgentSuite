@@ -1,6 +1,6 @@
 ---
 name: workspace-execution
-description: "Run bash, Python, Ruby or R code through the Workspace exec tasks with fresh-process discipline and durable provenance. Use when an agent must run a shell command or a script, compute a value, reproduce a calculation, decide which language surface fits the job, or interpret exec task failures such as condensed stderr or sandbox launch errors. Triggers: bash, python, ruby, r, \"run command\", \"execute script\", \"compute\", \"stderr_full\", \"exit_status\", \"fresh process\", \"return_path\", \"reproducible check\", \"bwrap\"."
+description: "Run bash, Python, Ruby or R code through the Workspace exec tasks with fresh-process discipline and durable provenance. Use when an agent must run a shell command or a script, compute a value, reproduce a calculation, decide which language surface fits the job, or interpret exec task failures such as bounded streams, failure_kind classification or sandbox launch errors. Triggers: bash, python, ruby, r, \"run command\", \"execute script\", \"compute\", \"stderr_full\", \"stdout_full\", \"exit_status\", \"failure_kind\", \"fresh process\", \"return_path\", \"reproducible check\", \"bwrap\"."
 ---
 
 # Workspace execution (bash / python / ruby / r)
@@ -26,6 +26,9 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
 - Each invocation is a FRESH process: variables, ambient imports and
   state from previous calls do not carry over. When behavior depends on
   prior state, encode it in files, not in call order.
+- All four surfaces share one child runner: the cwd is the same in host
+  and bwrap modes, and the reported `execution_mode` tells you which one
+  ran (`bwrap` or `host_fallback`; the fallback policy is unchanged).
 - Write scripts with the Workspace `write` task and run them by path; do
   not inline script bodies in `bash -c` strings where quoting can corrupt
   them. Iterate in `tmp/`, ship results from the results area.
@@ -42,20 +45,26 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
 - Cap probe iterations: after two consecutive identical failures, change
   one material variable or switch surface instead of repeating the call.
 
-## Reading exec results
+## Reading exec results (faithful by construction)
 
-- Every exec task returns `{stdout, stderr, exit_status}` as JSON. A
-  non-zero exit is a real result — read it, do not treat the call as
-  failed tooling.
-- On failure or huge error streams, `stderr` is condensed root-cause-first
-  (distinct error lines hoisted, repeats collapsed as `line [x N]`,
-  framework backtraces dropped, giant argv dumps summarized, long streams
-  cut with `... [N lines omitted] ...`). When persistence succeeds, the complete stream is preserved
-  on disk and its path returned in `stderr_full` — read that file when the
-  condensed view is not enough.
-- Sandbox launch failures surface as the bwrap argv in stderr; treat them
-  as environment constraints, consult `sandbox_paths` (see the
-  workspace-files skill), and use a path spelling the sandbox can see.
+- Every exec task returns `{stdout, stderr, exit_status}` as JSON. An
+  ordinary nonzero exit returns the REAL exit code and is a real result —
+  read it, do not treat the call as failed tooling. `-1` appears only when
+  no exit code exists.
+- A classified failure additionally carries the additive `failure_kind`:
+  `timeout`, `signal`, `launch` or `runner_exception`.
+- Streams are never dropped or reordered. Small child stderr is returned
+  verbatim — including EMPTY stderr — and stdout is preserved
+  independently of stderr: a quiet stderr never hides a loud stdout.
+- When a stream is oversized, `stderr`/`stdout` carry an in-order
+  head/tail excerpt whose byte budget INCLUDES the elision markers. The
+  complete stream is spooled to a file under the step's `files_dir` and
+  referenced as `stderr_full`/`stdout_full`; both are readable with the
+  exported `read` tool in the same caller context.
+- Sandbox launch failures surface as the launcher argv in debug
+  diagnostics; treat them as environment constraints, consult
+  `sandbox_paths` (see the workspace-files skill), and use a path spelling
+  the sandbox can see (`failure_kind: 'launch'`).
 
 ## Task cheat sheet
 
@@ -72,19 +81,21 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
 
 - Reading only `exit_status` and skipping `stdout` — tool success is not
   correctness; read what the run actually produced.
+- Treating empty stderr as "dropped" — an ordinary nonzero exit returns
+  empty stderr verbatim; nothing is elided for small streams.
 - Inlining multi-line scripts into `bash -c` and losing them to quoting —
   write the script file first.
 - Expecting variables from a previous exec call to persist — fresh process
   every time.
-- Chasing a "vanished" result in stderr instead of checking the job
-  directory (`var/jobs/Workspace/…`, `.files` sidecar).
+- Chasing a "vanished" result in stderr instead of reading
+  `stdout_full`/`stderr_full` under the job's `files_dir`.
 - Repeating an identical failing command — change one variable or switch
   surface after two failures.
 
 ## Going deeper (repo-relative pointers, optional)
 
 - `Workspace/doc/user/SandboxAndOutputs.md` — sandbox execution model,
-  output handling and `stderr_full`, examples.
+  output handling and `stdout_full`/`stderr_full`, examples.
 - `Workspace/README.md` — the `# Tasks` entries for `bash`, `python`,
   `ruby`, `r`, `current_time`.
 - scout-essentials `doc/user/RunningCommands.md`,
