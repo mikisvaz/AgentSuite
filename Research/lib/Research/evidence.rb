@@ -146,6 +146,13 @@ module Research
         #   { 'class' => 'durable'|'ephemeral', 'job_tree' => bool }
         # Raises ParameterException (hard error) for broken references.
         def classify_reference!(source, canonical)
+          if canonical && File.directory?(canonical)
+            raise ParameterException,
+                  "broken reference: #{source.inspect} is a directory " \
+                  '(C1/R7: a result ref must name one concrete artifact — ' \
+                  'one regular file — on persistent storage); attach regular ' \
+                  'files one by one'
+          end
           unless canonical && File.file?(canonical)
             raise ParameterException,
                   "broken reference: #{source.inspect} does not resolve to " \

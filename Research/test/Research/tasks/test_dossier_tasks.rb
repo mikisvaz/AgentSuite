@@ -284,6 +284,34 @@ class TestDossierTasksExported < Test::Unit::TestCase
     assert_equal "# New Title\n\nnew body\n", File.read(File.join(dir, 'README.md'))
   end
 
+  # T9 — store_document_name! error messages are bounded: a huge invalid
+  # name is excerpted, a short one keeps the exact existing text.
+  def test_invalid_document_name_error_is_bounded_for_long_names
+    r = dispatch('dossier_create', @p.merge('type' => 'question', 'title' => 'BND',
+                                            'content' => "# BND\n"))
+    id = r['id']
+    huge = ('x' * 50_000) + '.md'
+    err = dispatch('dossier_capture', @p.merge('id' => id, 'expected_revision' => 1, 'documents' => huge))
+    assert err.is_a?(ScoutException)
+    assert_operator err.message.length, :<, 1000,
+                    "error must be bounded (got #{err.message.length} bytes)"
+    assert_match(/truncated; 50003 chars, 50003 bytes/, err.message)
+    assert_match(/is not an authored document of the dossier/, err.message)
+    assert_match(/authored documents are 'README\.md' and 'supplements\/<name>'/, err.message)
+  end
+
+  def test_invalid_document_name_error_text_unchanged_for_short_names
+    r = dispatch('dossier_create', @p.merge('type' => 'question', 'title' => 'BND2',
+                                            'content' => "# BND2\n"))
+    id = r['id']
+    err = dispatch('dossier_capture', @p.merge('id' => id, 'expected_revision' => 1,
+                                              'documents' => 'short.md'))
+    assert err.is_a?(ScoutException)
+    assert_equal "document \"short.md\" is not an authored document of the " \
+                 "dossier; authored documents are 'README.md' and 'supplements/<name>'",
+                 err.message
+  end
+
   def test_update_replace_lines_exact_semantics
     doc = "l1\nl2\nl3\nl4\nl5\n"
     r = run_task(:dossier_create, @p.merge('type' => 'hypothesis', 'title' => 'L', 'content' => doc))
@@ -842,6 +870,59 @@ class TestDossierTasksExported < Test::Unit::TestCase
     assert_equal 2, u['revision']
     assert u['update_echo']['newline_normalized']
     assert_equal "l1\nn1\nn2\nl3\n", File.read(path)
+  end
+
+  # T7 — nofile class (same mechanism as v3/v4): a :text literal that
+  # happens to equal an existing filename must land as its own BYTES, not
+  # be replaced by that file's contents (scout-gear Task.format_input).
+  # The temp project CWD contains README.md and we plant a file named
+  # "Overview" to collide with the literal replacement/anchor text.
+  def test_update_literal_text_colliding_with_filename_is_not_substituted
+    r = dispatch('dossier_create', @p.merge('type' => 'question', 'title' => 'NF',
+                                            'content' => "# NF\n\nfoo\nbody\n"))
+    id = r['id']
+    readme = File.join(@root, 'questions', id, 'README.md')
+    file_body = "I AM THE Overview FILE'S CONTENTS\n"
+    File.binwrite(File.join(@project, 'Overview'), file_body)
+
+    # replacement == literal "Overview" (names an existing file in cwd):
+    # the bytes written must be the literal, never file_body.
+    u = dispatch('dossier_update',
+                 @p.merge('id' => id, 'expected_revision' => 1,
+                          'mode' => 'replace_lines',
+                          'start_line' => 3, 'end_line' => 4,
+                          'replacement' => 'Overview'))
+    assert_equal 2, u['revision']
+    stored = File.read(readme)
+    assert_equal "# NF\n\nOverview\nbody\n", stored
+    refute stored.include?(file_body.chomp),
+            'replacement literal must not be replaced by file contents'
+
+    # anchor == literal "Overview\n" of the span now on disk: a
+    # substitution would mismatch the span and reject the edit.
+    a = dispatch('dossier_update',
+                 @p.merge('id' => id, 'expected_revision' => 2,
+                          'mode' => 'replace_lines',
+                          'start_line' => 3, 'end_line' => 4,
+                          'anchor' => "Overview\n",
+                          'replacement' => "Overview (renamed)\n"))
+    assert_equal 3, a['revision']
+    assert File.read(readme).include?("Overview (renamed)\n")
+  end
+
+  # content (whole-document mode) with a literal colliding with README.md:
+  # the stored README.md must be the literal content, not the existing
+  # project README read from disk.
+  def test_create_content_literal_colliding_with_readme_is_not_substituted
+    # seed a distinct project README so a substitution would be observable
+    File.binwrite(File.join(@project, 'seed_marker.txt'), 'seeded')
+    r = dispatch('dossier_create',
+                 @p.merge('type' => 'question', 'title' => 'NF2',
+                          'content' => 'README.md'))
+    id = r['id']
+    stored = File.read(File.join(@root, 'questions', id, 'README.md'))
+    assert_equal 'README.md', stored # literal bytes, verbatim
+    refute_match(/WO-3|Evidence|dossier/, stored)
   end
 end
 

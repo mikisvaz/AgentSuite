@@ -98,6 +98,19 @@ module Research
       # Document names (Manager rulings 1 and 4)
       # -------------------------------------------------------------
 
+      # excerpt_for_error(s, limit = 200) -> String safe to interpolate
+      # into an error message. Long inputs (e.g. file contents that reached
+      # a name-taking input) are cut at `limit` characters with a size
+      # note, so one bad dispatch cannot bury the actionable guidance in
+      # tens of kilobytes of quoted bytes. Short values pass through
+      # unchanged, keeping historical messages byte-identical.
+      def excerpt_for_error(s, limit = 200)
+        s = s.to_s
+        return s if s.length <= limit
+
+        "#{s[0, limit]}…[truncated; #{s.length} chars, #{s.bytesize} bytes]"
+      end
+
       # store_document_name!(document) -> store document name.
       #
       # Accepts 'README.md' and 'supplements/<name>' (one path segment,
@@ -123,25 +136,25 @@ module Research
         end
         if s.start_with?('/')
           raise ParameterException,
-                "document #{s.inspect} must be relative to the dossier; " \
+                "document #{excerpt_for_error(s).inspect} must be relative to the dossier; " \
                 'absolute paths are rejected'
         end
         parts = s.split('/')
         if parts.include?('..') || parts.include?('.')
           raise ParameterException,
-                "document #{s.inspect} must not contain '.' or '..' components; " \
+                "document #{excerpt_for_error(s).inspect} must not contain '.' or '..' components; " \
                 'traversal out of the dossier is rejected'
         end
         if s == Layout::EVIDENCE || s.start_with?("#{Layout::EVIDENCE}/")
           raise ParameterException,
-                "#{s.inspect} is an evidence attachment, not an authored text " \
+                "#{excerpt_for_error(s).inspect} is an evidence attachment, not an authored text " \
                 'document; evidence bytes are immutable and are served by ' \
                 'evidence_read, not dossier_read'
         end
         if s == Layout::STORE || s.start_with?("#{Layout::STORE}/") ||
            s == Layout::ROOT_META || s.start_with?("#{Layout::ROOT_META}/")
           raise ParameterException,
-                "#{s.inspect} is a reserved store/metadata area, never an authored " \
+                "#{excerpt_for_error(s).inspect} is a reserved store/metadata area, never an authored " \
                 'document; revision records are cited through the record and ' \
                 'record_digest result fields of the dossier tasks'
         end
@@ -151,7 +164,7 @@ module Research
           rest = s[(Layout::SUPPLEMENTS.length + 1)..]
           if rest.empty? || rest.split('/').any?(&:empty?) || rest.end_with?('/')
             raise ParameterException,
-                  "supplement path #{s.inspect} is not a usable relative " \
+                  "supplement path #{excerpt_for_error(s).inspect} is not a usable relative " \
                   "document path under #{Layout::SUPPLEMENTS}/ " \
                   '(nested folders are supported; empty segments are not)'
           end
@@ -159,7 +172,7 @@ module Research
         end
 
         raise ParameterException,
-              "document #{s.inspect} is not an authored document of the dossier; " \
+              "document #{excerpt_for_error(s).inspect} is not an authored document of the dossier; " \
               "authored documents are '#{ENTRY_DOCUMENT}' and " \
               "'#{Layout::SUPPLEMENTS}/<name>'"
       end

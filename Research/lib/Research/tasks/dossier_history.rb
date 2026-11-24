@@ -21,7 +21,7 @@ module Research
   input :id, :string, 'Dossier id, e.g. Q-001'
   input :limit, :integer, 'Maximum revisions per page (default 100)', 100
   input :continuation, :string, 'Continuation token from a previous page'
-  input :diff_document, :string, "When set, produce a line diff of this document between from_revision and to_revision ('README.md' or 'supplements/<name>')"
+  input :diff_document, :string, "When set, produce a line diff of this document between from_revision and to_revision ('README.md' or 'supplements/<name>')", nil, nofile: true
   input :from_revision, :integer, 'Diff start revision (default: first revision)'
   input :to_revision, :integer, 'Diff end revision (default: current revision)'
   desc 'Browse the immutable revision inventory of a dossier: revisions, timestamps, change notes, document and attachment identities; optional line diff of one document between two revisions.'

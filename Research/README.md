@@ -109,6 +109,16 @@ re-materialized from objects — history and attachments are never touched.
 A no-op edit creates no revision and reports `changed: false`; a stale
 `expected_revision` rejects with `StaleRevision` (re-read, then retry).
 
+Worked example — replacing a three-line section at lines 26-28
+(`## Status` / blank / `Investigation in progress.`): pass
+`mode: replace_lines, start_line: 26, end_line: 29` (`end_line` is
+exclusive, so `[26, 29)` covers exactly lines 26-28),
+`replacement: "## Status\n\nAnswered (bounded).\n"`, and
+`anchor: "## Status\n\nInvestigation in progress.\n"` — the anchor quotes
+the span including the final newline of line 28. Line modes take
+`replacement`; `content` is only for whole-document modes, and to edit
+through end of document pass `end_line` = `total_lines + 1` from the read.
+
 ## evidence_attach
 Attach evidence files to a dossier, as retained copies or live references.
 

@@ -36,7 +36,7 @@ module Research
 
   input :id, :string, 'Dossier id, e.g. Q-001'
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-  input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names"
+  input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names", nil, nofile: true
   input :change_note, :string, 'Human-readable note recorded with the new revision'
   desc 'Capture externally edited authored documents as a new revision (the only explicit adoption path for drift). Rejects when retained evidence is corrupted.'
   task :dossier_capture do |id, expected_revision, documents, change_note|

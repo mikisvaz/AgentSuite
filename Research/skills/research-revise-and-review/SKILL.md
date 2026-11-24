@@ -87,6 +87,35 @@ LLM.call_workflow(Research, :dossier_history, 'id' => 'C-006')
 # revisions[1] keeps change_note null (original claim) — history stays honest.
 ```
 
+## Example (replace a three-line section, anchored)
+
+```ruby
+# dossier_read reported total_lines 40 and lines 26-28 are:
+#   26: ## Status
+#   27:
+#   28: Investigation in progress.
+LLM.call_workflow(Research, :dossier_update,
+  'id' => 'Q-001', 'expected_revision' => 2,
+  'mode' => 'replace_lines',
+  'start_line' => 26, 'end_line' => 29,                       # 29 is EXCLUSIVE -> covers 26-28
+  'replacement' => "## Status\n\nAnswered (bounded).\n",
+  'anchor' => "## Status\n\nInvestigation in progress.\n",    # includes line 28's trailing \n
+  'change_note' => 'status: answered (bounded)')
+# => {"id"=>"Q-001", "revision"=>3, "changed"=>true,
+#     "lines_removed"=>3, "lines_inserted"=>3, "newline_normalized"=>false, ...}
+```
+
+Notes the five-retry failures in real runs came from:
+- `end_line` is **exclusive**: `[26, 29)` covers lines 26-28 — passing 28
+  would leave line 28 in place.
+- The `anchor` quotes the span text **including the final newline of the
+  last span line** (`…in progress.\n`, not `…in progress.`); quoting
+  without it mismatches.
+- Line modes use `replacement` (the new span text); `content` is only for
+  whole-document modes (`create_document` / `replace_document`).
+- To replace through the end of the document, pass `end_line` =
+  `total_lines + 1` from the read.
+
 ## Details
 
 - Line-edit contract and error recovery (stale revisions, range errors,

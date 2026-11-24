@@ -18,7 +18,7 @@ require_relative 'common'
 module Research
   input :type, :select, 'Kind of dossier to create; fixes the ID prefix: question Q-###, claim C-###, hypothesis H-###', nil, select_options: %w[question claim hypothesis]
   input :title, :string, 'Dossier title (written as the entry heading when content is omitted)'
-  input :content, :text, 'Optional initial Markdown for the entry document README.md'
+  input :content, :text, 'Optional initial Markdown for the entry document README.md', nil, nofile: true
   desc 'Create a scientific record dossier (question, claim or hypothesis) and its first revision. Returns the root-local ID, revision, entry document README.md and a Markdown link to it.'
   task :dossier_create do |type, title, content|
     root = Tasks.store_root

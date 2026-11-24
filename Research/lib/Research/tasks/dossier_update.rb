@@ -101,11 +101,11 @@ module Research
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
   input :mode, :select, 'Update mode: create_document, replace_document, replace_lines or delete_lines', nil, select_options: %w[create_document replace_document replace_lines delete_lines]
   input :document, :string, "Target authored document: 'README.md' (default) or 'supplements/<name>'", 'README.md', nofile: true
-  input :content, :text, 'New document content for create_document / replace_document'
-  input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)'
+  input :content, :text, 'New document content for create_document / replace_document', nil, nofile: true
+  input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)', nil, nofile: true
   input :start_line, :integer, 'First line of the edited span (one-based)'
   input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
-  input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged, guarding against stale line numbers. Verifies the CURRENT TEXT of the stated span only — identical text at another position also matches, and an empty span anchors against "" (no position protection for insertions)'
+  input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged, guarding against stale line numbers. Verifies the CURRENT TEXT of the stated span only — identical text at another position also matches, and an empty span anchors against "" (no position protection for insertions)', nil, nofile: true
   input :change_note, :string, 'Human-readable note recorded with the new revision'
   desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; optional anchor verifies the addressed span first; no-op edits create no revision.'
   task :dossier_update do |id, expected_revision, mode, document, content, replacement, start_line, end_line, anchor, change_note|

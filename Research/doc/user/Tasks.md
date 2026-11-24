@@ -31,7 +31,7 @@ Task list: `dossier_create`, `dossier_list`, `dossier_read`,
 ```
 Research.input :type, :select, 'Dossier type', nil, select_options: %w[question claim hypothesis]
 Research.input :title, :string, 'Dossier title (written as the entry heading when content is omitted)'
-Research.input :content, :text, 'Optional initial Markdown for the entry document README.md'
+Research.input :content, :text, 'Optional initial Markdown for the entry document README.md', nil, nofile: true
 Research.desc 'Create a scientific record dossier (question, claim or hypothesis) and its first revision. Returns the root-local ID, revision, entry document README.md and a Markdown link to it.'
 ```
 
@@ -89,11 +89,11 @@ Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
 Research.input :mode, :select, 'Update mode: create_document, replace_document, replace_lines or delete_lines', nil, select_options: %w[create_document replace_document replace_lines delete_lines]
 Research.input :document, :string, "Target authored document: 'README.md' (default) or 'supplements/<name>'", 'README.md', nofile: true
-Research.input :content, :text, 'New document content for create_document / replace_document'
-Research.input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)'
+Research.input :content, :text, 'New document content for create_document / replace_document', nil, nofile: true
+Research.input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)', nil, nofile: true
 Research.input :start_line, :integer, 'First line of the edited span (one-based)'
 Research.input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
-Research.input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged. Verifies the current text of the stated span only — it cannot distinguish identical text at different positions, and an empty span's anchor is always empty (no position protection for insertions). A mismatch means: re-read the document, then retry with the corrected span and an anchor quoting the text you intend to replace'
+Research.input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged, guarding against stale line numbers. Verifies the CURRENT TEXT of the stated span only — identical text at another position also matches, and an empty span anchors against "" (no position protection for insertions)', nil, nofile: true
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
 Research.desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; no-op edits create no revision.'
 ```
@@ -153,7 +153,7 @@ revision; source/destination escapes; name collisions without `replace`.
 
 ```
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
-Research.input :attachment, :string, "Attachment key '<slot>/<name>' as returned by dossier overview or evidence_attach"
+Research.input :attachment, :string, "Attachment key '<slot>/<name>' as returned by dossier overview or evidence_attach", nil, nofile: true
 Research.input :revision, :integer, 'Historical revision of the attachment entry (default: current)'
 Research.input :start_line, :integer, 'First line to return for text evidence (one-based; default 1)', 1
 Research.input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500
@@ -204,7 +204,7 @@ Errors: unknown id; out-of-range limit. Read-only: findings never mutate.
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :limit, :integer, 'Maximum revisions per page (default 100)', 100
 Research.input :continuation, :string, 'Continuation token from a previous page'
-Research.input :diff_document, :string, "When set, produce a line diff of this document between from_revision and to_revision ('README.md' or 'supplements/<name>')"
+Research.input :diff_document, :string, "When set, produce a line diff of this document between from_revision and to_revision ('README.md' or 'supplements/<name>')", nil, nofile: true
 Research.input :from_revision, :integer, 'Diff start revision (default: first revision)'
 Research.input :to_revision, :integer, 'Diff end revision (default: current revision)'
 Research.desc 'Browse the immutable revision inventory of a dossier: revisions, timestamps, change notes, document and attachment identities; optional line diff of one document between two revisions.'
@@ -221,7 +221,7 @@ here and in `evidence_read`; concise task outputs do not remove it.
 ```
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-Research.input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names"
+Research.input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names", nil, nofile: true
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
 Research.desc 'Capture externally edited authored documents as a new revision (the only explicit adoption path for drift). Rejects when retained evidence is corrupted.'
 ```

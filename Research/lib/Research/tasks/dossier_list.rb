@@ -18,7 +18,7 @@ module Research
   MAX_LIMIT = 1000
 
   input :type, :select, 'Restrict the listing to one dossier type; omit to list all types', nil, select_options: %w[question claim hypothesis]
-  input :query, :string, 'Case-insensitive substring matched against id, title, authored-document names and CURRENT authored-document contents (never history snapshots, never attachment bytes). Scan cost is one read per document per listed dossier.'
+  input :query, :string, 'Case-insensitive substring matched against id, title, authored-document names and CURRENT authored-document contents (never history snapshots, never attachment bytes). Scan cost is one read per document per listed dossier.', nil, nofile: true
   input :limit, :integer, 'Maximum dossiers to return (1..1000)', 100
   input :continuation, :string, 'Continuation token from a previous page'
   desc 'List dossiers under the research root: id, title, type, revision, location. Derived live from the store; there is no index file to go stale.'

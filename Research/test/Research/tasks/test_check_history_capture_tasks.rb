@@ -34,6 +34,12 @@ class TestCheckHistoryCaptureTasks < Test::Unit::TestCase
     DossierFixtures.in_project(@project) { Research.job(task, nil, **params).exec }
   end
 
+  # The exported-call dispatch path (what an agent's workflow tool
+  # actually invokes), same contract as the dossier suite.
+  def dispatch(task, params)
+    DossierFixtures.in_project(@project) { LLM.call_workflow(Research, task, params) }
+  end
+
   def check(extra = {})
     run_task(:dossier_check, @p.merge(extra))
   end
@@ -333,6 +339,88 @@ class TestCheckHistoryCaptureTasks < Test::Unit::TestCase
                         'documents' => 'all'))
     end
     assert err.message.include?('drift')
+  end
+
+  # ---- ruled amendment: batch cap -----------------------------------
+
+  # ---- nofile regression: document-name literals must not be replaced  # T5 (unit variant): a legitimate selection exceeding 100 documents
+  # still raises the cap error — building 101 supplements through the API
+  # is too slow for the suite, so the rule is pinned directly here.
+  def test_capture_documents_over_cap_still_raises
+    big = (1..101).map { |i| "supplements/p#{i}.md" }
+    e = assert_raise(ParameterException) do
+      Research.parse_capture_documents(JSON.generate(big))
+    end
+    assert_match(/too many documents to capture \(101; cap 100\)/, e.message)
+    refute_match(/README/, e.message) # no file contents leaked in
+  end
+
+  # ---- nofile regression: document-name literals must not be replaced
+  # by file CONTENTS (scout-gear Task.format_input substitutes a :string
+  # literal that names an existing cwd-relative file when the input lacks
+  # nofile; the dossier store plants README.md in the project cwd, so the
+  # collision is self-inflicted — v4 hit this with documents:"README.md",
+  # parsing the whole README as a 935-entry document list).
+
+  def test_capture_documents_literal_readme_is_not_substituted_by_contents
+    external = "# WO-5\n\none\ntwo\nEXTERNAL EDIT\n"
+    File.binwrite(File.join(@dir, 'README.md'), external)
+    cap = dispatch(:dossier_capture,
+                   'id' => @id, 'expected_revision' => @rev,
+                   'documents' => 'README.md')
+    assert_equal 2, cap['revision']
+    assert_equal true, cap['changed']
+    assert_equal %w[README.md], cap['documents'].keys
+    assert cap['captured_documents']['README.md']['observed_digest']
+    read = run_task(:dossier_read, @p.merge('id' => @id))
+    assert_equal external, read['content']
+  end
+
+  def test_capture_documents_json_array_form_parity
+    external = "# WO-5\n\none\ntwo\nEXTERNAL EDIT\n"
+    File.binwrite(File.join(@dir, 'README.md'), external)
+    cap = dispatch(:dossier_capture,
+                   'id' => @id, 'expected_revision' => @rev,
+                   'documents' => '["README.md"]')
+    assert_equal %w[README.md], cap['documents'].keys
+    assert_equal 2, cap['revision']
+  end
+
+  def test_capture_documents_comma_list_captures_both
+    FileUtils.mkdir_p(File.join(@dir, 'supplements'))
+    File.binwrite(File.join(@dir, 'README.md'), "# WO-5\n\nDRIFT\n")
+    File.binwrite(File.join(@dir, 'supplements', 'notes.md'), "# notes\n\nDRIFT\n")
+    cap = dispatch(:dossier_capture,
+                   'id' => @id, 'expected_revision' => @rev,
+                   'documents' => 'README.md, supplements/notes.md')
+    assert_equal %w[README.md supplements/notes.md].sort,
+                 cap['documents'].keys.sort
+  end
+
+  def test_capture_documents_all_captures_all_authored_documents
+    FileUtils.mkdir_p(File.join(@dir, 'supplements'))
+    File.binwrite(File.join(@dir, 'README.md'), "# WO-5\n\nDRIFT\n")
+    File.binwrite(File.join(@dir, 'supplements', 'notes.md'), "# notes\n\nDRIFT\n")
+    cap = dispatch(:dossier_capture,
+                   'id' => @id, 'expected_revision' => @rev,
+                   'documents' => 'all')
+    assert_equal %w[README.md supplements/notes.md].sort,
+                 cap['documents'].keys.sort
+  end
+
+  # diff_document is the sibling demonstrated case (v3): with nofile the
+  # NAME reaches the task and the history diff is normal, not a 45 kB blob.
+  def test_history_diff_document_literal_name_reaches_task
+    external = "# WO-5\n\none\ntwo\nEXTERNAL EDIT\n"
+    File.binwrite(File.join(@dir, 'README.md'), external)
+    dispatch(:dossier_capture, 'id' => @id, 'expected_revision' => @rev,
+                               'documents' => 'README.md')
+    out = dispatch(:dossier_history, 'id' => @id,
+                                     'diff_document' => 'README.md')
+    assert out['diff']
+    assert_equal 'README.md', out['diff']['document']
+    assert_operator out['diff'].to_s.length, :<, 2000,
+                    'history diff must not embed file contents in errors'
   end
 
   # ---- ruled amendment: batch cap -----------------------------------

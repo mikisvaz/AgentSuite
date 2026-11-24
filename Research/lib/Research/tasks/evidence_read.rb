@@ -26,7 +26,7 @@ module Research
   EVIDENCE_READ_MAX_MAX_LINES = 5000
 
   input :id, :string, 'Dossier id, e.g. Q-001'
-  input :attachment, :string, "Attachment key '<slot>/<name>' as returned by dossier overview or evidence_attach"
+  input :attachment, :string, "Attachment key '<slot>/<name>' as returned by dossier overview or evidence_attach", nil, nofile: true
   input :revision, :integer, 'Historical revision of the attachment entry (default: current)'
   input :start_line, :integer, 'First line to return for text evidence (one-based; default 1)', 1
   input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500

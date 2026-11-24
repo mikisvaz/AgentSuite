@@ -143,6 +143,30 @@ class TestEvidenceTasksExported < Test::Unit::TestCase
     assert_equal @rev, run_task(:dossier_read, @p.merge('id' => @id))['current_revision']
   end
 
+  def test_reference_mode_directory_source_names_the_condition
+    # T8: reference mode must distinguish an EXISTING DIRECTORY from a
+    # missing path (both used to say "does not resolve to an existing
+    # regular file").
+    e = assert_raise(ParameterException) do
+      attach([{ 'source' => @sources, 'slot' => 'data', 'mode' => 'reference' }])
+    end
+    assert_match(/is a directory/, e.message)
+    assert_match(/one regular file/, e.message)
+    refute_match(/does not resolve/, e.message)
+    # batch atomicity preserved: no revision bump, no staged attachments
+    assert_equal @rev, run_task(:dossier_read, @p.merge('id' => @id))['current_revision']
+    ov = run_task(:dossier_read, @p.merge('id' => @id, 'overview' => true))
+    assert_equal [], ov['attachments']
+
+    # missing path keeps its own (unchanged) message
+    missing = File.join(@sources, 'no-such-file.txt')
+    m = assert_raise(ParameterException) do
+      attach([{ 'source' => missing, 'slot' => 'data', 'mode' => 'reference' }])
+    end
+    assert_match(/does not resolve to an existing regular file/, m.message)
+    assert_equal @rev, run_task(:dossier_read, @p.merge('id' => @id))['current_revision']
+  end
+
   def test_batch_with_one_invalid_item_rolls_back_whole_batch
     tsv = File.join(@sources, 'table.tsv')
     missing = File.join(@sources, 'nope.tsv')
