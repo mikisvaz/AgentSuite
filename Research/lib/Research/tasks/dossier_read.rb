@@ -49,19 +49,20 @@ module Research
     end
 
     Tasks.map_store_errors(root, id) do
+      cur = Store.current_revision(root, type, id)
+      effective = revision || cur['revision']
+      record = effective == cur['revision'] ? cur['record'] : Store.read_revision(cur['dir'], effective)
       if overview
-        Research.read_overview(root, type, id)
+        Research.read_overview(cur, record, effective, type, id)
       else
-        Research.read_document(root, type, id, document, revision,
-                      start_line, max_lines)
+        Research.read_document(cur, record, effective, type, id, document, start_line, max_lines)
       end
     end
   end
 
 # internal helpers (module functions reached from the task body as Research.<name>)
 
-  def Research.read_document(root, type, id, document, revision,
-                    start_line, max_lines)
+  def Research.read_document(cur, record, effective, type, id, document, start_line, max_lines)
     name = Tasks.store_document_name!(document)
     Tasks.reject_placeholder_text!(document, 'document')
 
@@ -72,11 +73,6 @@ module Research
             "max_lines must be between 1 and #{READ_MAX_MAX_LINES} (got #{max_lines})"
     end
 
-    cur = Store.current_revision(root, type, id)
-    effective = revision || cur['revision']
-    record =
-      effective == cur['revision'] ? cur['record'] : Store.read_revision(cur['dir'], effective)
-
     digests = record['documents'] || {}
     unless digests.key?(name)
       raise ParameterException,
@@ -85,7 +81,7 @@ module Research
             "#{digests.keys.map { |n| Tasks.public_document_name(n) }.sort.inspect}"
     end
 
-    bytes = Store.object_bytes(cur['dir'], record, name)
+    bytes = Store.object_bytes(cur['dir'], digests.fetch(name))
     text = bytes.dup.force_encoding(Encoding::UTF_8)
     unless text.valid_encoding?
       raise ParameterException,
@@ -125,9 +121,7 @@ module Research
 
   # Compact overview: entry document (bounded) plus inventory of
   # authored documents and evidence attachments (metadata only).
-  def Research.read_overview(root, type, id)
-    cur = Store.current_revision(root, type, id)
-    record = cur['record']
+  def Research.read_overview(cur, record, effective, type, id)
     dir = cur['dir']
 
     docs = (record['documents'] || {}).keys.sort.map do |n|
@@ -148,7 +142,7 @@ module Research
     entry = record['documents'] && record['documents'][Layout::DOC]
     entry_meta = nil
     if entry
-      bytes = Store.object_bytes(dir, record, Layout::DOC)
+      bytes = Store.object_bytes(dir, entry)
       text = bytes.dup.force_encoding(Encoding::UTF_8)
       entry_meta = {
         'name' => Tasks.public_document_name(Layout::DOC),
@@ -161,7 +155,8 @@ module Research
     {
       'id' => id,
       'type' => type,
-      'revision' => cur['revision'],
+      'revision' => effective,
+      'current_revision' => cur['revision'],
       'entry_document' => entry_meta,
       'documents' => docs,
       'attachments' => atts

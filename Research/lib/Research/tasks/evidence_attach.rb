@@ -61,9 +61,14 @@ module Research
             're-pass the new revision each time'
     end
 
+    keys = parsed.map { |item| [item['slot'], item['name']] }
+    unless keys.uniq.size == keys.size
+      raise ParameterException, 'items: duplicate attachment keys in one batch'
+    end
+
     attached_at = Time.now.utc.iso8601
 
-    per_item = parsed.map { |item| Research.prepare_attach_item(item, root) }
+    per_item = parsed.map { |item| Research.prepare_attach_item(item) }
 
     result = Tasks.map_store_errors(root, id) do
       Store.transaction(root, type, id, expected_revision: expected) do |ctx|
@@ -78,15 +83,13 @@ module Research
       Research.describe_attach_item(prepared, result, root, type, attached_at)
     end
 
-    warnings = per_item.flat_map { |p| Array(p['warnings']) }
-
     {
       'id' => id,
       'type' => type,
       'revision' => result['revision'],
       'changed' => result['changed'],
       'items' => items_out,
-      'warnings' => warnings,
+      'warnings' => [],
       'change_note' => change_note
     }
   end
@@ -115,36 +118,22 @@ module Research
 
   # Resolve authorization, classify, and acquire BEFORE the
   # transaction opens (fail fast, nothing staged on rejection).
-  def Research.prepare_attach_item(item, root)
-    warnings = []
+  def Research.prepare_attach_item(item)
     canonical = Evidence.authorize_read!(item['source'])
 
     if item['mode'] == 'reference'
-      klass = Evidence.classify_reference!(item['source'], canonical)
-      unless File.file?(canonical)
-        raise ParameterException,
-              "broken reference: #{item['source'].inspect} is not an existing file"
-      end
+      Evidence.validate_reference!(item['source'], canonical)
       stat = File.stat(canonical)
       observed = StoreBytes.digest(canonical)
-      # R12: durable-without-digest cannot happen here (we always
-      # record the observed digest); keep the warning arm for the
-      # contract's no-digest class as a recorded notice.
-      if klass['class'] == 'durable' && !klass['job_tree']
-        warnings << 'durable source outside a job tree: digest ' \
-                    'recorded from observation at attach time'
-      end
       item.merge('canonical' => canonical,
                  'digest' => observed,
-                 'size' => stat.size,
-                 'warnings' => warnings)
+                 'size' => stat.size)
     else
       acquired = Evidence.acquire_copy!(canonical)
       item.merge('canonical' => canonical,
                  'bytes' => acquired['bytes'],
                  'digest' => acquired['digest'],
-                 'size' => acquired['observed_size'],
-                 'warnings' => warnings)
+                 'size' => acquired['observed_size'])
     end
   end
 
@@ -198,14 +187,12 @@ module Research
     name = prepared['name']
     key = "#{slot}/#{name}"
     dir = Layout.dossier_dir(root, type, result['id'])
-    retained = if prepared['mode'] == 'reference'
-                 'reference (source identity + observed digest retained)'
-               else
-                 File.join(Research::Layout.evidence_dir(dir), key)
-               end
+    entry = result.fetch('attachments').fetch(key)
+    retained = Layout.object_path(dir, Store.attachment_view_digest(entry))
 
     item = {
       'attachment' => key,
+      'evidence_read' => { 'id' => result['id'], 'revision' => result['revision'], 'attachment' => key },
       'id' => "#{result['id']}@#{result['revision']}:#{key}",
       'revision' => result['revision'],
       'slot' => slot,

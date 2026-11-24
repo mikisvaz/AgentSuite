@@ -332,6 +332,41 @@ class TestCheckHistoryCaptureTasks < Test::Unit::TestCase
     assert_equal 2, out['current_revision']
   end
 
+  def test_partial_capture_leaves_both_edits_in_place
+    readme = File.join(@dir, 'README.md')
+    relative = 'supplements/nested/deep/note.md'
+    note = File.join(@dir, relative)
+    FileUtils.mkdir_p(File.dirname(note))
+    File.binwrite(readme, "# Edited\n")
+    File.binwrite(note, "Uncommitted note\n")
+    params = { 'id' => @id, 'expected_revision' => @rev }
+    err = assert_raise(ParameterException) do
+      run_task(:dossier_capture, params.merge('documents' => 'README.md'))
+    end
+    assert_include err.message, relative
+    assert_equal "# Edited\n", File.binread(readme)
+    assert_equal "Uncommitted note\n", File.binread(note)
+    cap = run_task(:dossier_capture, params)
+    assert_equal "Uncommitted note\n", File.binread(note)
+    File.unlink(note)
+    deleted = run_task(:dossier_capture, params.merge('expected_revision' => cap['revision']))
+    assert_nil deleted['captured_documents'].fetch(relative)['observed_digest']
+    assert_not_include deleted['documents'].keys, relative
+  end
+
+  def test_capture_rejects_damaged_object_even_with_intact_evidence_view
+    src = File.join(@sources, 'note.md')
+    item = run_task(:evidence_attach, 'id' => @id, 'expected_revision' => @rev,
+                    'items' => JSON.generate([{ 'source' => src, 'slot' => 'data' }]))['items'].first
+    File.binwrite(item.fetch('retained_location'), 'damaged object')
+    File.binwrite(File.join(@dir, 'README.md'), "# External edit\n")
+    assert_raise(ParameterException) do
+      run_task(:dossier_capture, 'id' => @id, 'expected_revision' => item['revision'])
+    end
+    assert_equal item['revision'], history['current_revision']
+    assert_equal File.binread(src), File.binread(File.join(@dir, 'evidence', item['attachment']))
+  end
+
   def test_capture_without_drift_rejected
     err = assert_raise(ParameterException) do
       run_task(:dossier_capture,

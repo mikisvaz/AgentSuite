@@ -259,7 +259,7 @@ module Research
     end
 
     bytes = ctx.staged_document_bytes[name] ||
-            Store.object_bytes(ctx.dir, ctx.current_record, name)
+            Store.object_bytes(ctx.dir, ctx.current_record['documents'].fetch(name))
     text = bytes.dup.force_encoding(Encoding::UTF_8)
 
     n = LineEdit.count(text)

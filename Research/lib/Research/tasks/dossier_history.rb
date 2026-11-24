@@ -122,8 +122,8 @@ module Research
             'nor r#{to}'
     end
 
-    old_text = Research.decode_history_document(old ? Store.object_bytes(dir, old_rec, document) : '')
-    new_text = Research.decode_history_document(new ? Store.object_bytes(dir, new_rec, document) : '')
+    old_text = Research.decode_history_document(old ? Store.object_bytes(dir, old) : '')
+    new_text = Research.decode_history_document(new ? Store.object_bytes(dir, new) : '')
 
     hunks = LineEdit.diff(old_text, new_text,
                           max_lines: HISTORY_DIFF_MAX_LINES)

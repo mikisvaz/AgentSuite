@@ -38,7 +38,7 @@ bytes plus the producing method retained and checkable.
    Attach contrary results too — a dossier that only keeps supporting
    evidence is not an evidence record.
 6. Link the attachment from the claim's document with the returned
-   `[name](<retained_location>)` link or the `citation` record address.
+   Markdown `link`. Pass the item’s `evidence_read` arguments to Research to revisit the same revision.
 
 ## Reconcile before you tell someone how to reproduce (workflow aid)
 
@@ -72,7 +72,7 @@ LLM.call_workflow(Research, :evidence_attach,
 # => {"revision"=>3, "items"=>[
 #      {"attachment"=>"tables/enrichment.tsv", "mode"=>"copy",
 #       "sha256"=>"5064fba5…", "verified"=>{"digest"=>"5064fba5…", "basis"=>"retained bytes"},
-#       "retained_location"=>"<project>/research/questions/Q-002/evidence/tables/enrichment.tsv", …},
+#       "retained_location"=>"<project>/research/questions/Q-002/store/objects/<sha256>", …},
 ```
 
 ## Details

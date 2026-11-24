@@ -132,13 +132,11 @@ module Research
         end
       end
 
-      # Byte content of a document/attachment view named by a record.
-      def object_bytes(dir, record, name)
-        digest = record_digest_for(record, name)
+      def object_bytes(dir, digest)
         path = Layout.object_path(dir, digest)
-        raise Missing, "object #{digest} for #{name.inspect} missing in #{File.basename(dir)}" unless File.file?(path)
-
         StoreBytes.read(path)
+      rescue Errno::ENOENT
+        raise Missing, "object #{digest} missing in #{File.basename(dir)}"
       end
 
       # -------------------------------------------------------------
@@ -326,14 +324,11 @@ module Research
         text.to_i
       end
 
-      def record_digest_for(record, name)
-        docs = record['documents'] || {}
-        atts = record['attachments'] || {}
-        entry = docs[name] || atts[name]
-        entry = entry['digest'] if entry.is_a?(Hash)
-        raise Missing, "revision record names no object for #{name.inspect}" unless entry
+      # Legacy copy entries contain the digest directly.
+      def attachment_view_digest(entry)
+        return entry unless entry.is_a?(Hash)
 
-        entry
+        entry['mode'] == 'reference' ? entry.fetch('pointer_digest') : entry.fetch('digest')
       end
 
       # Write exactly the views the record defines, from objects; drop
@@ -343,32 +338,21 @@ module Research
         docs = record['documents'] || {}
         atts = record['attachments'] || {}
         written = 0
-        views = []
-        docs.keys.sort.each { |n| views << [n, File.join(dir, n)] }
-        views.map! { |n, p| n == Layout::DOC ? [n, Layout.doc_path(dir)] : [n, p] }
-        atts.keys.sort.each { |n| views << [n, File.join(Layout.evidence_dir(dir), n)] }
-        views.sort_by(&:last).each do |name, target|
+        views = docs.map { |name, digest| [view_path(dir, name), digest] }
+        atts.each do |key, entry|
+          pointer = reference_pointer_bytes(entry) if entry.is_a?(Hash) && entry['mode'] == 'reference'
+          digest = attachment_view_digest(entry)
+          if pointer && StoreBytes.digest_bytes(pointer) != digest
+            raise Corrupt, "pointer digest mismatch for reference #{key}"
+          end
+          views << [File.join(Layout.evidence_dir(dir), key), digest, pointer]
+        end
+        views.sort_by(&:first).each do |target, digest, pointer|
           if fault == :mid_views && written.positive?
             raise Interrupted, 'fault injection at mid_views'
           end
-          # Nested supplement documents need their parent directories.
-          dirnames = [File.dirname(target)]
-          dirnames << File.dirname(Layout.doc_path(dir)) if name == Layout::DOC
-          dirnames.uniq.each { |d| FileUtils.mkdir_p(d) }
-          # Reference-mode attachments materialize their POINTER object
-          # (deterministic in the entry), never the external source
-          # bytes and never a symlink.
-          body =
-            if (entry = atts[name]).is_a?(Hash) && entry['mode'] == 'reference'
-              pd = entry['pointer_digest']
-              pbytes = Store.reference_pointer_bytes(entry)
-              raise Corrupt, "pointer digest mismatch for reference #{name}" unless StoreBytes.digest_bytes(pbytes) == pd
-
-              pbytes
-            else
-              object_bytes(dir, record, name)
-            end
-          StoreBytes.write_atomic(target, body)
+          FileUtils.mkdir_p(File.dirname(target))
+          StoreBytes.write_atomic(target, pointer || object_bytes(dir, digest))
           written += 1
         end
         raise Interrupted, 'fault injection at mid_views' if fault == :mid_views && written.zero?
@@ -404,10 +388,11 @@ module Research
         keep_dirs = []
         keep.each do |rel|
           parts = rel.to_s.split('/')
-          keep_dirs << File.join(dir, *parts[0...-1]) if parts.length > 1
+          (1...parts.length).each { |n| keep_dirs << File.join(dir, *parts.first(n)) }
           keep_files << File.join(dir, rel.to_s)
         end
-        Dir.glob(File.join(dir, '**', '*')).sort.reverse.each do |p|
+        Dir.glob(File.join(dir, '**', '*'), File::FNM_DOTMATCH).sort.reverse.each do |p|
+          next if File.basename(p) == '.'
           next if keep_files.include?(p)
           if File.directory?(p)
             FileUtils.rm_rf(p) unless keep_dirs.include?(p)
@@ -527,52 +512,30 @@ module Research
                          "(#{marker}); recover! must run first"
         end
 
-        expected_docs = current_record['documents'] || {}
-        expected_atts = current_record['attachments'] || {}
-
-        actual_docs = view_digests(Layout.doc_path(dir),
-                                   Layout.supplement_dir(dir),
-                                   Layout::DOC, Layout::SUPPLEMENTS)
-        expected_docs.each do |name, digest|
-          actual = actual_docs[name]
-          next if actual == digest
-
-          raise Drift, drift_message(dir, name, digest, actual)
-        end
-        extra = actual_docs.keys - expected_docs.keys
-        unless extra.empty?
-          raise Drift, "external drift on #{File.basename(dir)}: authored " \
-                       "document #{extra.first.inspect} exists on disk but " \
-                       'the current revision does not list it; stage it in a ' \
-                       'transaction or remove it (run dossier_check to see ' \
-                       'the full drift report)'
-        end
-
-        expected_atts.each do |name, info|
-          digest = info.is_a?(Hash) ? (info['mode'] == 'reference' ? info['pointer_digest'] : info['digest']) : info
-          path = File.join(Layout.evidence_dir(dir), name)
-          actual = File.file?(path) ? StoreBytes.digest(path) : nil
-          next if actual == digest
-
-          raise Drift, drift_message(dir, name, digest, actual)
-        end
-        # Evidence files the record does not list are drift too.
-        if File.directory?(Layout.evidence_dir(dir))
-          expected_names = expected_atts.keys
-          Dir.glob(File.join(Layout.evidence_dir(dir), '**', '*')).sort
-             .select { |p| File.file?(p) }
-             .each do |p|
-            rel = p.delete_prefix("#{Layout.evidence_dir(dir)}/")
-            next if expected_names.include?(rel)
-
-            raise Drift, "external drift on #{File.basename(dir)}: evidence " \
-                         "file #{rel.inspect} exists on disk but the current " \
-                         'revision does not list it; stage it in a ' \
-                         'transaction or remove it (run dossier_check to ' \
-                         'see the full drift report)'
+        %i[documents attachments].each do |kind|
+          view_drift(dir, current_record, kind).each do |name, (pinned, actual)|
+            if pinned.nil?
+              raise Drift, "external drift on #{File.basename(dir)}: #{name.inspect} exists but the current revision does not list it"
+            end
+            raise Drift, drift_message(dir, name, pinned, actual)
           end
         end
         true
+      end
+
+      # Missing, modified and new views, with the recorded and observed digests.
+      def view_drift(dir, record, kind)
+        if kind == :documents
+          expected = record.fetch('documents', {})
+          actual = view_digests(Layout.doc_path(dir), Layout.supplement_dir(dir),
+                                Layout::DOC, Layout::SUPPLEMENTS)
+        else
+          expected = record.fetch('attachments', {}).transform_values { |entry| attachment_view_digest(entry) }
+          actual = tree_digests(Layout.evidence_dir(dir))
+        end
+        (expected.keys | actual.keys).each_with_object({}) do |name, differences|
+          differences[name] = [expected[name], actual[name]] unless expected[name] == actual[name]
+        end
       end
 
       def drift_message(dir, name, pinned, actual)
@@ -586,15 +549,15 @@ module Research
       def view_digests(doc_path, supplement_dir, doc_name, supplements)
         result = {}
         result[doc_name] = StoreBytes.digest(doc_path) if File.file?(doc_path)
-        if File.directory?(supplement_dir)
-          Dir.glob(File.join(supplement_dir, '**', '*')).sort.each do |p|
-            next unless File.file?(p)
-
-            rel = p.delete_prefix(supplement_dir + File::SEPARATOR)
-            result["#{supplements}/#{rel}"] = StoreBytes.digest(p)
-          end
-        end
+        tree_digests(supplement_dir).each { |name, digest| result["#{supplements}/#{name}"] = digest }
         result
+      end
+
+      def tree_digests(dir)
+        Dir.glob('**/*', File::FNM_DOTMATCH, base: dir).each_with_object({}) do |rel, digests|
+          path = File.join(dir, rel)
+          digests[rel] = StoreBytes.digest(path) if File.file?(path)
+        end
       end
 
       def no_op_result(ctx)

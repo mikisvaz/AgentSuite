@@ -93,9 +93,7 @@ class TestStoreTransaction < Test::Unit::TestCase
     old_obj = File.join(@root, 'questions', 'Q-001', 'store', 'objects',
                         d("# Question\n\nBody v1.\n"))
     assert File.file?(old_obj)
-    bytes = Store.object_bytes(cur['dir'], { 'documents' => { 'README.md' =>
-                                       d("# Question\n\nBody v1.\n") } },
-                               'README.md')
+    bytes = Store.object_bytes(cur['dir'], d("# Question\n\nBody v1.\n"))
     assert_equal "# Question\n\nBody v1.\n", bytes
   end
 

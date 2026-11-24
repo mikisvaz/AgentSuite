@@ -137,7 +137,9 @@ source is still checked against the process's sandbox read grants
 
 Output (`attach.json`): `{id, type, revision, changed, items:
 [{attachment, id, revision, slot, name, mode, source, sha256, size,
-attached_at, caption?, retained_location, link, citation}], warnings?}`.
+attached_at, caption?, retained_location, link, citation, evidence_read: {id, revision, attachment}}], warnings?}`.
+
+The retained location points to the immutable copy or reference-pointer object. Pass the returned `evidence_read` arguments unchanged to read this revision.
 
 Mode semantics: `copy` retains exact bytes in the dossier store (digest
 from retained bytes); `reference` retains the source identity plus the
@@ -231,6 +233,6 @@ attachments, captured_documents: {<name>: {observed_digest,
 pinned_digest}}, change_note, capture_semantics}`.
 
 Errors: no drift to capture (`dossier_capture.json` error case — capture
-requires observed external edits); named documents not drifted; corrupted
+requires observed external edits); named documents not drifted or other edits omitted; missing entry README; corrupted
 retained evidence (capture refuses to inherit a broken mapping);
 placeholder markers in captured bytes.

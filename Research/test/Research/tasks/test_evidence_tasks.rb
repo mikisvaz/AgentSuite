@@ -89,6 +89,51 @@ class TestEvidenceTasksExported < Test::Unit::TestCase
     assert_equal digest_before, rd['sha256']
   end
 
+  def test_receipt_reads_pinned_bytes_after_replacement_despite_document_name_collision
+    key = 'supplements/note.md'
+    doc = "# Authored text\n"
+    run_task(:dossier_update, 'id' => @id, 'expected_revision' => @rev,
+             'mode' => 'create_document', 'document' => key, 'content' => doc)
+    src = File.join(@sources, 'note.md')
+    original = File.binread(src)
+    item = { 'slot' => 'supplements', 'source' => src }
+    first = attach([item], 2)['items'].first
+    File.binwrite(src, "New evidence\n")
+    attach([item.merge('replace' => true)], 3)
+
+    old = run_task(:evidence_read, first.fetch('evidence_read'))
+    assert_equal original, old['content']
+    assert_equal original, File.binread(old.fetch('retained_location'))
+    assert_equal old['retained_location'], first['retained_location']
+    assert_equal "New evidence\n", read_evidence(key)['content']
+    assert_equal doc, run_task(:dossier_read, 'id' => @id, 'document' => key)['content']
+    overview = run_task(:dossier_read, 'id' => @id, 'overview' => true, 'revision' => 2)
+    assert_equal 2, overview['revision']
+    assert_empty overview['attachments']
+  end
+
+  def test_two_items_cannot_issue_receipts_for_the_same_key_in_one_revision
+    item = { 'source' => File.join(@sources, 'note.md'), 'slot' => 'data' }
+    error = assert_raise(ParameterException) { attach([item, item.merge('replace' => true)]) }
+    assert_match(/duplicate attachment keys/, error.message)
+    overview = run_task(:dossier_read, 'id' => @id, 'overview' => true)
+    assert_equal @rev, overview['revision']
+    assert_empty overview['attachments']
+  end
+
+  def test_reference_read_and_check_reauthorize_the_source
+    src = File.join(@sources, 'reference.md')
+    item = attach([{ 'source' => src, 'slot' => 'data', 'mode' => 'reference' }])['items'].first
+    assert_match(/mode: reference/, File.read(item.fetch('retained_location')))
+    File.unlink(src)
+    File.symlink('/proc/1/environ', src)
+    read = run_task(:evidence_read, item.fetch('evidence_read'))
+    assert_equal 'unavailable', read['integrity']['state']
+    assert_equal 'inaccessible', read['integrity']['reason']
+    findings = run_task(:dossier_check, 'id' => @id)['dossiers'].first['findings']
+    assert_include findings.map { |f| f['category'] }, 'reference_inaccessible'
+  end
+
   def test_binary_fixture_known_sha256
     bin = File.join(@sources, 'binary.bin')
     expected = Digest::SHA256.hexdigest(DossierFixtures::BINARY_BYTES)
@@ -261,6 +306,7 @@ class TestEvidenceTasksExported < Test::Unit::TestCase
     rd = read_evidence('data/table.tsv')
     assert_equal 'changed', rd['integrity']['state']
     assert_match(/corrupted|mismatches?|hashes to/, rd['integrity']['detail'])
+    assert_nil rd['content']
   end
 
   def test_declared_vs_verified_field_separation

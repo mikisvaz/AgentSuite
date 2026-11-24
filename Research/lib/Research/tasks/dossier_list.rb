@@ -85,7 +85,7 @@ module Research
         # listed dossier — the scan cost is O(documents).
         documents = (cur['record']['documents'] || {}).keys.sort
         texts = documents.map do |name|
-          bytes = Store.object_bytes(cur['dir'], cur['record'], name)
+          bytes = Store.object_bytes(cur['dir'], cur['record']['documents'].fetch(name))
           bytes.dup.force_encoding(Encoding::UTF_8)
         end
         title = Tasks.title_of(texts.first.to_s)

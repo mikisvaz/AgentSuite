@@ -7,6 +7,7 @@
 # strength or direction to an attachment.
 #
 # Finding categories (per dossier):
+#   reference_inaccessible   current grants or permissions prevent reading the source
 #   reference_missing   reference source no longer exists
 #   reference_changed   reference source hashes differently than recorded
 #   copy_corrupted      retained copy recomputes to a different digest
@@ -166,7 +167,7 @@ module Research
     link_coverage = nil
     if current
       Research.check_references(current['record'], findings)
-      Research.check_copies(dir, current['record'], findings)
+      findings.concat(Evidence.copy_findings(dir, current['record']))
       Research.check_view_drift(dir, current['record'], findings)
       link_coverage = Research.check_local_links(
         root, dir, current['record'], findings
@@ -241,119 +242,21 @@ module Research
     (record['attachments'] || {}).each do |key, info|
       next unless info.is_a?(Hash) && info['mode'] == 'reference'
 
-      source = info['source'].to_s
-      unless File.file?(source)
-        findings << Research.check_finding(
-          'reference_missing',
-          "reference #{key.inspect}: source #{source} no longer exists",
-          'expected' => 'existing source file',
-          'observed' => 'missing'
-        )
-        next
-      end
-      actual = StoreBytes.digest(source)
-      next if actual == info['digest']
+      integrity = Evidence.reference_integrity(info)
+      next if integrity['state'] == 'ok'
 
-      findings << Research.check_finding(
-        'reference_changed',
-        "reference #{key.inspect}: source #{source} hashes to " \
-        "#{actual} but the recorded digest is #{info['digest']}",
-        'expected' => info['digest'], 'observed' => actual
-      )
-    end
-  end
-
-  def Research.check_copies(dir, record, findings)
-    (record['attachments'] || {}).each do |key, info|
-      next unless info.is_a?(Hash)
-      next if info['mode'] == 'reference'
-
-      # The authoritative retained bytes are the digest-addressed
-      # object; the view is a materialization that view_drift already
-      # compares against the current revision.
-      obj = Layout.object_path(dir, info['digest'])
-      unless File.file?(obj)
-        findings << Research.check_finding(
-          'copy_missing',
-          "retained evidence object #{key.inspect} missing at #{obj} " \
-          '(the view alone does not satisfy the retention guarantee)',
-          'expected' => 'retained evidence object',
-          'observed' => 'missing'
-        )
-        next
-      end
-      actual = StoreBytes.digest(obj)
-      next if actual == info['digest']
-
-      findings << Research.check_finding(
-        'copy_corrupted',
-        "retained evidence #{key.inspect}: recorded digest " \
-        "#{info['digest']} but the retained bytes hash to #{actual}",
-        'expected' => info['digest'], 'observed' => actual
-      )
+      category = "reference_#{integrity['reason'] || integrity['state']}"
+      findings << Research.check_finding(category, "reference #{key.inspect}: #{integrity['detail']}",
+                                         'expected' => info['digest'], 'observed' => integrity['observed'] || integrity['reason'])
     end
   end
 
   def Research.check_view_drift(dir, record, findings)
-    expected_docs = record['documents'] || {}
-    expected_atts = record['attachments'] || {}
-    actual_docs = Store.view_digests(
-      Layout.doc_path(dir), Layout.supplement_dir(dir),
-      Layout::DOC, Layout::SUPPLEMENTS
-    )
-
-    expected_docs.each do |name, digest|
-      actual = actual_docs[name]
-      next if actual == digest
-
-      findings << Research.check_finding(
-        'view_drift',
-        "authored document #{name.inspect} hashes to " \
-        "#{actual || 'MISSING'} but the current revision pinned " \
-        "#{digest}; the file was modified outside a transaction",
-        'expected' => digest, 'observed' => actual
-      )
-    end
-    (actual_docs.keys - expected_docs.keys).each do |extra|
-      findings << Research.check_finding(
-        'view_drift',
-        "authored document #{extra.inspect} exists on disk but the " \
-        'current revision does not list it',
-        'expected' => 'not present', 'observed' => 'present'
-      )
-    end
-
-    expected_atts.each do |key, info|
-      digest = if info.is_a?(Hash)
-                 (info['mode'] == 'reference' ?
-                    info['pointer_digest'] : info['digest'])
-               else
-                 info
-               end
-      path = File.join(Layout.evidence_dir(dir), key)
-      actual = File.file?(path) ? StoreBytes.digest(path) : nil
-      next if actual == digest
-
-      findings << Research.check_finding(
-        'view_drift',
-        "evidence view #{key.inspect} hashes to #{actual || 'MISSING'} " \
-        "but the current revision pinned #{digest}",
-        'expected' => digest, 'observed' => actual
-      )
-    end
-    if File.directory?(Layout.evidence_dir(dir))
-      listed = expected_atts.keys
-      Dir.glob(File.join(Layout.evidence_dir(dir), '**', '*')).sort
-         .select { |p| File.file?(p) }.each do |p|
-        rel = p.delete_prefix("#{Layout.evidence_dir(dir)}/")
-        next if listed.include?(rel)
-
-        findings << Research.check_finding(
-          'view_drift',
-          "evidence file #{rel.inspect} exists on disk but the current " \
-          'revision does not list it',
-          'expected' => 'not present', 'observed' => 'present'
-        )
+    %i[documents attachments].each do |kind|
+      Store.view_drift(dir, record, kind).each do |name, (expected, observed)|
+        findings << Research.check_finding('view_drift', "#{kind}: #{name.inspect} differs from the revision",
+                                           'expected' => expected || 'not present',
+                                           'observed' => observed || 'missing')
       end
     end
   end
@@ -454,7 +357,7 @@ module Research
     counts = Hash.new(0)
     (record['documents'] || {}).each do |name, _digest|
       text = begin
-        Store.object_bytes(dir, record, name)
+        Store.object_bytes(dir, record['documents'].fetch(name))
       rescue StandardError
         next
       end

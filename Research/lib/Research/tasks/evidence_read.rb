@@ -74,7 +74,7 @@ module Research
             "attachment #{attachment.inspect}; attachments: " \
             "#{atts.keys.sort.inspect}"
     end
-    entry = entry.merge('key' => attachment)
+    entry = { 'digest' => entry } unless entry.is_a?(Hash)
 
     dir = cur['dir']
     mode = entry['mode'] || 'copy'
@@ -93,20 +93,12 @@ module Research
       'size' => entry['size'],
       'attached_at' => entry['attached_at'],
       'attach_mode' => entry['attach_mode'] || mode,
-      'retained_location' =>
-        if mode == 'reference'
-          'reference (source identity + observed digest; the ' \
-          'materialized pointer file names the source)'
-        else
-          File.join(Layout.evidence_dir(dir), attachment)
-        end,
+      'retained_location' => Layout.object_path(dir, Store.attachment_view_digest(entry))
     }
     entry.each { |k, v| meta[k] = v if k.to_s.start_with?('declared_') }
 
-    integrity = Evidence.observed_integrity(entry, dir)
-    meta['integrity'] = integrity
-
     if mode == 'reference'
+      meta['integrity'] = Evidence.reference_integrity(entry)
       meta['reference_note'] =
         'reference history retains identity/digest only; it does not ' \
         'promise the original external bytes remain recoverable'
@@ -115,7 +107,15 @@ module Research
     end
 
     # Copy mode: serve bounded text when appropriate, else info.
-    bytes = Store.object_bytes(dir, record, attachment)
+    begin
+      bytes = Store.object_bytes(dir, entry.fetch('digest'))
+    rescue Store::Missing => e
+      meta['integrity'] = { 'state' => 'unavailable', 'detail' => e.message }
+      return meta
+    end
+    meta['integrity'] = Evidence.digest_integrity(entry['digest'], StoreBytes.digest_bytes(bytes))
+    return meta unless meta['integrity']['state'] == 'ok'
+
     detected = Evidence.detected_type(bytes, entry['name'] || attachment)
     meta['detected_type'] = detected
     meta['media'] = { 'detected_type' => detected }

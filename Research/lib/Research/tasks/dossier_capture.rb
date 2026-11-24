@@ -63,15 +63,14 @@ module Research
                         ),
                         allow_drift: true) do |ctx|
         ctx.change_note = change_note
-        current = Store.current_revision(root, type, id)
-        record = current['record']
+        record = ctx.current_record
 
         # Evidence corruption gate: never capture over corrupted
         # retained evidence (the new revision would inherit a broken
         # attachment mapping; corruption must be repaired explicitly).
         Research.capture_evidence_gate!(record, dir)
 
-        drift = Research.capture_drifted_documents(dir, record)
+        drift = Store.view_drift(dir, record, :documents)
         targets = docs ? docs & drift.keys : drift.keys
 
         if docs
@@ -86,6 +85,11 @@ module Research
           end
         end
 
+        omitted = drift.keys - targets
+        unless omitted.empty?
+          raise ParameterException, "capture would discard other edits: #{omitted.sort.join(', ')}; include them or capture all"
+        end
+
         if targets.empty?
           raise ParameterException,
                 'no drift to capture: no authored document differs ' \
@@ -94,7 +98,14 @@ module Research
         end
 
         targets.sort.each do |name|
-          bytes = File.binread(Research.capture_view_file(dir, name))
+          if drift.fetch(name).last.nil?
+            raise ParameterException, "restore the missing entry document #{name} before capture" if name == Layout::DOC
+
+            ctx.delete_document(name)
+            observed[name] = { 'observed_digest' => nil, 'pinned_digest' => record['documents'][name] }
+            next
+          end
+          bytes = File.binread(Store.view_path(dir, name))
           bytes = bytes.dup.force_encoding('UTF-8')
           unless bytes.valid_encoding?
             raise ParameterException,
@@ -141,7 +152,7 @@ module Research
     if list.length > CAPTURE_DOCUMENTS_MAX
       raise ParameterException,
             "too many documents to capture (#{list.length}; cap " \
-            "#{CAPTURE_DOCUMENTS_MAX}); split the capture"
+            "#{CAPTURE_DOCUMENTS_MAX}); use all to capture every drifted document"
     end
     list
   end
@@ -150,40 +161,14 @@ module Research
   # would inherit a broken attachment mapping. Corruption must be
   # repaired or replaced explicitly, never laundered into history.
   def Research.capture_evidence_gate!(record, dir)
-    Evidence.attachment_integrity_findings(record, dir).each do |f|
-      next unless f['category'] == 'copy_corrupted'
+    finding = Evidence.copy_findings(dir, record).first
+    raise ParameterException, "refusing capture: #{finding['category']}: #{finding['detail']}" if finding
 
-      raise ParameterException,
-            "refusing capture: retained evidence is corrupted " \
-            "(#{f['key']}: #{f['detail']}); repair or replace the " \
-            'evidence explicitly before capturing document edits ' \
-            '(corruption is never laundered into history)'
+    drift = Store.view_drift(dir, record, :attachments)
+    unless drift.empty?
+      raise ParameterException, "refusing capture: evidence views corrupted or modified: #{drift.keys.sort.join(', ')}"
     end
   end
 
-  def Research.capture_drifted_documents(dir, record)
-    actual = Store.view_digests(
-      Layout.doc_path(dir), Layout.supplement_dir(dir),
-      Layout::DOC, Layout::SUPPLEMENTS
-    )
-    expected = record['documents'] || {}
-    drifted = {}
-    (expected.keys | actual.keys).each do |name|
-      next if actual[name] == expected[name]
-
-      drifted[name] = { 'observed' => actual[name],
-                        'pinned' => expected[name] }
-    end
-    drifted
-  end
-
-  def Research.capture_view_file(dir, name)
-    if name == Layout::DOC
-      Layout.doc_path(dir)
-    else
-      File.join(Layout.supplement_dir(dir),
-                name.delete_prefix("#{Layout::SUPPLEMENTS}/"))
-    end
-  end
   export_exec :dossier_capture
 end

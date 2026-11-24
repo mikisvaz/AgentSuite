@@ -10,10 +10,8 @@
 #     the OS-facing policy, not by string-prefix checks). A
 #     model-supplied source path is NEVER a permission grant: grants
 #     come from the process's configured sandbox grants only.
-#   - the three-state citation validation ported from
-#     research/return-path-citation-contract.md (C1-C5, R6-R14):
-#     broken reference (hard error), ephemeral address (promote-or-
-#     reject), durable-without-digest (warning). Mapping table below.
+#   - reference validation: require an existing regular file outside
+#     temporary roots and record its observed digest.
 #   - source-change-during-acquisition detection for copy mode
 #     (stat-read-recheck): the digest is computed from the RETAINED
 #     bytes; a source that changed during the read is detected and
@@ -129,23 +127,7 @@ module Research
         # Reference-mode citation validation (C1-C5, R6-R14 port)
         # -------------------------------------------------------------
         #
-        # Mapping (contract rule -> code path here):
-        #   C1/R7  resolvability  -> classify_reference! existence arm
-        #   C2/R10 lifetime       -> classify_reference! ephemeral arm
-        #   C3     inspection     -> pointer is a plain readable text file
-        #                            (Store.reference_pointer_bytes)
-        #   C4/R12 integrity      -> digest recorded at attach; mismatch at
-        #                            read time -> 'changed', never substitute
-        #   R10    promote-or-reject -> ephemeral arm message names copy mode
-        #                            as the promote remedy
-        #   R11    promote remedy -> copy mode IS the promotion: bytes land
-        #                            in the dossier's content-addressed store
-        #   R12    no-digest      -> warning recorded ('warnings' in result)
-
-        # classify_reference!(source, canonical) -> classification Hash
-        #   { 'class' => 'durable'|'ephemeral', 'job_tree' => bool }
-        # Raises ParameterException (hard error) for broken references.
-        def classify_reference!(source, canonical)
+        def validate_reference!(source, canonical)
           if canonical && File.directory?(canonical)
             raise ParameterException,
                   "broken reference: #{source.inspect} is a directory " \
@@ -159,7 +141,6 @@ module Research
                   'an existing regular file (C1/R7: a result ref must name ' \
                   'one concrete artifact on persistent storage)'
           end
-          raise ParameterException, 'internal: canonical path missing' if canonical.nil?
 
           if ephemeral?(canonical)
             raise ParameterException,
@@ -172,33 +153,13 @@ module Research
                   'silently.'
           end
 
-          { 'class' => 'durable', 'job_tree' => job_tree?(canonical) }
+          true
         end
 
         def ephemeral?(canonical)
           EPHEMERAL_ROOTS.any? do |root|
             LLM::Sandbox.inside?(canonical, root)
           end
-        end
-
-        # R10 durable (job tree): a persisted var/jobs/<Workflow>/<task>/
-        # directory whose result file and/or .info sidecar exist on disk.
-        def job_tree?(canonical)
-          dir = File.dirname(canonical)
-          parts = dir.split(File::SEPARATOR)
-          jobs_idx = parts.rindex { |p| p == 'jobs' }
-          return false unless jobs_idx
-
-          wf = parts[jobs_idx + 1]
-          task = parts[jobs_idx + 2]
-          base = parts[0..jobs_idx + 2].join(File::SEPARATOR)
-          return false unless wf && task && File.directory?(base)
-
-          stem = File.basename(canonical).sub(/\.[^.]+\z/, '')
-          result_like = Dir.children(base).any? do |e|
-            e == stem || e == "#{stem}.info" || e.start_with?("#{stem}.")
-          end
-          result_like
         end
 
         # -------------------------------------------------------------
@@ -292,101 +253,38 @@ module Research
         # Read-time integrity observation (C4/R12)
         # -------------------------------------------------------------
 
-        # Per-attachment integrity findings in check shape (shared by
-        # dossier_capture's corruption gate and dossier_check):
-        # [{ 'key', 'category' => copy_corrupted|copy_missing|
-        #                     reference_missing|reference_changed,
-        #   'detail', 'expected', 'observed' }]
+        # Check live references with the grants of the current caller.
+        def reference_integrity(entry)
+          source = authorize_read!(entry.fetch('source'))
+          return { 'state' => 'unavailable', 'detail' => "referenced source no longer exists: #{source}", 'reason' => 'missing' } unless File.file?(source)
 
-        def attachment_integrity_findings(record, dir)
-          findings = []
-          (record['attachments'] || {}).each do |key, info|
-            next unless info.is_a?(Hash)
-
-            if info['mode'] == 'reference'
-              source = info['source'].to_s
-              unless File.file?(source)
-                findings << { 'key' => key,
-                              'category' => 'reference_missing',
-                              'detail' => "source #{source} no longer exists",
-                              'expected' => 'existing source',
-                              'observed' => 'missing' }
-                next
-              end
-              actual = StoreBytes.digest(source)
-              next if actual == info['digest']
-
-              findings << { 'key' => key, 'category' => 'reference_changed',
-                            'detail' => "source #{source} hashes to " \
-                                        "#{actual}, recorded #{info['digest']}",
-                            'expected' => info['digest'],
-                            'observed' => actual }
-            else
-              view = File.join(Layout.evidence_dir(dir), key)
-              unless File.file?(view)
-                findings << { 'key' => key, 'category' => 'copy_missing',
-                              'detail' => "retained view #{view} missing",
-                              'expected' => 'retained copy file',
-                              'observed' => 'missing' }
-                next
-              end
-              actual = StoreBytes.digest(view)
-              next if actual == info['digest']
-
-              findings << { 'key' => key, 'category' => 'copy_corrupted',
-                            'detail' => "retained bytes hash to #{actual}, " \
-                                          "recorded #{info['digest']}",
-                            'expected' => info['digest'],
-                            'observed' => actual }
-            end
-          end
-          findings
+          digest_integrity(entry.fetch('digest'), StoreBytes.digest(source))
+        rescue Errno::ENOENT => e
+          { 'state' => 'unavailable', 'detail' => e.message, 'reason' => 'missing' }
+        rescue ParameterException, Errno::EACCES => e
+          { 'state' => 'unavailable', 'detail' => e.message, 'reason' => 'inaccessible' }
         end
 
-        def observed_integrity(entry, dir)
-
-          mode = entry['mode'] || 'copy'
-          if mode == 'reference'
-            source = entry['source'].to_s
-            unless File.file?(source)
-              return { 'state' => 'unavailable',
-                       'detail' => "referenced source no longer exists: #{source}" }
-            end
-            actual = StoreBytes.digest(source)
-            if actual == entry['digest']
-              { 'state' => 'ok',
-                'detail' => 'referenced source still hashes to the recorded digest' }
-            else
-              { 'state' => 'changed',
-                'detail' => "referenced source changed: recorded " \
-                            "#{entry['digest']} but the current source hashes " \
-                            'to ' + actual + '; current bytes are NOT the ' \
-                            'historical evidence and are never substituted'
-              }
-            end
+        def digest_integrity(expected, observed)
+          if expected == observed
+            { 'state' => 'ok', 'detail' => 'bytes match the recorded digest' }
           else
-            # Copy mode: the retained bytes are the digest-addressed OBJECT,
-            # not the current-revision view (a view legitimately carries the
-            # CURRENT revision's attachment; replacing an attachment must not
-            # read as corruption of historical revisions).
-            obj = Layout.object_path(dir, entry['digest'])
-            unless File.file?(obj)
-              return { 'state' => 'unavailable',
-                       'detail' => "retained evidence object missing: #{obj} " \
-                                   '(run dossier_check for a full mechanical ' \
-                                   'integrity report)' }
-            end
-            actual = StoreBytes.digest(obj)
-            if actual == entry['digest']
-              { 'state' => 'ok', 'detail' => 'retained bytes hash to the recorded digest' }
-            else
-              { 'state' => 'changed',
-                'detail' => "retained evidence corrupted: recorded " \
-                            "#{entry['digest']} but the bytes on disk hash to " \
-                            + actual +
-                            '; run dossier_check for a full mechanical ' \
-                            'integrity report' }
-            end
+            { 'state' => 'changed', 'detail' => "content hashes to #{observed}, expected #{expected}", 'observed' => observed }
+          end
+        end
+
+        def copy_findings(dir, record)
+          record.fetch('attachments', {}).filter_map do |key, entry|
+            next if entry.is_a?(Hash) && entry['mode'] == 'reference'
+
+            expected = Store.attachment_view_digest(entry)
+            path = Layout.object_path(dir, expected)
+            actual = File.file?(path) ? StoreBytes.digest(path) : nil
+            next if actual == expected
+
+            { 'category' => actual ? 'copy_corrupted' : 'copy_missing',
+              'detail' => "retained copy #{key.inspect} hashes to #{actual || 'MISSING'}, expected #{expected}",
+              'expected' => expected, 'observed' => actual || 'missing' }
           end
         end
 

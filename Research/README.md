@@ -135,7 +135,14 @@ reference` retains only the source identity plus the digest observed at
 attach time. The batch is atomic: one invalid item rolls the whole call
 back, and directory sources or accidental name collisions fail loudly.
 Returns the new revision plus per-item `attachment` key and `sha256`;
-reference those keys (not paths) in later reads.
+each item also supplies the exact arguments for a revision-pinned read.
+
+For example, evaluate an entity property with `return_path` and pass the
+returned file path directly as `source` with `slot: "results"` and
+`mode: "copy"`. Use the returned Markdown `link` in the finding. To
+inspect the same evidence later, pass the item's `evidence_read` object
+unchanged to the Research task of that name. The receipt still selects
+the original revision after another attachment replaces that key.
 
 ## evidence_read
 Read one evidence attachment: its metadata, integrity state and text.
@@ -183,7 +190,10 @@ edited outside the tasks (e.g. by hand) and `dossier_check` reports view
 drift. Inputs: `id`, `expected_revision`, `documents` (`all`, a list, or
 a JSON array of names) and optional `change_note`. It is guarded by the
 revision you last read and the observed digests, and refuses when there
-is no drift or when retained evidence is corrupted. Ordinary
+is no drift or when retained evidence is corrupted. A named selection
+must include every drifted authored document. Use `all` to capture the
+whole edit, including removal of a supplement. Restore a missing entry
+README before capture. Ordinary
 `dossier_update` calls never adopt external edits, so drift never enters
 the history silently.
 
