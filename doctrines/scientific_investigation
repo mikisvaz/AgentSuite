@@ -32,9 +32,10 @@ agent calls. Use only the roles and capabilities that materially help.
   repository does not prove that the agent received it.
 - **Semantic surface:** domain entities, properties, associations and
   knowledge-base operations that expose scientific concepts.
-- **Epistemic surface:** the supported project system for recording and relating
-  observations, claims and hypotheses, including identity, validation and
-  lifecycle.
+- **Epistemic surface:** the supported project system for recording scientific
+  questions, bounded claims and testable hypotheses, with sourced findings,
+  evidence links, revisions and lifecycle. Observations are evidence within
+  these records, not another Research dossier type.
 - **Computational surface:** general code execution, scripts, libraries, data
   transformations and reusable workflow operations.
 - **Persistence surface:** project files and, where useful, Cortex conversations,
@@ -110,7 +111,8 @@ Research produces a compact investigation brief containing:
 - linked subquestions and their priority;
 - what is already known and which prior outputs are reusable;
 - relevant data, entities, properties, databases and literature;
-- the observations or hypotheses to discriminate;
+- competing explanations or claims to discriminate and the observations
+  that would distinguish them;
 - computations required, with inputs, outputs, denominators and missingness
   semantics;
 - plausible alternatives and falsifying outcomes;
@@ -212,19 +214,24 @@ For important results:
 - distinguish association, prediction, consistency and causality;
 - consider alternatives and contrary evidence;
 - assess dependence between analyses and robustness dimensions;
-- register decision-useful observations, not every intermediate table;
+- retain decision-useful observations and negative findings in the relevant
+  question dossier; do not create an observation record or one question per
+  intermediate table;
 - formulate claims only when the evidence supports a bounded statement;
 - keep hypotheses falsifiable, with explicit predictions and reopening or
   rejection conditions.
 
-Use the designated project record protocol. If the supported Research
-registration API is the configured authoritative route and passes preflight,
-use it for registration and lifecycle operations. The record's author field
-carries the acting role, not a default value. If the project deliberately
-specifies a file-based protocol, or the API is unavailable or defective, use
-the documented fallback and identify it accurately. Do not describe manually
-created files as API-registered records. Do not silently substitute Cortex for
-the Research record system.
+Use the designated project record protocol. When Research dossiers are the
+authoritative route, `dossier_create` accepts only `question`, `claim` and
+`hypothesis`; its revision, evidence and integrity tasks operate on those
+dossiers. Use the actual `Q-###`/`C-###`/`H-###` identities throughout handoffs
+and reports, not a parallel `OBS-###` numbering system. `dossier_check` is an
+integrity check, not a scientific verdict; scientific decisions belong in the
+authored record and decision artifacts. The task schema has no `author` input.
+If the project deliberately specifies a different protocol or the API is
+unavailable, use the documented alternative and identify it accurately. Do
+not describe manually created files as API-registered records or silently
+substitute Cortex for the Research record system.
 
 The mission prompt and role contract must agree on the record protocol. Do
 not instruct executors to write records manually while simultaneously
@@ -330,7 +337,8 @@ Cortex tooling is provisioned per role and launch configuration.
 Keep the surfaces distinct:
 
 - semantic: domain entities and properties;
-- epistemic: observations, claims and hypotheses;
+- epistemic: question, claim and hypothesis dossiers, with observations
+  retained as sourced findings;
 - computational: scripts, jobs and workflow execution;
 - persistence: project files and optional Cortex resources.
 

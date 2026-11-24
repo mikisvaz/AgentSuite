@@ -8,7 +8,10 @@ rejects the change with a `StaleRevision` message naming both revisions.
 Dossier types and ID prefixes: `question` (one answerable scientific
 question, `Q-###`), `claim` (a bounded statement the attached evidence
 supports, `C-###`), `hypothesis` (a falsifiable explanation with
-predictions, `H-###`).
+predictions, `H-###`). These are the only dossier types. An observation or
+computed result belongs as a sourced finding/answer inside a question dossier
+or as supporting evidence for a claim or hypothesis. Do not label `Q-###`
+records `OBS-###` or maintain a second observation-numbering system.
 
 Storage layout:
 

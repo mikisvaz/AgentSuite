@@ -7,10 +7,17 @@ roles that produce, curate, direct or verify conclusions.
 
 ## Keep evidence labels distinct
 
-Use four labels where they matter:
+Keep the scientific concepts distinct from the project's record types. In
+Research, the dossier types are **question**, **claim** and **hypothesis**;
+"observation" names a kind of evidence, not a fourth dossier type.
 
-- **Observation:** a sourced datum, tool result or recorded finding. It may be
-  measured, computed, retrieved or model-derived; identify which.
+Use these labels where they matter:
+
+- **Question:** the problem to answer, with its scope and evidence-bearing
+  findings; use the existing `Q-###` dossier when the question is already open.
+- **Observation:** a sourced datum, tool result or recorded finding within the
+  investigation. It may be measured, computed, retrieved or model-derived;
+  identify which. Do not give it a separate `OBS-###` record identity.
 - **Claim:** a proposition asserted or adopted, with a defined scope.
 - **Hypothesis:** a candidate explanation that has not been established and
   has outcomes that could count against it.
@@ -68,26 +75,26 @@ reopening trigger.
 
 ## Epistemic records
 
-Curate decision-useful evidence with resolvable sources. Separate observations
-from claims and hypotheses; respect the authority that owns status changes;
-record falsifiers and contrary evidence; preserve corrections and lifecycle
-history.
+Curate decision-useful, source-backed findings in question dossiers, and
+keep bounded claims and falsifiable hypotheses in their own dossiers when
+needed. Preserve contrary evidence, adjudications, corrections and revision
+history. Neither a recorded observation nor a question answer is automatically
+an adjudicated scientific claim.
 
-Record text never relies on transcribed numbers: every value cites the result
-address, job receipt or artifact path it came from. Every registration bout
-ends with a record-index reconciliation — the count and ids of records
-against the prior index — and the delta is reported with the bout return.
+Before promoting a table-derived result to a claim or final report, reconcile
+its numerators, denominators, comparison basis, category rankings and
+qualifiers against the source cells. Cite the artifact and row/column locator;
+a correct calculation does not prevent errors when values are transcribed.
+A dossier integrity check does not establish scientific correctness.
 
-Use the designated project record protocol. If a supported API is the
-configured authoritative route and it has passed the relevant capability
-check, use it. If the project deliberately uses a file-based protocol or the
-API is unavailable, follow that protocol and label the records accurately.
-A manually authored Markdown file is not evidence that an API registration
-operation occurred. Sample important locators at close to confirm that they
-resolve for the intended consumers.
-
-Observation metadata uses the author enum: Research for investigation
-records; Analyst for computation records whose content Analyst produced;
-ScientificLead for adjudications; Manager for coordination records. The
-default Investigator is legacy; do not apply it to new records that belong
-to another author.
+Use the designated project record protocol. When Research dossiers are the
+authoritative record, create only `question`, `claim` or `hypothesis` dossiers
+with the Research tasks, and use guarded revisions and evidence attachments.
+For a record inventory, use `dossier_list` (there is no separate durable
+record index), and inspect it after creating records to catch unexpected IDs
+or duplicates. Use `dossier_check` to verify mechanical integrity, not to
+adjudicate a scientific conclusion. If a different protocol is explicitly
+authorized, describe what actually occurred; a manually authored file is
+not an API registration. Confirm critical evidence links resolve for their
+intended consumers. Do not invent an `author` input or observation-specific
+metadata: the supported Research dossier tasks expose neither.

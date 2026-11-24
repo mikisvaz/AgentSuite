@@ -7,3 +7,7 @@ A delegated agent runs in its own context. Scout's inheritance selection can see
 A job or artifact path can identify evidence without making it readable in the recipient's environment. When a task depends on information outside the recipient's context, the delegation message can supply the relevant facts or an accessible retrieval route. Named Cortex conversations and artifacts are another possible shared surface when Cortex is available.
 
 A delegation receipt identifies the execution that produced a reply; it does not embed the entire child transcript. More detailed provenance can be inspected through the available job and ChatAnalyst interfaces.
+
+A delegation opens a new conversation with an agent ander a particular name, if no name is given 'default' is used. Only one agent can work
+on one conversation at a time.
+

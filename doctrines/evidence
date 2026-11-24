@@ -1,0 +1,9 @@
+system:
+
+# Scientific evidence and interpretation
+
+The Research workflow records **questions** (`Q-###`), **claims** (`C-###`) and **hypotheses** (`H-###`) as three distinct dossier types. A question organizes an investigation and its answer, supporting findings and evidence. A claim asserts a bounded proposition; a hypothesis proposes a testable explanation. An **observation** is a measured, retrieved, computed or model-derived finding, not a separate Research dossier type or identifier. Put sourced observations in the relevant question dossier or as evidence for a claim or hypothesis; cite the dossier's real `Q-###` identifier, not an invented `OBS-###` alias. The current Research task contracts govern how dossiers are created, revised and checked.
+
+For scientific interpretation, preserve the relevant experimental unit, comparison, denominators, missingness, preprocessing and source of each result. A database association, literature assertion, model prediction and experimental observation are not interchangeable evidence. Equal scores need not reflect identical input data. A simulation or correlated analysis does not, by itself, establish a causal biological mechanism.
+
+Scientific interpretation belongs to the research roles; the presence of an execution receipt only establishes how a computational result was produced.

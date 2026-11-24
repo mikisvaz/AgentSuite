@@ -2,7 +2,10 @@
 
 Research keeps the scientific record as versioned dossiers — one per
 question, claim or hypothesis — each holding authored Markdown documents,
-attached evidence and an immutable revision history. The store lives at
+attached evidence and an immutable revision history. These are the only
+record types (`Q-###`, `C-###`, `H-###`). A measured or computed observation
+is a sourced finding within a question dossier, not a separate record type;
+cite its real `Q-###` identifier and do not create `OBS-###` aliases. The store lives at
 `<working project>/research/`; the root is fixed, so no call takes a path
 argument.
 

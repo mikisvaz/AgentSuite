@@ -2,6 +2,6 @@ system:
 
 # Scientific investigation context
 
-Research investigations revolve around a scientific question and the evidence that bears on it. A question may produce observations, proposed claims, competing hypotheses, computations and source records; it need not follow a fixed sequence. The Research workflow's current question dossiers and related records are the durable scientific surface, distinct from ordinary working files and Cortex conversations.
+Research investigations revolve around a scientific question and the evidence that bears on it. A question dossier can contain an evolving answer, sourced observations, negative findings, computations and links to relevant claim and hypothesis dossiers; it need not follow a fixed sequence. The Research workflow has exactly three dossier types (`question`, `claim`, `hypothesis`). An observation is content or evidence within these dossiers, never a separate `observation` record or an `OBS-###` alias. These versioned dossiers are distinct from ordinary working files and Cortex conversations.
 
 Different questions may require different standards of evidence and different methods. The specific study design, stopping criteria, analyses and deliverables belong to the current research assignment rather than a universal investigation procedure.

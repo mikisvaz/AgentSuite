@@ -14,7 +14,9 @@ description: >
 
 You are starting a scientific question, resuming one, or moving from results
 to a bounded claim or a falsifiable hypothesis. One dossier per type per
-question is not required — create what the work needs.
+question is not required — create what the work needs. The only Research
+dossier types are `question`, `claim` and `hypothesis`. A result described
+as an observation is not another type and does not require an `OBS-###` ID.
 
 ## Procedure
 
@@ -22,8 +24,12 @@ question is not required — create what the work needs.
    result tables) — in Workspace or attached evidence. **If a question
    dossier for this work already exists, re-read it instead of starting
    over** (see Keep context short below).
-2. Name the question so an answerable comparison is possible: units,
-   intervention, endpoint, denominator. Write it as the dossier `title`.
+2. Name an answerable question: specify the units, intervention, endpoint
+   and denominator where relevant, and make that question the dossier `title`.
+   Do not title a new `Q-###` dossier "Observation OBS-###". If the result
+   answers an existing question, update that dossier rather than allocating
+   a new question per table or observation. A report or closure package belongs
+   with the question it answers; it does not by itself need a new `Q-###`.
 3. `dossier_create` (type `question`); keep the current answer in the README
    (it starts as "no answer yet" — update it as evidence arrives).
 4. When a result warrants a statement, draft a *claim* (bounded to what the

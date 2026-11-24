@@ -8,6 +8,8 @@ Scout tasks may create persisted jobs with inputs, dependencies, results and aux
 
 Scout keeps a recorded conversation and prepares a model-facing context for each inference. Prompt processing can compact earlier tool-call/output pairs into shorter records without deleting the original history or job results. A compacted entry describes earlier work, not a new event or a requirement to redo it.
 
+During extended work, keep established findings and decisions in durable artifacts when they will be needed later. When compaction threatens continuity, consolidate the working state or conclude the current bout with a self-contained handoff. Preserve evidence locations, unresolved questions, and the next useful action rather than reproducing the conversation. Resume in a smaller bout when appropriate. Compaction alone is not a reason to repeat completed work or interrupt productive progress.
+
 An agent's available capabilities are determined by its actual configuration. Workflows can register more tasks than an agent is exposed to; an introduced workflow, a selected tool, a Path kind and a skill are different things. Skills explain operations; they do not grant tools or filesystem permissions.
 
 Delegation creates a child agent context. Depending on the selected mode, the child may inherit no caller context, applicable tools, or conversation context. This is an initial context construction, not continuously shared state. The child retains its own role and actual tool configuration; do not assume it can read the caller's files or see information omitted from its context.
