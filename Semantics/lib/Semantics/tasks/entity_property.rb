@@ -13,38 +13,34 @@ module Semantics
   # error envelope with :status => 'error' and the exception class/message,
   # so a single bad query is inspectable without losing the receipt. This is
   # an error envelope, not a silent success: the status field is explicit.
-  input :entity_type, :string, 'Entity type name (e.g. as listed by the list_entities task)', nil, required: true
-  input :entity, :string, 'Entity identifier (e.g. a gene symbol)', nil, required: true
-  input :property, :string, 'Property name registered on the entity type', nil, required: true
-  input :arguments, :text, 'Optional property arguments as a JSON object string (e.g. {"max": 2})', nil
+  input :entity_type, :string, 'Entity type name (e.g. as listed by the list_entities task)', nil, required: true, nofile: true
+  input :entity, :string, 'Entity identifier (e.g. a gene symbol)', nil, required: true, nofile: true
+  input :property, :string, 'Property name registered on the entity type', nil, required: true, nofile: true
+  input :arguments, :text, 'Optional property arguments as a JSON object string (e.g. {"max": 2})', nil, nofile: true
   task :entity_property => :json do |entity_type, entity, property, arguments|
     mod, prop = EntityQuery.resolve_property!(entity_type, property)
     args = EntityQuery.parse_arguments(arguments)
 
-    # Task-output mechanism for full payloads: when the dispatched property
-    # declares an :output_dir kwarg and the caller did not choose a location,
-    # the task routes it into its own job files_dir (<job>.files/property_output).
-    # Properties then write their bulk payloads (e.g. article abstracts) there
-    # and return compact result entries with pointers, so the payloads are
-    # readable from the job output tree instead of the in-memory result.
-    param_types = EntityQuery.parameter_types(mod, prop)
-    payload_dir = EntityQuery.route_payload_dir!(self, param_types, args)
+    mode = EntityQuery.effective_dispatch(mod, prop)
+    positional, keywords = EntityQuery.prepare_call(self, mod, prop, args)
+    receipt = EntityQuery.receipt(self, mod, prop, args, entity: entity.to_s)
+    payload_dir = keywords[:output_dir]
 
     begin
-      result = EntityQuery.dispatch_single(mod, entity, prop, args, param_types)
+      result = EntityQuery.dispatch(mod, entity, prop, mode, positional, keywords)
       record = { status: 'done',
-                 entity: entity.to_s,
+                 entity_type: mod.name, entity: entity.to_s,
                  property: prop.to_s,
                  result: result,
-                 receipt: EntityQuery.receipt(self, entity, prop, args) }
+                 receipt: receipt }
       record[:payload_dir] = payload_dir if payload_dir
       record
     rescue StandardError, SystemCallError => error
       { status: 'error',
-        entity: entity.to_s,
+        entity_type: mod.name, entity: entity.to_s,
         property: prop.to_s,
         error: { class: error.class.to_s, message: error.message },
-        receipt: EntityQuery.receipt(self, entity, prop, args) }
+        receipt: receipt }
     end
   end
 

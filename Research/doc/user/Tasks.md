@@ -87,7 +87,7 @@ Errors: unknown id; unknown document; evidence binaries offered as text.
 ```
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-Research.input :mode, :select, 'Update mode: create_document, replace_document, replace_lines or delete_lines', nil, select_options: %w[create_document replace_document replace_lines delete_lines]
+Research.input :mode, :select, 'Update mode: create_document, replace_document, replace_lines, delete_lines or replace_text', nil, select_options: %w[create_document replace_document replace_lines delete_lines replace_text]
 Research.input :document, :string, "Target authored document: 'README.md' (default) or 'supplements/<name>'", 'README.md', nofile: true
 Research.input :content, :text, 'New document content for create_document / replace_document', nil, nofile: true
 Research.input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)', nil, nofile: true
@@ -95,6 +95,8 @@ Research.input :start_line, :integer, 'First line of the edited span (one-based)
 Research.input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
 Research.input :anchor, :text, 'Optional content anchor: the exact text currently occupying [start_line, end_line); a mismatch rejects the edit before anything is staged, guarding against stale line numbers. Verifies the CURRENT TEXT of the stated span only — identical text at another position also matches, and an empty span anchors against "" (no position protection for insertions)', nil, nofile: true
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
+Research.input :old_text, :text, 'Exact nonempty text to find once for replace_text', nil, nofile: true
+Research.input :new_text, :text, 'Literal replacement for replace_text', nil, nofile: true
 Research.desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; no-op edits create no revision.'
 ```
 
@@ -116,6 +118,11 @@ exactly and nothing is appended.
 Errors: stale `expected_revision` (`stale.json`); span out of range with
 the valid range in the message (`range_error.json`); placeholder markers
 in content/replacement/change_note (`placeholder_guard.json`).
+
+For a link or phrase inside a paragraph, use `replace_text` with
+`old_text`, `new_text`, and the revision you read. The old text must occur
+exactly once. For line edits, a read ending on line 23 includes line 23.
+To replace just that line, pass `start_line: 23, end_line: 24`.
 
 ## evidence_attach
 
@@ -171,6 +178,11 @@ truncated}`.
 
 Errors: unknown attachment key (message lists the existing keys);
 integrity mismatch is reported through `integrity`, never silently.
+
+To cite a question’s evidence from a claim, read the attachment at its
+recorded revision and insert the returned Markdown `link` verbatim. For a
+reference attachment this opens the retained pointer. For a copy it opens
+the retained bytes.
 
 ## dossier_check
 

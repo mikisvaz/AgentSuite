@@ -102,6 +102,7 @@ class TestEvidenceTasksExported < Test::Unit::TestCase
     attach([item.merge('replace' => true)], 3)
 
     old = run_task(:evidence_read, first.fetch('evidence_read'))
+    assert_equal first.fetch('link'), old.fetch('link')
     assert_equal original, old['content']
     assert_equal original, File.binread(old.fetch('retained_location'))
     assert_equal old['retained_location'], first['retained_location']

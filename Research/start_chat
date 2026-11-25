@@ -13,3 +13,4 @@ tool: Workspace
 introduce: Semantics
 tool: Semantics
 socialize: true
+tool: ScoutCoder reload_workflow

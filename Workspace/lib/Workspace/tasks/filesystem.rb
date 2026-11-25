@@ -386,7 +386,13 @@ module Workspace
 
   # Strip line terminators and join as text lines.
   helper :lines_to_text do |lines|
-    lines.map { |l| l.to_s.sub(/\r?\n\z/, '').sub(/\n\z/, '') }.join("\n")
+    lines.map do |l|
+      begin
+        l.to_s.sub(/\r?\n\z/, '').sub(/\n\z/, '') 
+      rescue ArgumentError
+        raise ParameterException, "Error reading file into text: #{$!.message}"
+      end
+    end.join("\n")
   end
 
   input :path, :path, 'Writable destination path for the complete contents', nil, required: true

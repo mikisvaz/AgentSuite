@@ -78,6 +78,7 @@ module Research
 
     dir = cur['dir']
     mode = entry['mode'] || 'copy'
+    retained = Layout.object_path(dir, Store.attachment_view_digest(entry))
     meta = {
       'id' => id,
       'type' => type,
@@ -93,7 +94,8 @@ module Research
       'size' => entry['size'],
       'attached_at' => entry['attached_at'],
       'attach_mode' => entry['attach_mode'] || mode,
-      'retained_location' => Layout.object_path(dir, Store.attachment_view_digest(entry))
+      'retained_location' => retained,
+      'link' => "[#{attachment}](#{retained})"
     }
     entry.each { |k, v| meta[k] = v if k.to_s.start_with?('declared_') }
 

@@ -25,8 +25,28 @@ class TestSemanticsListEntities < Test::Unit::TestCase
     end
   end
 
+  module Left
+    module TF
+      extend EntityWorkflow
+      property(:label) { to_s }
+    end
+  end
+  module Right
+    module TF
+      extend EntityWorkflow
+      property(:label) { to_s }
+    end
+  end
+
+  def test_qualified_names_disambiguate_acronyms
+    error = assert_raise(ParameterException) { Semantics::EntityQuery.resolve_property!('tf', :label) }
+    assert_include error.message, Left::TF.name
+    assert_include error.message, Right::TF.name
+    assert_equal Left::TF, Semantics::EntityQuery.resolve_property!(Left::TF.name, :label).first
+  end
+
   def setup
-    @probe_name = 'probe_discovery_widget'
+    @probe_name = 'ProbeDiscoveryWidget'
   end
 
   def test_lists_registered_probe_and_framework_entities
@@ -35,7 +55,7 @@ class TestSemanticsListEntities < Test::Unit::TestCase
     names = listing.collect { |record| record[:entity] }
     assert names.include?(@probe_name),
            "registry listing does not include the probe entity: #{names.inspect}"
-    assert names.include?('association_item'),
+    assert names.include?('AssociationItem'),
            'registry listing does not include the framework AssociationItem'
 
     probe = listing.find { |record| record[:entity] == @probe_name }
@@ -66,7 +86,7 @@ class TestSemanticsListEntities < Test::Unit::TestCase
     assert_nil probe[:source], "inline probe reported a checkout source: #{probe[:source].inspect}"
 
     framework = Semantics.job(:list_entities).clean.run
-                      .find { |record| record[:entity] == 'association_item' }
+                      .find { |record| record[:entity] == 'AssociationItem' }
     assert_nil framework[:source], 'framework entity must not claim checkout ownership'
   end
 

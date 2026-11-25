@@ -212,8 +212,28 @@ Below is the Use Case report
 The Use Case was ran here: #{use_case.file('sandbox')}, and chat file is here: #{main_chat}.
     EOF
 
-    analyst.chat
+    Misc.in_dir sandbox do
+      analyst.chat
+    end
   end
 
   export :use_case, :analyze
+
+  dep :analyze, compute: :produce
+  task :bundle => :array do
+    use_case = step(:use_case)
+    analyze = step(:analyze)
+
+    file('use_case.md').write use_case.load
+    file('analyze.md').write analyze.load
+    file('log.txt').write use_case.file('log.txt').read
+
+    sandbox = Path.setup(use_case.info[:sandbox])
+    target = file('files')
+    Open.mkdir target
+
+    CMD.cmd("cd '#{sandbox}' && find . -type f -newer '#{use_case.files_dir}' -print0 | rsync -av --files-from=- --from0 ./ '#{target}'")
+
+    files
+  end
 end

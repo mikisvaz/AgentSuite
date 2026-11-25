@@ -68,7 +68,7 @@ class TestDossierTasksExported < Test::Unit::TestCase
     update = Research.tasks[:dossier_update]
     mode_input = update.inputs.find { |i| Array === i && i.first == :mode }
     assert_equal :select, mode_input[1]
-    assert_equal %w[create_document replace_document replace_lines delete_lines], mode_input[4][:select_options]
+    assert_equal %w[create_document replace_document replace_lines delete_lines replace_text], mode_input[4][:select_options]
     # inputs arrive in declaration order; blocks bind them positionally
     assert_equal %i[type title content], create.inputs.collect(&:first)
   end
@@ -271,6 +271,20 @@ class TestDossierTasksExported < Test::Unit::TestCase
       run_task(:dossier_update, @p.merge('id' => id, 'expected_revision' => 2, 'mode' => 'create_document', 'content' => 'x'))
     end
     assert_match(/entry document/, e.message)
+  end
+
+  def test_replace_text_literal_unique_in_pinned_revision
+    create = run_task(:dossier_create, { 'type' => 'claim', 'title' => 'Claim',
+                      'content' => "α README.md aaa\r\n" })
+    args = { 'id' => create['id'], 'mode' => 'replace_text', 'expected_revision' => 1,
+             'new_text' => '\\1' }
+    { 'aa' => 2, 'absent' => 0 }.each do |old, count|
+      error = dispatch(:dossier_update, args.merge('old_text' => old))
+      assert_match(/matched #{count} times/, error.to_s)
+    end
+    assert_equal 2, dispatch(:dossier_update, args.merge('old_text' => 'README.md'))['revision']
+    assert_equal "α \\1 aaa\r\n", run_task(:dossier_read, { 'id' => create['id'] })['content']
+    assert_match(/stale/i, dispatch(:dossier_update, args.merge('old_text' => 'α')).to_s)
   end
 
   def test_update_replace_document
@@ -517,6 +531,8 @@ class TestDossierTasksExported < Test::Unit::TestCase
                                          'replacement' => "Status: resolved.\n"))
     end
     assert_match(/anchor mismatch/, e.message)
+    assert_include e.message, 'at revision 1'
+    assert_include e.message, 'first differing byte 1'
     # the message quotes the observed span so the caller can re-anchor
     assert_match(/lines \[2, 3\) currently read "l2\\n"/, e.message)
     assert_match(/the anchor was "OPEN — investigating\.\\n"/, e.message)

@@ -2,62 +2,46 @@ require 'json'
 
 module Semantics
 
-  # Per-entity fan-out of one property over a list of entity ids.
-  #
-  # Two dispatch modes, chosen per property:
-  #
-  # - One-shot list dispatch (the default when the property registered a
-  #   special accessor): the property is called ONCE on the whole annotated
-  #   entity list and the framework fans out per element; per-entity records
-  #   are aligned from the result. This is the batch-friendly path: :multiple
-  #   properties get the whole list in their block, and :single/:array
-  #   properties are collected element-wise without N dispatches.
-  # - Per-entity fallback: when the list result cannot be aligned per entity
-  #   (wrong arity or a non-alignable single value), each entity is
-  #   dispatched individually through the single-entity idiom, each failure
-  #   becoming that record's error envelope; nothing blocks the others.
-  #
-  # Properties that declare an :output_dir kwarg get the same task-output
-  # routing as entity_property: the bulk payloads land under the task job's
-  # <job>.files/property_output, and per-entity result entries carry
-  # pointers. In list mode one payload dir serves the whole run; in
-  # per-entity fallback mode the routing happens inside dispatch_single via
-  # the args hash either way.
-  #
-  # Failure policy: one entity's failure never affects the others. Parameter
-  # problems (unknown type or property, malformed arguments, empty list)
-  # abort the whole run with ParameterException, since they make every
-  # per-entity record invalid.
-  input :entity_type, :string, 'Entity type name (e.g. as listed by the list_entities task)', nil, required: true
-  input :property, :string, 'Property name registered on the entity type', nil, required: true
+  input :entity_type, :string, 'Entity type name (e.g. as listed by the list_entities task)', nil, required: true, nofile: true
+  input :property, :string, 'Property name registered on the entity type', nil, required: true, nofile: true
   input :entities, :array, 'Entity identifiers', nil, required: true
-  input :arguments, :text, 'Optional property arguments as a JSON object string (e.g. {"max": 2})', nil
+  input :arguments, :text, 'Optional property arguments as a JSON object string (e.g. {"max": 2})', nil, nofile: true
   task :entity_list_property => :json do |entity_type, property, entities, arguments|
     mod, prop = EntityQuery.resolve_property!(entity_type, property)
     args = EntityQuery.parse_arguments(arguments)
     raise ParameterException, 'entities is empty' if entities.empty?
 
-    param_types = EntityQuery.parameter_types(mod, prop)
-    payload_dir = EntityQuery.route_payload_dir!(self, param_types, args)
-
-    mode = :list
-    records = begin
-      EntityQuery.records_from_list_dispatch(mod, entities, prop, args, param_types)
-    rescue ArgumentError
-      mode = :per_entity
-      EntityQuery.dispatch_each(mod, entities, prop, args, param_types)
+    mode = EntityQuery.effective_dispatch(mod, prop)
+    positional, keywords = EntityQuery.prepare_call(self, mod, prop, args)
+    dispatch_mode = 'per_entity'
+    batch_error = nil
+    if %w[array multiple].include?(mode)
+      begin
+        stage = 'execution'
+        result = EntityQuery.dispatch(mod, entities.dup, prop, mode, positional, keywords)
+        stage = 'alignment'
+        records = EntityQuery.align_records(entities, result)
+        dispatch_mode = 'list'
+      rescue StandardError => error
+        batch_error = { stage: stage, class: error.class.to_s, message: error.message }
+      end
     end
-
-    { status: 'done',
-      entity_type: entity_type.to_s,
-      property: prop.to_s,
-      dispatch_mode: mode.to_s,
-      payload_dir: payload_dir,
-      count: records.length,
-      done: records.count { |record| record[:status] == :done },
-      failed: records.count { |record| record[:status] == :failed },
-      receipt: EntityQuery.receipt(self, nil, prop, args),
-      records: records }
+    records ||= EntityQuery.dispatch_each(mod, entities, prop, mode, positional, keywords)
+    done = records.count { |record| record[:status] == :done }
+    status = if done == records.size
+               'done'
+             elsif done.zero?
+               'failed'
+             else
+               'partial'
+             end
+    response = { status: status, entity_type: entity_type.to_s, constant: mod.name,
+                 property: prop.to_s, dispatch_mode: dispatch_mode,
+                 payload_dir: keywords[:output_dir], count: records.size,
+                 done: done, failed: records.size - done, records: records,
+                 receipt: EntityQuery.receipt(self, mod, prop, args, entities: entities) }
+    response[:batch_error] = batch_error if batch_error
+    response
   end
 
   export :entity_list_property

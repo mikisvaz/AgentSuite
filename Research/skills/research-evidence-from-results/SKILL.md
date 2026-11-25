@@ -38,7 +38,7 @@ bytes plus the producing method retained and checkable.
    Attach contrary results too — a dossier that only keeps supporting
    evidence is not an evidence record.
 6. Link the attachment from the claim's document with the returned
-   Markdown `link`. Pass the item’s `evidence_read` arguments to Research to revisit the same revision.
+   Markdown `link`. Pass the item’s `evidence_read` arguments to Research to revisit the same revision. A later writer can use the `link` returned by that read verbatim in the claim.
 
 ## Reconcile before you tell someone how to reproduce (workflow aid)
 

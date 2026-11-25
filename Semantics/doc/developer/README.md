@@ -6,7 +6,7 @@ workflow. Agent-facing usage lives in `Semantics/README.md` and
 
 ## Auto-require of the project workflow
 
-`workflow.rb` (L7-9) requires the project workflow when Semantics itself is
+`workflow.rb` requires the project workflow when Semantics itself is
 loaded from its own checkout rather than as `./workflow.rb`:
 
 ```ruby
@@ -82,14 +82,10 @@ ruby -Itest -Ilib test/Semantics/tasks/test_entity_property.rb
 ruby -Itest -Ilib test/Semantics/tasks/test_entity_list_property.rb
 ```
 
-The task tests are structure-based: they register their own probe entity
-modules in-process (the same registration a loaded draft performs) and run
-the real task jobs, so they pass regardless of which entity drafts the
-checkout carries, involve no network, and pin both the success and failure
-contracts. Property tasks write their jobs under the standard Scout jobs
-tree; the tests clean each job before running it.
+The task tests register probe modules and execute real Scout jobs. To exercise the agent-facing workflow entry point and the persisted JSON handoff in fresh processes, also run:
 
-(The behavioral description above was marked unverified in the Wave A
-audit dossier; it was verified against the test file headers during the
-Wave A execution — the probe-module and no-network claims appear in the
-test file comments and code.)
+```bash
+ruby -Itest -Ilib test/Semantics/tasks/test_consumer.rb
+```
+
+The consumer fixture loads a foreign project from its working directory, follows an entity ID, requests a job path through Scout-AI, and reads the selected value and digest in a second Ruby process.

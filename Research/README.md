@@ -122,6 +122,11 @@ the span including the final newline of line 28. Line modes take
 `replacement`; `content` is only for whole-document modes, and to edit
 through end of document pass `end_line` = `total_lines + 1` from the read.
 
+For a link or phrase inside a paragraph, use `replace_text` with
+`old_text`, `new_text`, and the revision you read. The old text must occur
+exactly once. For line edits, a read ending on line 23 includes line 23.
+To replace just that line, pass `start_line: 23, end_line: 24`.
+
 ## evidence_attach
 Attach evidence files to a dossier, as retained copies or live references.
 
@@ -156,6 +161,11 @@ binaries return file/media info instead of text. References report their
 source's observed integrity — a changed or missing source is surfaced,
 never silently substituted, so historical claims cannot drift with the
 filesystem.
+
+To cite a question’s evidence from a claim, read the attachment at its
+recorded revision and insert the returned Markdown `link` verbatim. For a
+reference attachment this opens the retained pointer. For a copy it opens
+the retained bytes.
 
 ## dossier_check
 Run the read-only integrity check over the store.

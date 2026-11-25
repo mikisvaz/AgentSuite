@@ -17,6 +17,9 @@ class TestSemanticsEntityProperty < Test::Unit::TestCase
       raise "widget #{self} is not computable" if self.to_s == 'boom'
       self.to_s.to_i * factor
     end
+    property :probe_arguments => :single do |first = 1, second = 2, required:, optional: 3|
+      [to_s, first, second, required, optional]
+    end
     property :probe_documents => :array do |output_dir: nil|
       label = first.to_s
       dir = Path.setup(output_dir || Path.tmpdir)
@@ -43,10 +46,9 @@ class TestSemanticsEntityProperty < Test::Unit::TestCase
     assert_equal 14, record[:result]
 
     receipt = record[:receipt]
-    assert_equal false, receipt[:step_backed], 'receipt claims a Step that does not exist'
+    assert_equal ProbePropertyWidget.name, receipt[:dispatched][:entity_type]
     assert_equal '7', receipt[:dispatched][:entity]
-    assert receipt[:job][:path].to_s.start_with?(File.join(ENV['HOME'], '.scout')),
-           "job path does not look like a Scout job: #{receipt[:job][:path]}"
+    assert_equal job.path.to_s, receipt[:job][:path]
     assert File.exist?(receipt[:job][:path]),
            "receipt job file does not exist: #{receipt[:job][:path]}"
     assert_equal 'entity_property', receipt[:job][:task]
@@ -108,6 +110,15 @@ class TestSemanticsEntityProperty < Test::Unit::TestCase
     assert record[:error][:class], 'error envelope without class'
     assert record[:error][:message], 'error envelope without message'
     assert record[:receipt], 'error record missing receipt'
+  end
+
+  def test_binding_and_literal_entity
+    inputs = { entity_type: @entity_type, property: 'probe_arguments', entity: 'README.md' }
+    job = Semantics.job(:entity_property, inputs.merge(arguments: '{"required":false,"optional":0}'))
+    assert_equal ['README.md', 1, 2, false, 0], job.clean.run[:result]
+    ['{}', '{"required":1,"second":4}', '{"required":1,"typo":0}'].each do |args|
+      assert_raise(ParameterException) { Semantics.job(:entity_property, inputs.merge(arguments: args)).clean.run }
+    end
   end
 
   def test_unknown_property_aborts_loudly

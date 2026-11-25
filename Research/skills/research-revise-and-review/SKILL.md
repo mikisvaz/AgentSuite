@@ -22,7 +22,8 @@ edit hit a dossier and needs adopting or reverting.
    numbers come from the read you base the edit on. Use `overview: true` for
    structure, `dossier_history` for what changed and when.
 2. **Guarded edit**: `dossier_update` with `expected_revision` = the revision
-   you just read. Spans are one-based half-open `[start_line, end_line)`;
+   you just read. To fix a link or a phrase, use `replace_text` with the unique
+   literal `old_text` and its `new_text`. For line edits, spans are one-based half-open `[start_line, end_line)`;
    `end_line` is required for `replace_lines`/`delete_lines` — to edit through
    end of document pass `total_lines + 1` from the read; the replacement
    includes its own line breaks; `delete_lines` deletes a span; `[N+1, N+1)`

@@ -1,4 +1,5 @@
 require 'scout-ai'
+require 'scout/workflow/live'
 
 Misc.add_libdir if __FILE__ == $PROGRAM_NAME
 

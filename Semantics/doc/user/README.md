@@ -1,111 +1,38 @@
-# Using Semantics tasks (user guide)
+# Using Semantics
 
-Agent-facing usage of the Semantics workflow's three tasks —
-`list_entities`, `entity_property`, `entity_list_property`. The workflow
-introduction and task entries live in `Semantics/README.md`; developer
-material (authoring drafts, layout, testing) in
-[doc/developer/README.md](../developer/README.md).
+Start in the project checkout that owns the entities. Load Semantics and call `list_entities` in the process that will evaluate the properties. A fresh consumer process must load the project workflow and its entity definitions. Use the reported `constant` as `entity_type` when passing a type between agents. A unique short CamelCase name or snake_case alias also works. An ambiguous alias produces an error listing the qualified alternatives.
 
-## Picking the task
+Discovery reports property names, dispatch modes, persistence flags and Ruby parameter signatures. For entity definitions in the Scout draft or promoted layout, `source.definition` identifies the file where the constant was defined. A property's `source` points to a matching draft by filename under that checkout. It is a navigation hint. Inline properties can have a null source. Paths under the Semantics checkout are relative to that checkout. Foreign checkout paths are absolute.
 
-| Need | Task |
-|---|---|
-| What entity types and properties exist in this process? | `list_entities` |
-| One property for one entity | `entity_property` |
-| One property for many entities at once | `entity_list_property` |
+## Evaluate a property
 
-`list_entities` is the discovery entry point: run it before assuming an
-entity type or property exists. It reports every entity type registered in
-the running process — including framework entities and entities owned by
-other loaded workflows — each with its properties, and a `source` field
-naming the checkout-relative draft files when this checkout owns the
-entity (`null` otherwise).
-
-## Naming rules (aligned with ScoutCoder)
-
-Entity-TYPE names are CamelCase, matching `[A-Z][A-Za-z0-9]*` (e.g. `Gene`,
-`DemoWidget`, or the all-caps acronym `TF`); property names are snake_case
-(`[a-z][a-z0-9_]*`). A legacy snake_case entity name still validates, with
-a warning that names both spellings; the two collision cases (a snake name
-whose camelized constant collides with a coexisting CamelCase draft, and
-two snake names whose constants collide) are hard errors. The full rule,
-with examples, is in the ScoutCoder authoring guide,
-`ScoutCoder/doc/user/AuthoringEntities.md`.
-
-## Addressing the workflow
-
-In this environment bare workflow names may not resolve; address the
-workflow by path (`workflow.rb`):
+For example, if the project registers a type named Gene with a property named pubmed_articles, run the following commands from the project directory. Set SEMANTICS to the absolute path to the Semantics workflow.rb.
 
 ```bash
-scout workflow task workflow.rb list_entities
+scout workflow task "$SEMANTICS" list_entities
+scout workflow task "$SEMANTICS" entity_property \
+  --entity_type Gene --entity TP53 --property pubmed_articles
+scout workflow task "$SEMANTICS" entity_list_property \
+  --entity_type Gene --entities $'TP53\nKRAS' --property pubmed_articles
 ```
 
-## Examples
+For a property with arguments, supply a JSON object such as `--arguments '{"max":3}'`. Names are taken from the property signature. Supply positional parameters from left to right without gaps. Required keywords must be present. Extra keys require a property that accepts arbitrary keywords. An invalid call raises a parameter error before property execution. A declared output_dir keyword defaults to the job’s property_output directory.
 
-The examples assume an example entity type `Gene` (identified by gene
-symbol) with a property `pubmed_articles` returning publication
-identifiers. Substitute whatever entity types and properties your checkout
-actually carries.
+## Interpret the result
 
-```bash
-scout workflow task workflow.rb list_entities
+A single evaluation returns `done` with a result or `error` with the exception details. Both carry the resolved entity type and a receipt for the Semantics job. List evaluations preserve input order and duplicates. The summary status is `done`, `partial`, or `failed`. Each record has its own `done` or `failed` status.
 
-scout workflow task workflow.rb entity_property \
-    --entity_type Gene --entity TP53 --property pubmed_articles
+Scalar and typeless properties run once per input. Array and multiple properties use Scout’s batch accessor. If the batch raises or its result cannot be aligned, Semantics retries each identifier separately. In that case `dispatch_mode` is `per_entity` and `batch_error.stage` identifies `execution` or `alignment`. A missing key in a keyed result produces a failure for that identifier. Properties that call rate-limited services own their pacing.
 
-scout workflow task workflow.rb entity_property \
-    --entity_type Gene --entity TP53 \
-    --property pubmed_article_details --arguments '{"max": 3}'
+## Cite a result in Research
 
-scout workflow task workflow.rb entity_list_property \
-    --entity_type Gene --property pubmed_articles \
-    --entities $'TP53\nKRAS\nZZZQQQNOTAGENE123'
-```
+1. Call the ordinary property tool with `return_path: true`. Use `refresh: "refresh"` to recompute a cached Semantics job, including when testing edited property code. Capture the completed job output before a later refresh.
+2. Attach the job output by copy to the Research dossier and retain its returned digest. Select the value directly from that JSON. For a single result, check the status, entity type, identifier and property before resolving a selector such as `/result/n_active`.
+3. For a list, check the selected record's identifier and status before using a selector such as `/records/2/result/n_active`. A successful result with `comparable: false` and a null fraction can support an observation about comparability. A failed record carries an execution error.
+4. If the claim uses bytes from a bulk payload, capture the referenced payload file as well. Copying the JSON captures the pointer.
 
-From Ruby:
+Receipts identify the Semantics job and its effective arguments. Cached jobs created with earlier workflow code retain the receipt and status fields written by that version.
 
-```ruby
-require File.expand_path('workflow.rb', <semantics checkout>)
+## Troubleshooting for Agents
 
-Semantics.job(:entity_property, entity_type: 'Gene', entity: 'TP53',
-                                property: 'pubmed_articles').run
-```
-
-## Outputs and receipts
-
-- All tasks return **JSON** (Scout return type `:json`), so results can be
-  directly consumed by other agent tools.
-- Export mode: `entity_property` and `entity_list_property` are exported as
-  ordinary (non-exec) tasks, so one dispatched call runs as a persisted job
-  and returns value and durable job path together. Through the agent tool
-  layer, `return_path: true` answers with the persisted job path (durable,
-  readable by ordinary tools after the producing process ends) rather than a
-  temporary file; `list_entities` stays exec-exported (pure discovery, no
-  result to cite).
-- Property tasks write their jobs under the standard Scout jobs tree
-  (`var/jobs` / `~/.scout/var/jobs`); clean a job when freshness matters.
-- When a dispatched property declares an `:output_dir` kwarg and the
-  caller did not choose a location, `entity_property` routes it into the
-  task's own job files dir (`<job>.files/property_output`), so bulk
-  payloads (abstracts and similar) land on disk as one file per record
-  while the returned JSON record carries only compact pointers (the record
-  itself is persisted as the job result). `entity_list_property` reports
-  the same routing as `payload_dir`.
-
-## Failure policy
-
-A consistent two-level policy, shared by the property-evaluating tasks:
-
-- **Parameter problems** — unknown entity type, unknown property,
-  malformed `arguments` JSON, empty entity list — abort the run with a
-  Scout `ParameterException`. These make every downstream record invalid,
-  so they fail loud and early.
-- **Execution problems** — a property that raises for one particular
-  entity (network down for a gene without offline fallbacks, a bad
-  identifier, etc.) — are captured per entity as a structured error
-  envelope carrying the exception class and message. One entity's failure
-  never blocks or corrupts another's record.
-
-List runs also apply a modest politeness delay between dispatches, since
-some properties call rate-limited public services.
+When the ScoutCoder agent develops new entities and entity properties, these are not automatically made available until a workflow reload is done with 'reload_workflow'. New tasks are not made available during a running inference bout even after a workflow reload, but it will make them available for new inferences, like a new delegation.
