@@ -73,7 +73,7 @@ Your work seems to have been interrupted. Please continue
       EOF
     else
       agent.user <<-EOF
-You have been asked to fulfill a user request. A plan is attached above from the plan stage. Follow the plan for all consequential steps and cite the plan step you are executing in the work order; when you deviate from the plan, log the deviation and its reason in your report rather than silently departing from it.
+Use the plan as a proposed execution strategy. Adapt it as needed to satisfy the user's request efficiently. Explain material changes to requirements, scope or expected deliverables, rather than ordinary changes to execution strategy.
       EOF
 
     end

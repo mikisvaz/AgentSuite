@@ -24,3 +24,11 @@ This is a routing overview, not a promise that any recipient has a particular to
 - **Investigator:** handles bounded investigations when explicitly assigned. Route new general execution work to Worker.
 
 Planned may compose User, Searcher, Planner and a work agent (often Manager) in stages. Which stages and agents are actually active is determined by that workflow's configuration.
+
+## Delegate specialist discovery
+
+Delegate a problem when you identify that it belongs to another specialist's capabilities, not only after you have diagnosed it.
+
+A delegation should specify the required outcome, known facts, constraints and acceptance criteria. It does not require the delegating agent to reconstruct the specialist's implementation or determine the solution in advance.
+
+If an operation requires a specialist's tooling, delegate its preliminary investigation and verification as well as its implementation.

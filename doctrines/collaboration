@@ -8,6 +8,4 @@ A job or artifact path can identify evidence without making it readable in the r
 
 A delegation receipt identifies the execution that produced a reply; it does not embed the entire child transcript. More detailed provenance can be inspected through the available job and ChatAnalyst interfaces.
 
-A delegation opens a new conversation with an agent ander a particular name, if no name is given 'default' is used. Only one agent can work
-on one conversation at a time.
-
+A delegation addresses a conversation with an agent under a particular name. If no name is given, `default` is used. An existing conversation may be continued, retaining its accumulated context. Only one agent can work on a given conversation at a time.

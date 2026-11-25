@@ -1,8 +1,12 @@
-Workspace
+Suite of sandboxed tools to work with the filesystem and execute scripts
 
 Use Workspace to inspect project files, edit text, execute scripts, and work with Scout TSV tables. For a first call, run `sandbox_paths` with no inputs to see the workflow root, grants from Scout-AI, and the planned bwrap mounts. A directory granted outside the checkout can be a valid input or output.
 
 Start with the [agent introduction](doc/user/README.md). For path access and job results, see [Sandbox and outputs](doc/user/SandboxAndOutputs.md). For table preparation and row shapes, see [Working with TSV files](doc/user/TSV.md).
+
+## Tabular artifacts
+
+Scout TSVs are keyed tables: the first column is the key, the remaining columns are fields, and the column-name line starts with `#`, optionally preceded by `#:` metadata. Multi-valued fields use `|` as the default sub-value separator. When producing TSV artifacts for Scout, use its native format rather than an unmodified CSV/TSV export. The `workspace-tsv` skill describes creation, interpretation and manipulation of these files.
 
 # Tasks
 

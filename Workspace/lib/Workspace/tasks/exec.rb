@@ -1071,6 +1071,8 @@ module Workspace
       raise ParameterException, 'Provide either a file or code to run'
     end
 
+    require 'scout/python/paths'
+
     cmd_name = nil
     ['python3', 'python'].each do |p|
       begin
@@ -1086,8 +1088,21 @@ module Workspace
     end
     cmd_name ||= 'python'
 
+    scout_paths = ScoutPython.paths.map(&:to_s)
+
+    scout_paths.each do |path|
+      LLM::Sandbox.allow_read_path path
+    end
+
+    python_paths = (
+      scout_paths +
+      ENV.fetch('PYTHONPATH', '').split(File::PATH_SEPARATOR)
+    ).reject(&:empty?).uniq
+
     begin
-      cmd_json cmd_name, target, timeout: timeout
+      Misc.with_env 'PYTHONPATH', python_paths.join(File::PATH_SEPARATOR) do
+        cmd_json cmd_name, target, timeout: timeout
+      end
     rescue => e
       raise ScoutException, e.message
     end

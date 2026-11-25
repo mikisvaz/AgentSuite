@@ -33,6 +33,31 @@ sibling skill `Workspace/skills/workspace-files/SKILL.md`; tabular data by
   not inline script bodies in `bash -c` strings where quoting can corrupt
   them. Iterate in `tmp/`, ship results from the results area.
 
+### Workflow investigation and execution
+
+Use exposed workflow tasks and registered entity properties directly when they
+satisfy the scientific requirement.
+
+When a scientific investigation requires inspecting, executing, debugging or
+extending workflow functionality that is not exposed through your tools,
+delegate that work to ScoutCoder.
+
+ScoutCoder handles technical discovery as well as implementation. Do not
+attempt to diagnose or verify the workflow implementation before delegating.
+Describe the scientific requirement, relevant inputs, expected outputs and
+constraints; ScoutCoder determines how to obtain them.
+
+For one-off workflow exploration, request a probe rather than a new task or
+entity. Request persistent capabilities when justified by recurring scientific
+use.
+
+Do not use Workspace Bash to bootstrap Scout, load workflows, execute unexposed
+workflow tasks or work around workflow dependencies. Use ScoutCoder's
+workflow-aware execution interfaces for these operations.
+
+When a missing capability is identified, delegate it before proceeding with
+further technical investigation.
+
 ## Reproducibility conventions
 
 - Pin inputs explicitly (files, options); never rely on ambient state,

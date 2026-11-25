@@ -8,6 +8,71 @@ the nine TSV tasks; the README summarizes them. TSV value-type semantics
 (`single`/`list`/`flat`/`double`, `sep2`) are Scout `TSV` semantics, documented
 in scout-gear `doc/user/ProcessingTabularData.md`.
 
+## Scout TSV file format
+
+Scout TSV is a keyed table, not just a rectangular array of records. The
+canonical on-disk representation uses actual tab characters between columns:
+
+```tsv
+#: :type=:list
+#Gene	Score	Direction
+TP53	2.4	up
+MYC	-1.8	down
+```
+
+- The first column is the key; the remaining columns are the value fields.
+  The column-name line begins with `#` immediately before the key-field name.
+- An optional `#:` metadata preamble precedes the column-name line. It can
+  describe the value type, namespace, cast, filename and other scalar
+  options. Declare the type when writing new Scout TSVs so that the intended
+  value shape is explicit. Preserve applicable metadata when transforming a
+  table; do not copy stale filename, cast or namespace information blindly.
+- Data lines do not carry a header marker. `#:` metadata and the `#` field
+  header are not interchangeable. Do not write an unmarked column-name line
+  or discard all `#` lines as comments.
+- A key identifies the logical record. Use unique keys for scalar records;
+  repeated keys can collapse or merge on loading. If records are identified
+  by a tuple (e.g. gene, treatment and time), use an unambiguous composite
+  key, or model the multiplicity explicitly.
+
+For a multi-valued table, the default sub-value separator is `|`:
+
+```tsv
+#: :type=:double
+#GO Term	Gene	Score
+GO:0000278	CDK1|CCNB1	2.4|1.8
+```
+
+Here the row for `GO:0000278` has two value fields, represented as
+`[["CDK1", "CCNB1"], ["2.4", "1.8"]]`. Where field values describe associated
+items, preserve their positional correspondence. A `:list` table represents
+one scalar per field; a `:single` table one scalar per key; a `:flat` table
+does not preserve stable named-field boundaries.
+
+Keep identifiers as strings, including leading zeros. Missing values are not
+zeros. A literal tab or newline in a value, or a literal sub-value separator
+in a multi-valued field, needs explicit handling rather than ordinary CSV
+quoting: do not assume Scout decodes CSV quoting in canonical TSVs.
+
+## Reading and writing
+
+Use `tsv_info` to inspect the interpreted structure rather than treating
+the first physical line as the column names. Its materialized key count is
+not necessarily the physical number of records. Use `tsv_query` for exact
+key lookups and `tsv_read` for normalization or selected rows.
+
+There is no `tsv_write` task. For small new tables use Workspace's ordinary
+file-writing tools with the canonical representation above. For programmatic
+outputs prefer Scout serialization in Ruby, or emit the format explicitly
+from Python or another language. `tsv_set_metadata` rewrites an existing
+table; it is not a constructor and cannot recover rows already lost through
+incorrect key interpretation.
+
+For an ordinary unmarked tab-separated header, use `header_hash: ''` and
+the intended `type` when inspecting or normalizing the source. For comma-
+separated sources set the delimiter as well; quoted CSV requires a
+CSV-aware reader if the values contain quoted delimiters or line breaks.
+
 ## Recommended ingest flow
 
 1. Run `tsv_info` on an unfamiliar source to inspect the interpreted key field,
@@ -47,10 +112,9 @@ in scout-gear `doc/user/ProcessingTabularData.md`.
 | `flat` | `["a", "b"]` | Flattened values without stable named-field boundaries |
 | `double` | `[["a"], ["b"]]` | An array of values per value field |
 
-A typical header is `#ID\tGene\tScore`; `ID` is the key field and remaining
-columns are value fields. `#: :type=:double` is a type annotation. `sep` is the
-column separator (tab by default), `sep2` the multi-value separator (pipe by
-default), and `header_hash` the header/comment marker (`#` by default).
+`sep` is the column separator (tab by default), `sep2` the multi-value
+separator (pipe by default), and `header_hash` the header marker (`#` by
+default). These options describe how to interpret the input.
 
 ## `tsv_info`
 
@@ -61,9 +125,7 @@ is the heuristic count of physical input records behind them. Candidate fields
 are identified by name. `type`, `key_field`, `fields`, delimiters, and header
 marker describe how to interpret the source.
 
-`tsv_info` is **side-effect free**. The former metadata-rewriting inputs
-(`new_key_field`, `rename_fields`, `cast`, `new_type`, `namespace`,
-`identifiers`) were removed from this task; persist metadata with
+`tsv_info` is **side-effect free**. Persist metadata changes with
 `tsv_set_metadata` instead.
 
 ## `tsv_read`
@@ -114,8 +176,7 @@ the caller can request the persisted job result path using the harness-level
 `return_path: true` option. That option does not select or replace the mutated
 source.
 
-`tsv_set_metadata` is the explicit metadata-mutation task that inherited
-`tsv_info`'s old rewrite behavior. It takes one or more of `new_key_field`
+`tsv_set_metadata` explicitly persists metadata changes. It takes one or more of `new_key_field`
 (new key label), `rename_fields` (new value-field labels in order; duplicate
 labels are rejected), `cast` (`to_i`/`to_f`), `namespace`, `identifiers`
 (recorded as metadata only; not opened or applied), and `new_type` (persisted

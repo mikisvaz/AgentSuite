@@ -1,102 +1,219 @@
 ---
 name: workspace-tsv
-description: "Inspect, normalize, query, edit, set metadata, merge, attach, translate and sort Scout TSV tabular data with the nine Workspace tsv_* tasks. Use when an agent must work with a TSV/CSV table — check its shape, normalize a non-Scout source, look up exact keys, replace a cell or row, persist a key/field/type/cast change, join two tables, translate identifiers, or page through sorted output — or when a tsv_* task rejected an input and the reason is interpretation (sep, sep2, header_hash, type). Triggers: tsv_info, tsv_read, tsv_query, tsv_edit, tsv_set_metadata, tsv_merge, tsv_attach, tsv_translate, tsv_sort, TSV, \"tabular\", \"table join\", \"column separator\", \"sep2\", \"key field\", \"double\", \"normalize CSV\", \"identifier mapping\"."
+description: "Read, create, inspect, normalize and manipulate Scout TSV files, including computational results, evidence tables, identifier mappings and TSV/CSV inputs. Use when writing a new .tsv artifact, exporting a dataframe for Scout, reading # or #: headers, handling keyed rows or pipe-separated values, or using Workspace tsv_* tools (info, read, query, edit, set_metadata, merge, attach, translate, sort)."
 ---
 
-# Workspace TSV operations (the nine `tsv_*` tasks)
+# Working with Scout TSVs
 
-## What this skill covers
+Scout TSVs are keyed tables. Use the canonical Scout format for new TSV
+artifacts intended for Scout tools or agents, unless the consumer specifies
+another format.
 
-Operational choice among the nine TSV tasks, the prepare-then-operate flow,
-and the mutation-safety rules. Per-input detail is authoritative in
-`Workspace/doc/user/TSV.md` (project-qualified); Scout TSV value-type
-semantics (`single`/`list`/`flat`/`double`, `sep2`) live in scout-gear
-`doc/user/ProcessingTabularData.md`. This skill does not repeat either.
+## File format
 
-## Prepare first, then operate
+```tsv
+#: :type=:list
+#Gene	Score	Direction
+TP53	2.4	up
+MYC	-1.8	down
+```
 
-`tsv_info` and `tsv_read` accept source delimiters and header options. Use `tsv_read` to produce canonical TSV for downstream operations. Individual tasks also accept field, type or cast options as described in their task help.
+The first column is the key; the others are fields. The column-name line
+begins with `#`, immediately before the key-field name. An optional `#:`
+metadata preamble comes before it. Declare the intended type for new
+outputs; preserve applicable namespace and other metadata when transforming
+existing tables. Use actual tabs, not the literal characters `\\t`.
 
-Recommended flow on an unfamiliar source:
+| Type | Shape of value for one key |
+|---|---|
+| `single` | One scalar |
+| `list` | One scalar per field |
+| `double` | An array of values per field |
+| `flat` | Flattened values, without stable named-field boundaries |
 
-1. `tsv_info` — shape: interpreted key field, value fields, type, materialized key
-   counts, entity-format candidates (hints, not validated identifiers). It is
-   side-effect free: it only reports.
-2. `tsv_read` with any needed options — normalize into canonical Scout TSV
-   (tab columns, pipe multi-values, `#` headers); text result feeds the
-   downstream tasks; `return_path: true` when a path is needed instead.
-3. Operate: `tsv_query` / `tsv_edit` / `tsv_set_metadata` / `tsv_merge` /
-   `tsv_attach` / `tsv_translate` / `tsv_sort`.
+```tsv
+#: :type=:double
+#GO Term	Gene	Score
+GO:0000278	CDK1|CCNB1	2.4|1.8
+```
 
-## Which task for which need
+The default sub-value separator is `|`; the second example represents
+`[["CDK1", "CCNB1"], ["2.4", "1.8"]]`. Preserve correspondence between
+associated values in different fields.
+
+## Creating and reading files
+
+- Write small tables using the ordinary Workspace file-writing tools.
+  There is no `tsv_write` task. In Scout Ruby code prefer `TSV.setup`
+  followed by native serialization (`tsv.to_s` or a dumper).
+- For Python/dataframe outputs, explicitly select the key column, add the
+  `#` header marker, and emit the intended metadata. Do not emit an
+  accidental dataframe index or assume CSV quoting is decoded by Scout.
+  Handle tabs, newlines and literal multi-value separators in cells
+  explicitly.
+- Keep keys unique for scalar records. For distinct observations sharing
+  an identifier, use a composite key or an appropriate multi-valued type.
+  Repeated physical keys may be merged or overwritten when materialized.
+- Treat identifiers as strings. Do not coerce missing values or invalid
+  numbers into zeros. A cast applies to the values, not a declaration of
+  per-column types.
+- When reading outside Scout, distinguish the `#:` preamble from the `#`
+  column-name line; strip only the header marker from the latter before
+  parsing its field names. Do not discard every `#` line or use the first
+  physical line as the header. Preserve the declared value shape.
+- For a newly written or unfamiliar table whose interpretation matters,
+  inspect it with `tsv_info` using the intended consumer's parsing options
+  (defaults for canonical output). Check the key field, fields, type and
+  materialized key count. Use `tsv_query` for representative values.
+
+## Workspace operations
+
+`tsv_info` and `tsv_read` accept source interpretation options such as
+`sep`, `sep2`, `header_hash`, `type`, `key_field` and `fields`.
+Use `tsv_read` to normalize noncanonical sources before passing them to
+downstream tasks. For an ordinary unmarked header use `header_hash: ''`.
+If the source is quoted CSV, use a CSV-aware reader when required.
 
 | Need | Task |
 |---|---|
-| Inspect shape (fields, type, counts) | `tsv_info` (read-only) |
-| Normalize / subset / reinterpret a source | `tsv_read` |
+| Inspect interpreted shape and counts | `tsv_info` |
+| Normalize, project or select records | `tsv_read` |
 | Fetch exact keys in request order | `tsv_query` |
-| Replace one cell or a whole row | `tsv_edit` |
-| Persist key/field labels, cast, namespace, identifiers or type | `tsv_set_metadata` |
-| Join two compatible tables (replace or zip) | `tsv_merge` |
-| Attach right-side fields on matching keys | `tsv_attach` |
-| Translate identifiers through a mapping file | `tsv_translate` |
-| Sort by key or field, return one page | `tsv_sort` |
+| Replace a cell or row | `tsv_edit` |
+| Persist metadata or type changes | `tsv_set_metadata` |
+| Combine compatible keyed tables | `tsv_merge` |
+| Attach right-side fields by explicit matching fields | `tsv_attach` |
+| Translate identifiers with a mapping file | `tsv_translate` |
+| Sort by key or field and page | `tsv_sort` |
 
-## Read vs traverse vs query
+`tsv_query` is exact-key lookup, not search. A missing key is reported
+explicitly; the request limit is 5000 keys. Use `@key` for a value field
+literally named `key`. Named-field operations are not supported on `flat`
+rows where field boundaries are absent.
 
-- `tsv_read` is the full normalization read: it returns the whole table
-  (optionally filtered via `select`/`grep`/`keys`), not a lookup.
-- `tsv_query` is exact-key lookup: give it the keys you want, it returns
-  each row (or one `column`) in request order, with `found: false` for
-  misses. It does not search or rank. A `column` accepts the reserved
-  alias `key`, the exact key-field label, or a value-field name; prefix `@`
-  for a value field literally named `key`. Requests are capped (5000 keys).
-- Full-table traversal order (e.g. scanning by value) is a `tsv_sort` (by a
-  value `column`, possibly `just_keys`) or a `tsv_read` concern, not a
-  query concern.
+`tsv_sort` defaults to a page of 500 rows. Its value-field ordering uses
+the first value of a multi-valued field. Supply numeric `cast` when needed
+and appropriate for the data.
 
-## Mutation-safety rules
+## Mutations and results
 
-- `tsv_edit` **always rewrites its source on success** (atomic
-  same-directory tmp + rename). Point it only at a file you own.
-- `tsv_set_metadata` is the only metadata mutation: it persists
-  `new_key_field`, `rename_fields`, `cast`, `new_type`, `namespace` or
-  `identifiers` into the source (atomic rewrite, write-authorized first).
-  It needs at least one of them and refuses CSV sources — normalize with
-  `tsv_read` first.
-- `tsv_info` never rewrites anything. Metadata persisted through
-  `tsv_info` in older revisions now lives in `tsv_set_metadata`.
-- `tsv_query`, `tsv_read`, `tsv_merge`, `tsv_attach`, `tsv_translate`,
-  `tsv_sort` never modify their inputs; `tsv_attach` operates on a copy
-  because Scout's `TSV.attach` mutates its receiver.
-- Mutation requires a writable, regular, non-symlink file and writable
-  parent directory.
-- TSV-producing tasks return text; use the harness-level `return_path: true`
-  when a persisted path is needed (not a task input).
+`tsv_edit` and `tsv_set_metadata` rewrite the source on success. They
+require a writable regular non-symlink file and writable parent directory;
+normalize CSV first. The other TSV tasks do not mutate their inputs.
+A parse override (`type`, `key_field`, `fields`) is not by itself a
+persistent change; metadata mutation may bake a projection into the source.
 
-## Common mistakes
+`identifiers` associates mapping metadata; actual translation requires
+`tsv_translate`. TSV-producing tasks return text; use the harness-level
+`return_path: true` when a persisted result path is needed.
 
-- Calling an operating task with `sep`/`header_hash` on a raw CSV — those
-  options exist only on `tsv_info`/`tsv_read`; normalize first.
-- Expecting `tsv_query` to search or filter — it fetches exact keys only.
-- Using `tsv_edit` on a shared or tracked source without expecting the
-  rewrite — it mutates in place.
-- Expecting `tsv_info` to persist a change — it is side-effect free; use
-  `tsv_set_metadata`.
-- Treating `tsv_info`'s or `tsv_set_metadata`'s `identifiers` as a
-  translation — it is metadata assignment; actual translation is
-  `tsv_translate` with an explicit mapping file.
-- Sorting a `flat` TSV by a named field, or expecting named columns there —
-  `flat` rows carry no stable field boundaries.
-- Assuming `type` on `tsv_info`/`tsv_read` persists a conversion — it is a
-  parse override; `new_type` on `tsv_set_metadata` is the persistent
-  conversion.
-- Forgetting `page_size` on `tsv_sort` and assuming the whole table — the
-  default is a bounded page (500 rows) and never silently truncated; pass
-  an explicit size for everything.
+## Working with Scout TSVs in Python
 
-## Going deeper (repo-relative pointers, optional)
+The Workspace `python` tool makes Scout's registered Python modules available automatically. The scout-rig Python companion package provides pandas-based TSV reading and writing utilities:
 
-- `Workspace/doc/user/TSV.md` — authoritative per-input detail for all
-  nine tasks, the ingest flow, data-shape reference, mutation rules.
-- `Workspace/README.md` — one-line entries for the nine `tsv_*` tasks.
+```python
+import scout
+import pandas as pd
+```
+
+There is no need to locate the scout-rig installation, modify `sys.path`, or implement a custom reader for ordinary Scout TSV files.
+
+### Reading TSVs
+
+```python
+df = scout.tsv("expression.tsv")
+```
+
+The Scout key field becomes the DataFrame index, and the value fields become its columns. The reader handles the `#` field header and the optional `#:` metadata preamble.
+
+Additional pandas options can be supplied:
+
+```python
+df = scout.tsv(
+    "identifiers.tsv",
+    dtype=str,
+    keep_default_na=False
+)
+```
+
+This is useful when identifiers must retain their textual representation or empty cells must remain empty strings.
+
+Inspect metadata separately when it affects the interpretation:
+
+```python
+header = scout.tsv_header("expression.tsv")
+print(header)
+```
+
+Do not use `comment="#"` with pandas to read Scout TSVs: it discards the field header as well as the metadata.
+
+### Creating TSVs
+
+Use `scout.save_tsv` to produce Scout-compatible tabular artifacts from pandas DataFrames.
+
+```python
+df = pd.DataFrame({
+    "Gene": ["TP53", "MYC", "CDK1"],
+    "Score": [2.4, -1.8, 3.1]
+}).set_index("Gene")
+
+scout.save_tsv(
+    "scores.tsv",
+    df,
+    metadata={"type": "list"}
+)
+```
+
+This produces:
+
+```tsv
+#: :type=:list
+#Gene	Score
+TP53	2.4
+MYC	-1.8
+CDK1	3.1
+```
+
+The DataFrame index becomes the Scout key. Select an appropriate index rather than inadvertently exporting pandas' default numeric row index. The optional `key` argument overrides its name.
+
+Supply relevant metadata through the `metadata` dictionary:
+
+```python
+scout.save_tsv(
+    "expression.tsv",
+    df,
+    key="Ensembl Gene ID",
+    metadata={
+        "type": "list",
+        "namespace": "Hsa"
+    }
+)
+```
+
+Common metadata includes `type`, `namespace`, `cast` and `filename`. Declare the type that describes the actual structure of the data. Ordinary DataFrames with one scalar per value field generally correspond to `list` TSVs.
+
+Metadata is optional, but explicitly declaring the TSV type avoids ambiguity. Metadata values must be scalar. The output uses tab-separated columns, `#` field headers and, when provided, a `#:` metadata preamble.
+
+### Multi-valued fields and keyed data
+
+A pandas DataFrame is not equivalent to a native Scout TSV object. In particular:
+
+- Pipe-separated values in `double` TSVs generally remain strings when read into pandas.
+- `scout.save_tsv` does not automatically serialize Python lists as pipe-separated values. Prepare the field representation explicitly when writing multi-valued tables.
+- Repeated DataFrame index values are permitted by pandas but can be merged or overwritten by Scout. Choose keys that express the intended logical records.
+- Metadata is not automatically transferred from an input TSV to an output DataFrame or TSV. Retain applicable metadata explicitly, and reconsider it when transformations change the table's meaning.
+- Scout's native TSV format is not quoted CSV. Avoid embedded tabs, newlines and values requiring CSV quoting.
+
+For operations that depend on native Scout type conversion, duplicate-key merging, multi-valued field semantics or identifier translation, use Workspace's native TSV tools or ScoutCoder's workflow-aware interfaces.
+
+When the interpretation of a generated table matters, `tsv_info` and `tsv_query` can verify its key field, value fields, type and representative values through the native Scout parser.
+
+## References
+
+- `Workspace/doc/user/TSV.md` — task-specific options, interpretation, result
+  shapes and mutation semantics.
+- scout-gear `doc/user/ProcessingTabularData.md` — Scout TSV format, types,
+  Ruby API, serialization, traversal and joins.
+- `Workspace/README.md` — task reference.
+- The Python interfaces are documented in scout-rig's `python/README.md` and
+  implemented in `python/scout/__init__.py`.

@@ -1,6 +1,7 @@
 import: Agent/doctrine
 import: Agent/doctrines/evidence
 import: Agent/doctrines/investigation
+import: Agent/society
 
 system:
 

@@ -7,6 +7,7 @@ AgentSuite=/$PWD filter="*" {
   collaboration
   discipline
   handoff
+  evidence
   investigation
  }
  society
@@ -44,6 +45,8 @@ AgentSuite=/$PWD filter="*" {
   pills
 
   skills
+
+  named_conversations
  }
 
  Worker=Worker {
@@ -160,6 +163,12 @@ AgentSuite=/$PWD filter="*" {
     }
    }
   }
+  skills=skills{
+   workspace-tsv=workspace-tsv{
+    SKILL.md
+   }
+  }
+
  }
  Research=Research{
   README.md
@@ -300,6 +309,9 @@ AgentSuite=/$PWD filter="*" {
   start_chat
  }
  User=User {
+  start_chat
+ }
+ Planner=Planner {
   start_chat
  }
 

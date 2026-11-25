@@ -12,6 +12,30 @@ Workspace handles ordinary files, command execution and Scout TSV tables. The wo
 
 For example, if a read grant covers `/data/study`, call `read` with `{"path":"/data/study/counts.tsv","file_end":"head","limit":1}`. For a table beginning with a header, the result is the header line. A derived table can be written under the workflow root or another writable grant.
 
+## Scout TSV files
+
+Scout TSVs are keyed tables: the first column is the key and the remaining
+columns are fields. The column-name line starts with `#`, optionally preceded
+by `#:` metadata (type, namespace, cast and other options). For example,
+with actual tabs between columns:
+
+```tsv
+#: :type=:single :cast=:to_f
+#Assotiacted Gene Name	Score
+TP53	2.4
+MYC	-1.8
+```
+
+Use this format when creating TSV artifacts intended for Scout. Repeated keys
+can merge or overwrite records. Multi-valued `:double` fields use `|` between
+values by default. Do not discard the marked header as a comment or assume
+an ordinary dataframe export is already a Scout TSV.
+
+Workspace provides `tsv_info` for inspection, `tsv_read` for normalization,
+and specialized tools for lookup, editing, metadata, merging, attaching,
+identifier translation and sorting. For creating new tables and interpreting
+their contents, see [TSV.md](TSV.md) and the `workspace-tsv` skill.
+
 ## What to expect from the tools
 
 These contracts hold for every call:
