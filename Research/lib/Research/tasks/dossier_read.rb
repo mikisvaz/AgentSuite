@@ -24,6 +24,8 @@
 # insertions).
 
 require_relative 'common'
+require_relative '../evidence_identity'
+require_relative '../sections'
 
 module Research
   READ_DEFAULT_MAX_LINES = 500
@@ -35,11 +37,16 @@ module Research
   input :overview, :boolean, 'Compact overview mode: entry document metadata plus attachment inventory', false
   input :start_line, :integer, 'First line to return (one-based; default 1)', 1
   input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500
+  input :outline, :boolean, 'Return the ATX headings and section selectors for this document', false
+  input :section, :string, 'Read one subtree using an outline selector (e.g. L3)', nil, nofile: true
+  input :body_only, :boolean, 'With section, read its editable direct body for replace_section. Follow continuation for additional pages.', false
   desc 'Read authored text documents of a dossier with bounded ranges and continuation. Raw text is returned separately from line-number metadata. Evidence binaries are rejected here.'
-  task :dossier_read do |id, document, revision, overview, start_line, max_lines|
+  task :dossier_read do |id, document, revision, overview, start_line, max_lines, outline, section, body_only|
     root = Tasks.store_root
     type, id = Tasks.parse_id!(id)
 
+    body_only = Tasks.truthy?(body_only)
+    raise ParameterException, 'body_only requires section' if body_only && !section
     overview = Tasks.truthy?(overview)
     if revision && !revision.to_s.strip.empty?
       revision = Tasks.int!(revision, 'revision')
@@ -52,17 +59,21 @@ module Research
       cur = Store.current_revision(root, type, id)
       effective = revision || cur['revision']
       record = effective == cur['revision'] ? cur['record'] : Store.read_revision(cur['dir'], effective)
+      outline = Tasks.truthy?(outline)
+      if [overview, outline, !section.nil?].count(true) > 1
+        raise ParameterException, 'choose one of overview, outline or section'
+      end
       if overview
         Research.read_overview(cur, record, effective, type, id)
       else
-        Research.read_document(cur, record, effective, type, id, document, start_line, max_lines)
+        Research.read_document(cur, record, effective, type, id, document, start_line, max_lines, outline, section, body_only)
       end
     end
   end
 
 # internal helpers (module functions reached from the task body as Research.<name>)
 
-  def Research.read_document(cur, record, effective, type, id, document, start_line, max_lines)
+  def Research.read_document(cur, record, effective, type, id, document, start_line, max_lines, outline, section, body_only)
     name = Tasks.store_document_name!(document)
     Tasks.reject_placeholder_text!(document, 'document')
 
@@ -91,7 +102,26 @@ module Research
 
     lines = LineEdit.lines(text)
     total = lines.length
-    last_returned = [start_line + max_lines - 1, total].min
+    stop = total
+    section_info = {}
+    if outline || section
+      headings = Sections.outline(text)
+      return { 'id' => id, 'revision' => effective, 'document' => document,
+               'total_lines' => total, 'outline' => headings } if outline
+      selected = Sections.select!(headings, section)
+      first, last = selected.values_at('start_line', 'end_line')
+      if body_only
+        first, last = Sections.body_span(headings, selected)
+        section_info = { 'section' => section, 'body_only' => true,
+                         'body_start_line' => first, 'body_end_line_exclusive' => last }
+      end
+      start_line = first if start_line == 1
+      stop = last - 1
+      unless start_line.between?(first, last)
+        raise ParameterException, 'start_line is outside the selected section'
+      end
+    end
+    last_returned = [start_line + max_lines - 1, stop].min
 
     if start_line > total + 1 || start_line < 1
       raise ParameterException,
@@ -101,7 +131,7 @@ module Research
     end
 
     window = lines[(start_line - 1)...last_returned] || []
-    remaining = total - last_returned
+    remaining = stop - last_returned
 
     {
       'id' => id,
@@ -116,7 +146,7 @@ module Research
       'content' => window.join,
       'continuation' => remaining.positive? ? (last_returned + 1).to_s : nil,
       'truncated' => remaining.positive?
-    }
+    }.merge(section_info)
   end
 
   # Compact overview: entry document (bounded) plus inventory of
@@ -128,13 +158,15 @@ module Research
       { 'name' => Tasks.public_document_name(n) }
     end
 
+    prefixes = EvidenceIdentity.prefixes((record['attachments'] || {}).values.map { |e| EvidenceIdentity.digest(e) })
     atts = (record['attachments'] || {}).keys.sort.map do |key|
       info = record['attachments'][key]
       slot, name = key.split('/', 2)
       {
         'slot' => slot,
         'name' => name,
-        'digest' => info.is_a?(Hash) ? info['digest'] : info,
+        'digest' => EvidenceIdentity.digest(info),
+        'digest_prefix' => prefixes.fetch(EvidenceIdentity.digest(info)),
         'size' => info.is_a?(Hash) ? info['size'] : nil
       }
     end

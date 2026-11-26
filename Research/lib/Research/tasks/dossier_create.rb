@@ -31,7 +31,7 @@ module Research
     Tasks.reject_placeholder_text!(title, 'title')
     Tasks.reject_placeholder_text!(content, 'content') unless content.nil?
 
-    body = content.nil? ? Research.outline_for(type, title) : content.to_s
+    body = content.nil? ? "# #{title}\n" : content.to_s
     Tasks.reject_placeholder_text!(body, 'content')
 
     result = Tasks.map_store_errors(root) do
@@ -55,13 +55,5 @@ module Research
     }
   end
 
-  # Short title-only outline. Template is a suggestion: no structure
-  # is required and none of this is schema.
-  def Research.outline_for(type, title)
-    label = Ids::TYPES.keys.include?(type) ? type : 'record'
-    "# #{title}\n\n#{label.capitalize} record created by dossier_create. " \
-      "Replace this outline through dossier_update.\n"
-  end
-# internal helpers (module functions reached from the task body as Research.<name>)
   export_exec :dossier_create
 end

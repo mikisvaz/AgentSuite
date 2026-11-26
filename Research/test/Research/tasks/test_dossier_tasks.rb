@@ -68,7 +68,7 @@ class TestDossierTasksExported < Test::Unit::TestCase
     update = Research.tasks[:dossier_update]
     mode_input = update.inputs.find { |i| Array === i && i.first == :mode }
     assert_equal :select, mode_input[1]
-    assert_equal %w[create_document replace_document replace_lines delete_lines replace_text], mode_input[4][:select_options]
+    assert_equal %w[create_document replace_document replace_lines delete_lines replace_text add_section replace_section], mode_input[4][:select_options]
     # inputs arrive in declaration order; blocks bind them positionally
     assert_equal %i[type title content], create.inputs.collect(&:first)
   end

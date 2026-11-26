@@ -14,6 +14,7 @@
 require 'json'
 require_relative 'common'
 require_relative '../evidence'
+require_relative '../evidence_identity'
 
 module Research
   HISTORY_DIFF_MAX_LINES = 2000
@@ -63,18 +64,19 @@ module Research
     record = Store.read_revision(Layout.dossier_dir(root, type, id), number)
     docs = record['documents'] || {}
     atts = record['attachments'] || {}
+    prefixes = EvidenceIdentity.prefixes(atts.values.map { |entry| EvidenceIdentity.digest(entry) })
 
     { 'revision' => number,
       'is_current' => number == current['revision'],
       'timestamp' => record['timestamp'] || record['committed_at'],
       'change_note' => record['change_note'],
+      'change_kind' => record.fetch('change_kind', 'unclassified'),
       'documents' => docs.keys.sort,
       'attachments' => atts.map { |key, info|
-        info.is_a?(Hash) ?
-          { 'key' => key, 'digest' => info['digest'],
-            'mode' => info['mode'] || 'copy',
-            'size' => info['size'] } :
-          { 'key' => key, 'digest' => info, 'mode' => 'copy' }
+        entry = info.is_a?(Hash) ? info : { 'digest' => info }
+        { 'key' => key, 'digest' => entry['digest'],
+          'digest_prefix' => prefixes.fetch(entry['digest']),
+          'mode' => entry['mode'] || 'copy' }.merge(entry.slice('size'))
       }.sort_by { |a| a['key'] } }
   rescue Store::Missing, Store::Corrupt => e
     { 'revision' => number,

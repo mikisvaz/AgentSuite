@@ -31,7 +31,7 @@ as an observation is not another type and does not require an `OBS-###` ID.
    a new question per table or observation. A report or closure package belongs
    with the question it answers; it does not by itself need a new `Q-###`.
 3. `dossier_create` (type `question`); keep the current answer in the README
-   (it starts as "no answer yet" — update it as evidence arrives).
+   (the default document starts with the title alone).
 4. When a result warrants a statement, draft a *claim* (bounded to what the
    attached evidence supports) or a *hypothesis* (falsifiable, with explicit
    predictions). Create a separate dossier and link them with the Markdown
@@ -47,14 +47,20 @@ document text; the dossier types do not enforce it mechanically.
 
 ## Keep context short (workflow aid)
 
-When definitions are repeatedly needed, or the conversation is getting long
-enough that compaction or re-derivation is likely, do a maintenance edit
-instead of carrying it in working memory: one `dossier_update` on the
-question dossier (or one small working note it links) recording — the
-settled definitions with their sources, the points still unresolved, and
-the single next action. Then re-read that note at resume time. Do not
-create a new checkpoint object per inference; this is an ordinary revision
-of the working record, not a new process step.
+Read the outline first and open the relevant scientific section. Keep settled
+definitions, warrant, and scientific uncertainty in the current document.
+Put a pending run, delegation, or next action in a working supplement such
+as `supplements/continuation.md`. For example, response-selected membership
+limits which population a claim covers. That limitation belongs beside the
+claim. The instruction to rerun with an annotation-defined panel belongs in
+the continuation supplement. A central unresolved mechanism can remain a
+hypothesis. Create a claim when another investigation can use the result
+as a premise.
+
+For a GRN result, put its scientific contribution and shared-expression-input
+limitation beside the claim it supports (`scientific`). Put the script command
+in a reproduction supplement (`documentary`). A later heading-spacing repair
+is also `documentary`; its reason fits in `change_note`.
 
 ## Example (generic longitudinal perturbation study)
 
@@ -72,13 +78,10 @@ LLM.call_workflow(Research, :dossier_create,
 # record an in-progress answer after first results
 LLM.call_workflow(Research, :dossier_update,
   'id' => 'Q-001', 'expected_revision' => 1,
-  'mode' => 'replace_lines', 'start_line' => 3, 'end_line' => 4,
-  'replacement' => "Current answer: partial — see [C-001](../../claims/C-001/README.md).\n",
+  'mode' => 'add_section', 'section' => 'L1',
+  'content' => "## Current answer\nPartial — see [C-001](../../claims/C-001/README.md).\n",
   'change_note' => 'link first claim')
-# => {"id"=>"Q-001", "type"=>"question", "document"=>"README.md",
-#     "mode"=>"replace_lines", "changed"=>true, "revision"=>2,
-#     "previous_revision"=>1, "change_summary"=>"edited README.md (…)",
-#     "change_note"=>"link first claim"}
+# => revision 2
 ```
 
 ## Details

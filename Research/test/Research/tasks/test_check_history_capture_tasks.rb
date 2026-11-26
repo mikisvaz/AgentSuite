@@ -69,7 +69,7 @@ class TestCheckHistoryCaptureTasks < Test::Unit::TestCase
   # ---- registration / export ---------------------------------------
 
   def test_tasks_are_registered_and_exported
-    assert_equal %w[dossier_capture dossier_check dossier_create
+    assert_equal %w[dossier_backlinks dossier_capture dossier_check dossier_create
                     dossier_history dossier_list dossier_read dossier_update
                     evidence_attach evidence_read],
                  Research.tasks.keys.map(&:to_s).sort
@@ -199,7 +199,7 @@ class TestCheckHistoryCaptureTasks < Test::Unit::TestCase
     assert r2['attachments'].any? { |a| a['key'] == 'data/table.tsv' }
     assert_equal 'data/table.tsv', r2['attachments'].first['key']
     assert r2['attachments'].first['digest']
-    assert_equal %w[digest key mode size], r2['attachments'].first.keys.sort
+    assert_equal %w[digest digest_prefix key mode size], r2['attachments'].first.keys.sort
     out_json = JSON.generate(out)
     refute out_json.include?('row1'), 'binary/table content must not leak'
   end

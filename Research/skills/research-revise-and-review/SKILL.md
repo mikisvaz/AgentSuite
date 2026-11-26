@@ -16,6 +16,25 @@ Evidence moved, an interpretation must change, a number was wrong, an
 attachment must be replaced, a `StaleRevision` error appeared, or an external
 edit hit a dossier and needs adopting or reverting.
 
+## Choose an edit
+
+Every edit takes the dossier ID and the integer `expected_revision` from
+the read. Supply `document` for a supplement.
+
+| Mode | Arguments specific to the edit |
+|---|---|
+| `add_section` | `content` beginning with the new heading. Optional `section` selects its parent. |
+| `replace_section` | `section` and `content` containing the direct body. The selected heading and child sections stay in place. |
+| `replace_text` | `old_text` and `new_text` for one unique literal match. |
+| `replace_lines` | `start_line`, exclusive `end_line`, and `replacement`. Optional `anchor` checks the original span. |
+
+For a section edit, get its selector from `dossier_read(outline: true)`.
+Read with that selector, the outline's revision, and `body_only: true`.
+If the body spans pages, concatenate their `content` in order using
+`continuation` as the next `start_line` at the same revision. Edit the
+assembled body and pass it to `replace_section`. A single page from a
+longer body is insufficient for whole-body replacement.
+
 ## Procedure
 
 1. **Read before writing**: `dossier_read` the current revision — line
@@ -58,7 +77,16 @@ edit hit a dossier and needs adopting or reverting.
    stricter multiple-testing"). The earlier revision in history keeps the
    original statement — the record shows the claim was narrowed, not that it
    always predicted the result. Do not rewrite the historical hypothesis.
-7. **Mechanical check**: `dossier_check` after structural work (attachments,
+7. Classify a change in scope, warrant, or uncertainty as `scientific`. Use
+   `documentary` for wording or format repairs with equivalent meaning. Include
+   the consequence in `change_note`. After a scientific revision, use
+   `dossier_backlinks` on the changed record. Inspect reviewed premises before
+   updating the integer baseline in a dependent document. Use ordinary links
+   for background reading. For example, adding GRN corroboration from the same
+   expression inputs changes the stated warrant and merits a scientific revision.
+   Saving its reproduction command in a supplement and correcting heading
+   spacing are documentary changes.
+8. **Mechanical check**: `dossier_check` after structural work (attachments,
    links, captures) — missing/changed references, corrupted retained copies,
    broken local links. It is an integrity report: `status: "ok"` means the
    machinery is consistent, not that the science is right. Scientific review
@@ -81,6 +109,7 @@ LLM.call_workflow(Research, :dossier_update,
   'replacement' =>
     "After stricter multiple-testing, one term remains significant; the claim is\n" \
     "narrowed to that term. The broader statement did not survive correction.\n",
+  'change_kind' => 'scientific',
   'change_note' => 'narrow claim after stricter multiple-testing (was: metabolism genes changed)')
 # => {"id"=>"C-006", "revision"=>2, "changed"=>true, "previous_revision"=>1, ...}
 

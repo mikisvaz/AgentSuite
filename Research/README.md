@@ -242,3 +242,10 @@ dossier_update  {id: Q-001, expected_revision: 2, mode: "replace_lines",
 - [Developer notes](doc/developer/README.md) — task layout, store
   protocol, tests
 
+
+## dossier_backlinks
+
+Inspect incoming scientific links to a changed dossier. A Markdown link with
+the title `"reviewed@3"` records the integer revision used as a premise.
+Review suggestions identify the changed warrant and its dependent documents.
+See [the task reference](doc/user/Tasks.md#dossier_backlinks).

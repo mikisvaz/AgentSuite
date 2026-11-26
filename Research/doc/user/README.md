@@ -31,6 +31,8 @@ argument.
   external edits; `dossier_capture` is the only way to adopt externally
   edited documents as a new revision.
 
+Request `outline: true` to see a document’s sections. Pass a returned `section` selector with the same integer revision to read its subtree. To review records that cite a changed premise, call `dossier_backlinks` with its ID.
+
 ## Representative path
 
 ```
@@ -40,9 +42,10 @@ evidence_attach  {id: Q-001, expected_revision: 1,
                   items: [{source: "results/endpoint.tsv", slot: "data", mode: "copy"}]}
                    -> {revision: 2, items: [{attachment: "data/endpoint.tsv", ...}]}
 dossier_read     {id: Q-001}
-                   -> {revision: 2, start_line: 1, end_line: 3, ...}
-dossier_update   {id: Q-001, expected_revision: 2, mode: "replace_lines",
-                  start_line: 2, end_line: 2, replacement: "answer line"}
+                   -> {revision: 2, start_line: 1, end_line: 1, ...}
+dossier_update   {id: Q-001, expected_revision: 2, mode: "add_section",
+                  section: "L1", content: "## Current answer\nAnswer text.",
+                  change_kind: "scientific"}
                    -> {revision: 3, changed: true}
 ```
 

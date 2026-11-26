@@ -1,6 +1,6 @@
 # Tasks
 
-The authoritative task reference for the nine Research tasks. Every input
+The authoritative task reference for the Research tasks. Every input
 below is the real registered declaration (`input`, `desc`) from
 `lib/Research/tasks/`; every output shape is a real payload produced by
 running the task in a temporary project. Inputs not shown here do not
@@ -22,14 +22,14 @@ Common conventions for all tasks:
 
 Task list: `dossier_create`, `dossier_list`, `dossier_read`,
 `dossier_update`, `evidence_attach`, `evidence_read`, `dossier_check`,
-`dossier_history`, `dossier_capture`.
+`dossier_history`, `dossier_capture`, `dossier_backlinks`.
 
 ---
 
 ## dossier_create
 
 ```
-Research.input :type, :select, 'Dossier type', nil, select_options: %w[question claim hypothesis]
+Research.input :type, :select, 'Kind of dossier to create; fixes the ID prefix: question Q-###, claim C-###, hypothesis H-###', nil, select_options: %w[question claim hypothesis]
 Research.input :title, :string, 'Dossier title (written as the entry heading when content is omitted)'
 Research.input :content, :text, 'Optional initial Markdown for the entry document README.md', nil, nofile: true
 Research.desc 'Create a scientific record dossier (question, claim or hypothesis) and its first revision. Returns the root-local ID, revision, entry document README.md and a Markdown link to it.'
@@ -50,8 +50,8 @@ in title or content (`TOOL-COMPACTION-RECORD`); invalid UTF-8 in content.
 ## dossier_list
 
 ```
-Research.input :type, :select, 'Restrict the listing to one dossier type', nil, select_options: %w[question claim hypothesis]
-Research.input :query, :string, 'Case-insensitive substring matched against id, title, authored-document names and CURRENT authored-document contents (never history snapshots, never attachment bytes). Scan cost is one read per document per listed dossier.'
+Research.input :type, :select, 'Restrict the listing to one dossier type; omit to list all types', nil, select_options: %w[question claim hypothesis]
+Research.input :query, :string, 'Case-insensitive substring matched against id, title, authored-document names and CURRENT authored-document contents (never history snapshots, never attachment bytes). Scan cost is one read per document per listed dossier.', nil, nofile: true
 Research.input :limit, :integer, 'Maximum dossiers to return (1..1000)', 100
 Research.input :continuation, :string, 'Continuation token from a previous page'
 Research.desc 'List dossiers under the research root: id, title, type, revision, location. Derived live from the store; there is no index file to go stale.'
@@ -70,6 +70,9 @@ Research.input :revision, :integer, 'Historical revision to read (default: curre
 Research.input :overview, :boolean, 'Compact overview mode: entry document metadata plus attachment inventory', false
 Research.input :start_line, :integer, 'First line to return (one-based; default 1)', 1
 Research.input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500
+Research.input :outline, :boolean, 'Return the ATX headings and section selectors for this document', false
+Research.input :section, :string, 'Read one subtree using an outline selector (e.g. L3)', nil, nofile: true
+Research.input :body_only, :boolean, 'Read the selected section’s editable direct body', false
 Research.desc 'Read authored text documents of a dossier with bounded ranges and continuation. Raw text is returned separately from line-number metadata. Evidence binaries are rejected here.'
 ```
 
@@ -87,9 +90,9 @@ Errors: unknown id; unknown document; evidence binaries offered as text.
 ```
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-Research.input :mode, :select, 'Update mode: create_document, replace_document, replace_lines, delete_lines or replace_text', nil, select_options: %w[create_document replace_document replace_lines delete_lines replace_text]
+Research.input :mode, :select, 'Update mode: create_document, replace_document, replace_lines, delete_lines, replace_text, add_section or replace_section', nil, select_options: UPDATE_MODES
 Research.input :document, :string, "Target authored document: 'README.md' (default) or 'supplements/<name>'", 'README.md', nofile: true
-Research.input :content, :text, 'New document content for create_document / replace_document', nil, nofile: true
+Research.input :content, :text, 'Document modes take full text. add_section takes the new heading and body. replace_section takes only the direct body returned by dossier_read(body_only: true).', nil, nofile: true
 Research.input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)', nil, nofile: true
 Research.input :start_line, :integer, 'First line of the edited span (one-based)'
 Research.input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
@@ -97,7 +100,9 @@ Research.input :anchor, :text, 'Optional content anchor: the exact text currentl
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
 Research.input :old_text, :text, 'Exact nonempty text to find once for replace_text', nil, nofile: true
 Research.input :new_text, :text, 'Literal replacement for replace_text', nil, nofile: true
-Research.desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; no-op edits create no revision.'
+Research.input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
+Research.input :section, :string, 'Revision-local outline selector. Parent for add_section, target for replace_section', nil, nofile: true
+Research.desc 'add_section and replace_section take content. replace_text takes old_text and new_text. replace_lines takes start_line, exclusive end_line, replacement and optional anchor. Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; optional anchor verifies the addressed span first; no-op edits create no revision.'
 ```
 
 Output (`update_lines.json`, `delete_lines.json`): `{id, type, document,
@@ -129,8 +134,10 @@ To replace just that line, pass `start_line: 23, end_line: 24`.
 ```
 Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-Research.input :items, :text, 'JSON array of attachment items: source (absolute path, or relative resolved against the working project), slot, name, mode (copy|reference), caption, replace, and declared script/parameters/inputs/receipt'
+Research.input :items, :text, 'JSON array of attachment items: source (absolute path, or relative resolved against the working project), slot, name, mode (copy|reference), caption, replace, and declared script/parameters/inputs/receipt. mode "reference" retains NO source bytes — only the source identity plus the digest observed at attach time, with integrity re-checked against the live source on every later read — so use mode "copy" whenever the bytes themselves must be retained durably'
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
+Research.input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
+Research.input :compact, :boolean, 'Return digest prefixes and pinned read arguments', false
 Research.desc 'Attach evidence files (copy or reference mode) to a dossier. Batch-atomic: one invalid item rolls back the whole batch. Returns per-item retained locations and digests.'
 ```
 
@@ -166,6 +173,8 @@ Research.input :attachment, :string, "Attachment key '<slot>/<name>' as returned
 Research.input :revision, :integer, 'Historical revision of the attachment entry (default: current)'
 Research.input :start_line, :integer, 'First line to return for text evidence (one-based; default 1)', 1
 Research.input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500
+Research.input :digest, :string, 'Evidence SHA-256 or unique prefix (minimum five characters) in the requested revision', nil, nofile: true
+Research.input :compact, :boolean, 'Return digest prefixes and pinned read arguments', false
 Research.desc 'Read an evidence attachment: metadata, integrity state, and bounded text ranges for text evidence (binary evidence returns file/media info). Never substitutes changed bytes for historical evidence.'
 ```
 
@@ -188,7 +197,7 @@ the retained bytes.
 
 ```
 Research.input :id, :string, 'Check one dossier only (overrides type/limit)'
-Research.input :type, :select, 'Restrict the selection to one dossier type', nil, select_options: %w[question claim hypothesis]
+Research.input :type, :select, 'Restrict the check to one dossier type; omit to check all types', nil, select_options: %w[question claim hypothesis]
 Research.input :limit, :integer, 'Maximum dossiers to check (1..1000; default 100)', 100
 Research.input :continuation, :string, 'Continuation token from a previous page'
 Research.desc 'Run the mechanical integrity check over dossiers: references, retained copies, view drift, local links, metadata. Read-only; never a scientific verdict.'
@@ -237,6 +246,7 @@ Research.input :id, :string, 'Dossier id, e.g. Q-001'
 Research.input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
 Research.input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names", nil, nofile: true
 Research.input :change_note, :string, 'Human-readable note recorded with the new revision'
+Research.input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
 Research.desc 'Capture externally edited authored documents as a new revision (the only explicit adoption path for drift). Rejects when retained evidence is corrupted.'
 ```
 
@@ -248,3 +258,69 @@ Errors: no drift to capture (`dossier_capture.json` error case — capture
 requires observed external edits); named documents not drifted or other edits omitted; missing entry README; corrupted
 retained evidence (capture refuses to inherit a broken mapping);
 placeholder markers in captured bytes.
+
+## dossier_backlinks
+
+```
+Research.input :id, :string, 'Target dossier whose incoming links and reviewed premises to inspect'
+Research.input :limit, :integer, 'Number of source dossiers to scan per page (1..1000)', 100
+Research.input :continuation, :string, 'Next source dossier offset'
+Research.desc 'Find authored links to a dossier and flag scientific or unclassified changes since an explicitly reviewed integer revision.'
+```
+
+Pass the upstream `id` to find incoming links. Each result locates the
+source dossier, document, integer revision, line and enclosing heading.
+The page limit counts source dossiers. For a proposition used as a
+premise, record the integer revision reviewed in the Markdown link title,
+for example `[panel definition](../../claims/C-001/README.md "reviewed@3")`.
+Other links are mentions. The scanner supports single-line inline links.
+Heading fragments are outside the mechanical check.
+
+Scientific changes since the reviewed baseline suggest review and include
+the author's reason. Documentary changes alone leave the premise current.
+Unclassified changes, including older journal entries, surface as
+uncertain. The task leaves dependent text under the author's control.
+After review, use a guarded edit to revise the text or advance the baseline.
+
+## Section reads and edits
+
+Use `dossier_read(outline: true)` on the README or a named supplement.
+ATX headings (`#` through `######`) outside fenced code produce a selector,
+heading path, depth and one-based half-open subtree span. A selector such as
+`L3` refers to one document and integer revision. Re-read the outline after
+a write. Pass `section: "L3"` for the subtree with an optional `max_lines`.
+Use the returned absolute continuation as `start_line`. A read reports
+the inclusive last returned line.
+
+For editing, pass `body_only: true` with the selector. The response echoes
+`section`, `revision`, and the full editable span
+`[body_start_line, body_end_line_exclusive)` on every page. Follow
+`continuation` at that revision and join all pages before replacing the body.
+An empty body has equal span endpoints. To clear a populated body, pass the populated body’s returned bounds to `delete_lines`.
+
+Use `add_section` with `content` beginning with the new heading.
+Supply the parent's selector to append a child one heading level deeper.
+Omit the parent to append a root section. Insertion supplies missing blank-line separators using the document’s line ending and preserves supplied content. Use `replace_section` with the
+selected section and its new direct body (without headings). Child
+sections and the selected heading survive the edit. Both operations take
+the ordinary `expected_revision` guard.
+
+## Evidence shortcuts and revision notes
+
+For routine agent work, pass `compact: true` on attach or read. It returns the short digest and pinned read arguments, plus the requested text on reads. Use the pinned arguments without `compact` for full provenance, links and locations.
+
+Full attach and read results include `digest_prefix`, full `evidence_digest`,
+`project_locator`, `retained_kind`, `retained_digest`, and pinned
+`evidence_read` arguments. The locator resolves relative to the project
+directory. For a reference it identifies the retained pointer file, while
+the evidence digest describes the source bytes observed at attach time.
+Pass `digest` to `evidence_read` in the same dossier and revision.
+Prefixes start at five characters and grow to distinguish different
+digests. If several attachment receipts describe identical bytes, select
+one with `attachment`. Keep the full digest for durable identification.
+
+`change_kind` on update, attach and capture records the author's classification
+in history. Use `scientific` for a change to meaning, scope, warrant or
+uncertainty, and `documentary` for an equivalent restatement or formatting
+repair. Give the reason in `change_note`. Omitted classification is
+`unclassified`.

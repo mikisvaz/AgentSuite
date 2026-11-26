@@ -1,10 +1,11 @@
 # Testing Research
 
-Ten test suites under `test/`, all run in fresh processes, all expected
+Eleven test suites under `test/`, all run in fresh processes, all expected
 green (logs under `tmp/`):
 
 | Suite | Covers |
 |---|---|
+| `tasks/test_epistemic_workflow.rb` | section boundaries, prefix collisions, copy/reference receipts, reviewed premises and scientific revision |
 | `line_edit/test_line_edit.rb` | pure one-based half-open line editor |
 | `store/test_ids.rb` | ID allocation, cwd-based root resolution |
 | `store/test_store.rb` | S/J/M/V/C protocol, locking, drift, recovery |

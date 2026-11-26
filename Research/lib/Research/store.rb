@@ -446,6 +446,7 @@ module Research
           'revision' => new_revision,
           'timestamp' => Time.now.utc.strftime('%Y-%m-%dT%H:%M:%SZ'),
           'change_note' => ctx.change_note,
+          'change_kind' => ctx.change_kind || 'unclassified',
           'documents' => ctx.staged_documents,
           'attachments' => ctx.staged_attachments }
       end
@@ -608,7 +609,7 @@ module Research
     # (phase S) through Store#stage_objects!.
     class Ctx
       attr_reader :root, :type, :id, :dir, :current, :current_record
-      attr_accessor :change_note
+      attr_accessor :change_note, :change_kind
       # Task-layer after-state echo (dossier_update D4): opaque to the
       # store — set by the task, surfaced in the transaction result so
       # the payload can show the edit that landed. Never persisted.

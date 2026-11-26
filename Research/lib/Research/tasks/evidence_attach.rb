@@ -33,6 +33,7 @@
 require 'json'
 require 'time'
 require_relative 'common'
+require_relative '../evidence_identity'
 require_relative '../evidence'
 
 module Research
@@ -42,8 +43,10 @@ module Research
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
   input :items, :text, 'JSON array of attachment items: source (absolute path, or relative resolved against the working project), slot, name, mode (copy|reference), caption, replace, and declared script/parameters/inputs/receipt. mode "reference" retains NO source bytes — only the source identity plus the digest observed at attach time, with integrity re-checked against the live source on every later read — so use mode "copy" whenever the bytes themselves must be retained durably'
   input :change_note, :string, 'Human-readable note recorded with the new revision'
+  input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
+  input :compact, :boolean, 'Return digest prefixes, pinned read arguments and compact metadata; omit full hash fields', false
   desc 'Attach evidence files (copy or reference mode) to a dossier. Batch-atomic: one invalid item rolls back the whole batch. Returns per-item retained locations and digests.'
-  task :evidence_attach do |id, expected_revision, items, change_note|
+  task :evidence_attach do |id, expected_revision, items, change_note, change_kind, compact|
     root = Tasks.store_root
     type, id = Tasks.parse_id!(id)
     expected = Tasks.int!(expected_revision, 'expected_revision')
@@ -73,15 +76,19 @@ module Research
     result = Tasks.map_store_errors(root, id) do
       Store.transaction(root, type, id, expected_revision: expected) do |ctx|
         ctx.change_note = change_note
+        ctx.change_kind = Tasks.change_kind!(change_kind)
         per_item.each do |prepared|
           Research.stage_attach_item!(ctx, prepared, attached_at)
         end
       end
     end
 
+    prefixes = EvidenceIdentity.prefixes(result.fetch('attachments').values.map { |entry| EvidenceIdentity.digest(entry) })
     items_out = per_item.map do |prepared|
-      Research.describe_attach_item(prepared, result, root, type, attached_at)
+      Research.describe_attach_item(prepared, result, root, type, attached_at, prefixes)
     end
+
+    items_out = items_out.map { |item| EvidenceIdentity.compact(item) } if Tasks.truthy?(compact)
 
     {
       'id' => id,
@@ -182,7 +189,7 @@ module Research
     meta
   end
 
-  def Research.describe_attach_item(prepared, result, root, type, attached_at)
+  def Research.describe_attach_item(prepared, result, root, type, attached_at, prefixes)
     slot = prepared['slot']
     name = prepared['name']
     key = "#{slot}/#{name}"
@@ -192,7 +199,6 @@ module Research
 
     item = {
       'attachment' => key,
-      'evidence_read' => { 'id' => result['id'], 'revision' => result['revision'], 'attachment' => key },
       'id' => "#{result['id']}@#{result['revision']}:#{key}",
       'revision' => result['revision'],
       'slot' => slot,
@@ -214,7 +220,7 @@ module Research
     prepared['declared'].each do |k, v|
       item["declared_#{k}"] = v
     end
-    item
+    item.merge(EvidenceIdentity.describe(result['id'], type, result['revision'], key, entry, prefixes))
   end
   export_exec :evidence_attach
 end

@@ -20,6 +20,7 @@
 
 require 'json'
 require_relative 'common'
+require_relative '../evidence_identity'
 require_relative '../evidence'
 
 module Research
@@ -30,8 +31,10 @@ module Research
   input :revision, :integer, 'Historical revision of the attachment entry (default: current)'
   input :start_line, :integer, 'First line to return for text evidence (one-based; default 1)', 1
   input :max_lines, :integer, 'Maximum lines to return per call (1..5000; default 500)', 500
+  input :digest, :string, 'Evidence SHA-256 or unique prefix (minimum five characters) in the requested revision', nil, nofile: true
+  input :compact, :boolean, 'Return digest prefixes, pinned read arguments and compact metadata; omit full hash fields', false
   desc 'Read an evidence attachment: metadata, integrity state, and bounded text ranges for text evidence (binary evidence returns file/media info). Never substitutes changed bytes for historical evidence.'
-  task :evidence_read do |id, attachment, revision, start_line, max_lines|
+  task :evidence_read do |id, attachment, revision, start_line, max_lines, digest, compact|
     root = Tasks.store_root
     type, id = Tasks.parse_id!(id)
 
@@ -50,14 +53,15 @@ module Research
     end
 
     Tasks.map_store_errors(root, id) do
-      Research.read_evidence(root, type, id, attachment.to_s, revision,
-                    start_line, max_lines)
+      result = Research.read_evidence(root, type, id, attachment, revision,
+                                      start_line, max_lines, digest)
+      Tasks.truthy?(compact) ? EvidenceIdentity.compact(result) : result
     end
   end
 
 # internal helpers (module functions reached from the task body as Research.<name>)
 
-  def Research.read_evidence(root, type, id, attachment, revision, start_line, max_lines)
+  def Research.read_evidence(root, type, id, attachment, revision, start_line, max_lines, digest)
     cur = Store.current_revision(root, type, id)
     effective = revision || cur['revision']
     record = if effective == cur['revision']
@@ -67,6 +71,7 @@ module Research
              end
 
     atts = record['attachments'] || {}
+    attachment = EvidenceIdentity.resolve!(atts, digest, attachment) if digest
     entry = atts[attachment]
     unless entry
       raise ParameterException,
@@ -97,6 +102,8 @@ module Research
       'retained_location' => retained,
       'link' => "[#{attachment}](#{retained})"
     }
+    prefixes = EvidenceIdentity.prefixes(atts.values.map { |a| EvidenceIdentity.digest(a) })
+    meta.merge!(EvidenceIdentity.describe(id, type, effective, attachment, entry, prefixes))
     entry.each { |k, v| meta[k] = v if k.to_s.start_with?('declared_') }
 
     if mode == 'reference'

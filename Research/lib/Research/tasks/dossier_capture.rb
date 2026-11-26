@@ -38,8 +38,9 @@ module Research
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
   input :documents, :string, "Documents to capture: 'all' (default), a comma/newline list, or a JSON array of document names", nil, nofile: true
   input :change_note, :string, 'Human-readable note recorded with the new revision'
+  input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
   desc 'Capture externally edited authored documents as a new revision (the only explicit adoption path for drift). Rejects when retained evidence is corrupted.'
-  task :dossier_capture do |id, expected_revision, documents, change_note|
+  task :dossier_capture do |id, expected_revision, documents, change_note, change_kind|
     root = Tasks.store_root
     type, id = Tasks.parse_id!(id)
     dir = Layout.dossier_dir(root, type, id)
@@ -63,6 +64,7 @@ module Research
                         ),
                         allow_drift: true) do |ctx|
         ctx.change_note = change_note
+        ctx.change_kind = Tasks.change_kind!(change_kind)
         record = ctx.current_record
 
         # Evidence corruption gate: never capture over corrupted

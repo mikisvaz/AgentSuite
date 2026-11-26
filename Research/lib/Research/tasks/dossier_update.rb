@@ -1,6 +1,6 @@
 # dossier_update — revisioned edits to authored documents.
 #
-# Five modes share one commit path through the Store transaction:
+# The edit modes share one commit path through the Store transaction:
 #
 #   create_document   write a new supplements/<name> document (never the
 #                     entry document, which always exists);
@@ -19,8 +19,8 @@
 #                     to "absent", which would make deletion unreachable
 #                     through that surface).
 #
-# NO Markdown parsing, no regexp selectors, no character selectors, no
-# unified patches — the caller states spans and literal text only.
+# add_section appends an ATX section under a selected parent or at the root.
+# replace_section replaces direct prose while preserving child sections.
 #
 # Parameter contract (ONE pass, BEFORE the store transaction opens):
 # each mode's required and forbidden inputs are validated together and
@@ -50,13 +50,14 @@
 # pinned by test/Research/line_edit/test_line_edit.rb).
 
 require_relative 'common'
+require_relative '../sections'
 
 module Research
   # delete_lines is the explicit form of replace_lines with an empty
   # replacement: model tool layers commonly coerce '' to "absent"
   # (scout-ai rejects empty-string parameters before the task runs),
   # which would make deletion unreachable through that surface.
-  UPDATE_MODES = %w[create_document replace_document replace_lines delete_lines replace_text].freeze
+  UPDATE_MODES = %w[create_document replace_document replace_lines delete_lines replace_text add_section replace_section].freeze
 
   # Per-mode parameter contract, validated in one pass before the store
   # transaction opens (see header). Only nil counts as absent: an empty
@@ -69,6 +70,8 @@ module Research
   # addressed, deletions included: the text about to be removed is
   # exactly as worth anchoring as the text about to be rewritten.
   UPDATE_INPUT_CONTRACT = {
+    'add_section' => { 'required' => %w[content], 'forbidden' => %w[replacement anchor start_line end_line] },
+    'replace_section' => { 'required' => %w[section], 'forbidden' => %w[replacement anchor start_line end_line] },
     'create_document' => {
       'required' => %w[content],
       'forbidden' => %w[replacement anchor start_line end_line]
@@ -104,9 +107,9 @@ module Research
 
   input :id, :string, 'Dossier id, e.g. Q-001'
   input :expected_revision, :integer, 'Revision the caller read; rejects concurrent edits (optimistic concurrency)'
-  input :mode, :select, 'Update mode: create_document, replace_document, replace_lines, delete_lines or replace_text', nil, select_options: UPDATE_MODES
+  input :mode, :select, 'Update mode: create_document, replace_document, replace_lines, delete_lines, replace_text, add_section or replace_section', nil, select_options: UPDATE_MODES
   input :document, :string, "Target authored document: 'README.md' (default) or 'supplements/<name>'", 'README.md', nofile: true
-  input :content, :text, 'New document content for create_document / replace_document', nil, nofile: true
+  input :content, :text, 'Document modes take full text. add_section takes the new heading and body. replace_section takes only the direct body returned by dossier_read(body_only: true).', nil, nofile: true
   input :replacement, :text, 'Replacement text for the one-based half-open span [start_line, end_line)', nil, nofile: true
   input :start_line, :integer, 'First line of the edited span (one-based)'
   input :end_line, :integer, 'End of the edited span (exclusive); required for replace_lines and delete_lines — to edit through end of document pass total_lines + 1 from the read'
@@ -114,8 +117,10 @@ module Research
   input :change_note, :string, 'Human-readable note recorded with the new revision'
   input :old_text, :text, 'Exact nonempty text to find once for replace_text', nil, nofile: true
   input :new_text, :text, 'Literal replacement for replace_text', nil, nofile: true
-  desc 'Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; optional anchor verifies the addressed span first; no-op edits create no revision.'
-  task :dossier_update do |id, expected_revision, mode, document, content, replacement, start_line, end_line, anchor, change_note, old_text, new_text|
+  input :change_kind, :select, 'Scientific or documentary change; omitted changes remain unclassified', nil, select_options: %w[scientific documentary]
+  input :section, :string, 'Revision-local outline selector. Parent for add_section, target for replace_section', nil, nofile: true
+  desc 'add_section and replace_section take content. replace_text takes old_text and new_text. replace_lines takes start_line, exclusive end_line, replacement and optional anchor. Apply revisioned edits to authored documents: create, replace or line-span edit. Optimistic concurrency on expected_revision; optional anchor verifies the addressed span first; no-op edits create no revision.'
+  task :dossier_update do |id, expected_revision, mode, document, content, replacement, start_line, end_line, anchor, change_note, old_text, new_text, change_kind, section|
     root = Tasks.store_root
     type, id = Tasks.parse_id!(id)
     name = Tasks.store_document_name!(document)
@@ -126,7 +131,7 @@ module Research
                                      'replacement' => replacement,
                                      'anchor' => anchor,
                                      'start_line' => start_line,
-                                     'end_line' => end_line, 'old_text' => old_text, 'new_text' => new_text)
+                                     'end_line' => end_line, 'old_text' => old_text, 'new_text' => new_text, 'section' => section)
     Tasks.reject_placeholder_text!(change_note, 'change_note') unless change_note.nil?
     Tasks.reject_placeholder_text!(content, 'content') unless content.nil?
     Tasks.reject_placeholder_text!(new_text, 'new_text') unless new_text.nil?
@@ -135,8 +140,9 @@ module Research
     result = Tasks.map_store_errors(root, id) do
       Store.transaction(root, type, id, expected_revision: expected) do |ctx|
         ctx.change_note = change_note
+        ctx.change_kind = Tasks.change_kind!(change_kind)
         Research.apply_update(ctx, id, name, mode, content, replacement,
-                              anchor, start_line, end_line, old_text, new_text)
+                              anchor, start_line, end_line, old_text, new_text, section)
       end
     end
 
@@ -191,6 +197,7 @@ module Research
     missing = contract['required'].select { |p| params[p].nil? }
     forbidden = contract['forbidden']
     forbidden += %w[old_text new_text] unless mode == 'replace_text'
+    forbidden += %w[section] unless %w[add_section replace_section].include?(mode)
     unexpected = forbidden.select { |p| !params[p].nil? }
     return if missing.empty? && unexpected.empty?
 
@@ -200,8 +207,11 @@ module Research
     raise ParameterException, message
   end
 
-  def Research.apply_update(ctx, id, name, mode, content, replacement, anchor, start_line, end_line, old_text, new_text)
+  def Research.apply_update(ctx, id, name, mode, content, replacement, anchor, start_line, end_line, old_text, new_text, section)
     case mode
+    when 'add_section', 'replace_section'
+      text = Research.document_text(ctx, id, name)
+      ctx.write_document(name, Sections.edit(text, mode, section, content))
     when 'create_document'
       if name == Layout::DOC
         raise ParameterException,
@@ -423,6 +433,8 @@ module Research
     return 'no change' unless result['changed']
 
     case mode
+    when 'add_section', 'replace_section'
+      "#{mode} in #{Tasks.public_document_name(name)}"
     when 'create_document'
       "created #{Tasks.public_document_name(name)} (#{content.to_s.bytesize} bytes)"
     when 'replace_text'

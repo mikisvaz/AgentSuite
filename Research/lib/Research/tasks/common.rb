@@ -207,6 +207,12 @@ module Research
       # Small coercions
       # -------------------------------------------------------------
 
+      def change_kind!(kind)
+        return 'unclassified' if kind.nil? || kind == ''
+        return kind if %w[scientific documentary].include?(kind)
+        raise ParameterException, 'change_kind must be scientific or documentary'
+      end
+
       def truthy?(value)
         value == true || value.to_s == 'true'
       end

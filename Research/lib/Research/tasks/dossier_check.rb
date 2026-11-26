@@ -281,14 +281,8 @@ module Research
   # Fragments are separated but NEVER validated (stated in the output).
   def Research.link_path_fragment(raw)
     target = raw.strip
-    if target.start_with?('<') && target.end_with?('>')
-      target = target[1..-2].to_s.strip
-    end
-    # optional title after the path: keep only the first token group;
-    # a title is quoted, so strip a trailing "..." segment.
-    if (m = target.match(/\A(.*?)(?:\s+"[^"]*")?\z/m))
-      target = m[1].to_s.strip
-    end
+    target = target.sub(/\s+"[^"]*"\z/, '').strip
+    target = target[1...-1] if target.start_with?('<') && target.end_with?('>')
     path, frag = target.split('#', 2)
     [path.to_s.empty? ? nil : path, frag]
   end
@@ -336,13 +330,14 @@ module Research
       elsif (m = path.match(ID_FORM_TARGET)) &&
             !path.include?('..') && containing_dir != root
         # legacy bare-ID form: resolve against the research root
-        Layout.dossier_dir(root, TYPE_LETTER.fetch(m[1][0]), m[1])
+        home = Layout.dossier_dir(root, TYPE_LETTER.fetch(m[1][0]), m[1])
+        File.expand_path(m[2] || Layout::DOC, home)
       else
         File.expand_path(path, containing_dir)
       end
     info['resolved'] = resolved
 
-    unless resolved.start_with?(root.to_s)
+    unless resolved == root.to_s || resolved.start_with?(root.to_s + File::SEPARATOR)
       return info.merge('kind' => 'out_of_scope')
     end
     # checks stay inside the store root (5k): no probing outside
@@ -365,7 +360,7 @@ module Research
       lines = text.lines
       text.scan(INLINE_LINK) do |bang, raw|
         counts['images'] += 1 unless bang.to_s.empty?
-        if Research.link_in_fence?(lines, Regexp.last_match.begin(0))
+        if Research.link_in_fence?(lines, Regexp.last_match.pre_match.bytesize)
           counts['in_code_fence'] += 1
           next
         end
@@ -395,7 +390,7 @@ module Research
       # resolved (bounded syntax, 5g); counted as unsupported_syntax so
       # a clean result never claims they were checked (5i).
       text.scan(REFERENCE_LINK) do
-        next if Research.link_in_fence?(lines, Regexp.last_match.begin(0))
+        next if Research.link_in_fence?(lines, Regexp.last_match.pre_match.bytesize)
 
         counts['unsupported_syntax'] += 1
       end

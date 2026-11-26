@@ -46,7 +46,7 @@ class TestEvidenceTasksExported < Test::Unit::TestCase
   end
 
   def test_tasks_are_registered_and_exported
-    assert_equal %w[dossier_capture dossier_check dossier_create
+    assert_equal %w[dossier_backlinks dossier_capture dossier_check dossier_create
                     dossier_history dossier_list dossier_read dossier_update
                     evidence_attach evidence_read],
                  Research.tasks.keys.map(&:to_s).sort

@@ -2,7 +2,7 @@
 #
 # This file pins the conventional-workflow shape after the migration:
 #
-#   - the nine native dossier tasks are registered and exec-exported;
+#   - the native dossier tasks are registered and exec-exported;
 #   - NO task carries a research_root input (the root is fixed
 #     project-relative, resolved from Dir.pwd at execution time);
 #   - the retired exec-memoization apparatus is gone (grep-clean):
@@ -26,7 +26,7 @@ ROOT = File.expand_path('../../../..', __dir__)
 $LOAD_PATH.unshift(File.join(ROOT, 'Research', 'lib'))
 
 class TestRegistration < Test::Unit::TestCase
-  EXPECTED_TASKS = %w[dossier_capture dossier_check dossier_create
+  EXPECTED_TASKS = %w[dossier_backlinks dossier_capture dossier_check dossier_create
                       dossier_history dossier_list dossier_read
                       dossier_update evidence_attach evidence_read].freeze
 
@@ -38,7 +38,7 @@ class TestRegistration < Test::Unit::TestCase
     require File.join(workflow_root, 'workflow')
   end
 
-  def test_nine_tasks_registered_and_exec_exported
+  def test_tasks_registered_and_exec_exported
     load_workflow!
     assert_equal EXPECTED_TASKS, Research.tasks.keys.map(&:to_s).sort
     EXPECTED_TASKS.each do |t|
